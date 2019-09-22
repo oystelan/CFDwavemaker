@@ -1119,7 +1119,7 @@ double ww_2order(double t, double xx, double yy, double zz) {
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			//cout << "Rn: " << Rn << endl;
 
-			//// Adiusting Bandwidth for 2 order cut-off
+			//// Adjusting Bandwidth for 2 order cut-off
 			//if (i + 1 + f_bw<nfreqs) {
 			//	p = i + 1 + f_bw;
 			//}
@@ -1299,25 +1299,23 @@ double pp(double t, double xx, double yy, double zz) {
 
 }
 
-
+/* vertical velocity gradient at z=0 for velocity component U */
 double phi_dxdz(double t, double xx, double yy) {
 
 	double usum = 0.0;
 	double phi;
 
-
 	for (int i = 0; i< ndir*nfreq; i++) {
 		phi = w[i] * tofmax + phas[i];
 		usum += cos(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] * cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
 	}
-
 	return usum;
 
 }
 
 
 
-/* horizontal velocity U for a sinus wave */
+/* vertical velocity gradient at z=0 for velocity component V */
 double phi_dydz(double t, double xx, double yy) {
 
 	double vsum = 0.0;
@@ -1327,26 +1325,22 @@ double phi_dydz(double t, double xx, double yy) {
 		phi = w[i] * tofmax + phas[i];
 		vsum += sin(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] *cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
 	}
-
 	return vsum;
 
 }
 
 
-/* vertical velocity for a sinus wave */
+/* vertical velocity gradient at z=0 for velocity component W */
 double phi_dzdz(double t, double xx, double yy) {
 
 	double wsum = 0.0;
 	double phi;
-
-
 
 	for (int i = 0; i< ndir*nfreq; i++) {
 
 		phi = w[i] * tofmax + phas[i];
 		wsum += D[i] * Ampspec[i] * w[i] * k[i] * (cosh(k[i] * depth) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
 	}
-
 	return wsum;
 
 }
@@ -1357,19 +1351,16 @@ double u_piston(double t) {
 	double ux = interp1(PD_time, n_timesteps, PD_velo, t);
 
 	return ux+alpha_u*ux;
-
 }
 
 /* Wave elevation taken directly from piston timeseries*/
 double wave_elev_piston(double t) {
-
 	return alpha_z*interp1(PD_time, n_timesteps, PD_eta, t);
 }
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void initialize_kinematics(double tpt) {
-
 	// Allocating memory for storage of surface elevation and velocities
 	UX = new double[NX*NY*NZ];
 	UY = new double[NX*NY*NZ];
@@ -1380,8 +1371,6 @@ void initialize_kinematics(double tpt) {
 	UZL = new double[NXL*NYL*NZL];
 
 	cout << "Memory allocation successful for storage of kinematics." << endl;
-
-	
 
 	dx = (domainsize[1] - domainsize[0]) / double(NX-1);
 	dy = (domainsize[3] - domainsize[2]) / double(NY-1);
@@ -1399,7 +1388,6 @@ void initialize_kinematics(double tpt) {
 
 		double xpt, ypt, zpt;
 		double eta_temp;
-
 
 		// Main grid
 		#pragma omp for
@@ -1438,7 +1426,6 @@ void initialize_kinematics(double tpt) {
 					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
 					UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);*/
 				}
-
 			}
 		}
 	} // End parallel initialization
@@ -1446,7 +1433,6 @@ void initialize_kinematics(double tpt) {
 	cout << "Generation of upper domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
 	cout << "Initialization time: " << dd << " seconds." << endl;
-
 
 	dd = omp_get_wtime();
 	#pragma omp parallel // start parallel initialization
@@ -1511,13 +1497,9 @@ void initialize_surface_elevation(double tpt) {
 	cout << "Surface Elevation generated successfully. ";
 	cout << "Initialization time: " << dd << " seconds." << endl;
 	initsurf = 1;
-	
-	
 }
 
-
-
-
+/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
 double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) {
 	double nxp = min(double(NX), max(0., (xpt - domainsize[0]) / dx));
 	double nyp = min(double(NY), max(0., (ypt - domainsize[2]) / dy));
@@ -1545,7 +1527,7 @@ double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) 
 
 	return C0*(1. - zd) + C1*zd;
 }
-
+/* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
 double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt) {
 	
 	double nxp = min(double(NXL),max(0.,(xpt - domainsize[0]) / dxl));
@@ -1575,7 +1557,7 @@ double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt)
 	return C0*(1. - zd) + C1*zd;
 }
 
-
+/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
 double bilinear_interpolation(double *VAR, double xpt, double ypt) {
 	
 	double nxp = min(double(NX), max(0.,(xpt - domainsize[0]) / dx));
