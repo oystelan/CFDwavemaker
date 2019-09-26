@@ -166,6 +166,14 @@ int check_license()
 	return licensecheck;
 }
 
+
+int read_inptudata_v2() {
+	string lineA;
+	ifstream fid;
+	string res;
+}
+
+
 int read_inputdata()
 {
 	string lineA;
@@ -173,8 +181,6 @@ int read_inputdata()
 	string res;
 
 	// READ INPUT FILE AND REMOVE COMMENT LINES
-
-	
 	fid.open("./waveinput.dat");
 
 	// check one step up in the folder tree (this is used in the latest comflow version)

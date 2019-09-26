@@ -109,6 +109,9 @@
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="Stokes5.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="waveinput.dat" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
