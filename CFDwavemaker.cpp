@@ -23,6 +23,10 @@
 #include <ctime>
 #include "CFDwavemaker.h"
 #include "omp.h"
+#include <direct.h>
+#include <algorithm> 
+#include <cctype>
+#include <locale>
 
 //#include <fftw3.h>
 
@@ -72,6 +76,9 @@ int initialized;
 int initsurf = 0;
 int initkin = 0;
 double dx, dy, dz, dxl, dyl, dzl;
+
+
+#define GetCurrentDir _getcwd
 
 /*void testfft() {
 	fftw_complex *in, *out;
@@ -166,11 +173,122 @@ int check_license()
 	return licensecheck;
 }
 
+// trim from start (in place)
+static inline void ltrim(string& s) {
+	s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) {
+		return !isspace(ch);
+		}));
+}
+
+// trim from end (in place)
+static inline void rtrim(string& s) {
+	s.erase(find_if(s.rbegin(), s.rend(), [](int ch) {
+		return !isspace(ch);
+		}).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(string& s) {
+	ltrim(s);
+	rtrim(s);
+}
 
 int read_inptudata_v2() {
 	string lineA;
 	ifstream fid;
 	string res;
+
+
+
+
+	// READ INPUT FILE AND REMOVE COMMENT LINES
+	fid.open("./waveinput.dat");
+
+	// check one step up in the folder tree (this is used in the latest comflow version)
+	if (fid.fail()) {
+		fid.open("../waveinput.dat");
+	}
+	// Error check
+	if (fid.fail()) {
+		cerr << "Could not open file (is it really there?) " << endl;
+		return -1;
+		exit(1);
+	}
+	else {
+		cout << "Reading data from file: waveinput.dat..." << endl;
+	}
+	while (fid.good()) {
+		getline(fid, lineA);
+		//cout << lineA << endl;
+		lineA.erase(find(lineA.begin(), lineA.end(), '#'), lineA.end());
+		if (lineA.length() > 0) {
+			res += lineA + "\n";
+
+		}
+	}
+	fid.close();
+
+	istringstream buf;
+	istringstream f(res);
+	//get and write data lines
+	while (!f.eof()) {
+		getline(f, lineA);
+		trim(lineA);
+		cout << lineA << endl;
+
+		if (!lineA.compare("[wave type]")) {
+			getline(f, lineA);
+			wavetype = stoi(lineA);
+		}
+		if (!lineA.compare("[general wave data]")) {
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> ampl;
+			buf >> normalizeA;
+			buf >> depth;
+			buf >> mtheta;
+			buf.clear();
+			if (ramp_time > 0) {
+				rampswitch = 1;
+			}
+			else {
+				rampswitch = 0;
+			}
+		}
+		if (!lineA.compare("[perturbation]")) {
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> extmet;
+			buf >> pertmet;
+			buf >> bandwidth;
+			buf.clear();
+		}
+		if (!lineA.compare("[wave origin]")) {
+
+		}
+		if (!lineA.compare("[ramps]")) {
+
+		}
+		if (!lineA.compare("[wave components]")) {
+
+		}
+		if (!lineA.compare("[grid]")) {
+
+		}
+	}
+	cout << "Input file read successfully." << endl;
+
+}
+
+string GetCurrentWorkingDir(void) {
+	char buff[FILENAME_MAX];
+	GetCurrentDir(buff, FILENAME_MAX);
+	std::string current_working_dir(buff);
+	return current_working_dir;
+}
+int main() {
+	cout << GetCurrentWorkingDir() << endl;
+	read_inptudata_v2();
 }
 
 

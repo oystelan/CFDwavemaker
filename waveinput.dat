@@ -1,14 +1,16 @@
 # Wavedata version 2 input
 # Default focus point is t=x=0. Target amplitude of event: 10.05 m
-[waves]
+[wave type]
 # WAVETYPE 
 #   1 = focused wave groups
 #   2 = irregular short-crested waves (separate frequency and heading given) 
 #   3 = Irregular short-crested waves (one heading pr frequency, faster)
 #   4 = wave maker theory
 #   5 = stokes 5th order regular wave
+#   6 = swd file (spectral wave data library)
 3
-[general]
+
+[general wave data]
 # AMPL  NORMALIZE  DEPTH  MTHETA(deg)
 1.0700  0          76.40  0.0000      
 
@@ -29,7 +31,7 @@
 #Yramp y_start y_end
 0 10.0 11.0
 
-[components]
+[wave components]
 # NFREQ
 200
 # OMEGA [rad/s] S(omega) K   Phase   theta

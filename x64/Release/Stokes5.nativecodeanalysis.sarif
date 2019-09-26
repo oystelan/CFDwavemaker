@@ -7,22 +7,22 @@
       "tool": {
         "name": "PREfast",
         "fullName": "PREfast Code Analysis",
-        "version": "14.22.27905.0",
-        "fileVersion": "14.00.27905.00"
+        "version": "14.23.28105.4",
+        "fileVersion": "14.00.28105.04"
       },
       "invocations": [
         {
-          "commandLine": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.22.27905\\bin\\HostX86\\x64\\c1.dll\" -ACf{1F7B090C-16DB-4822-966A-A93D26ED4681} -ACpmspft140.dll -Alint -D_PREFAST_ -D_AST_FE_ -Analyze -zm0x01402090 -il C:\\Users\\oystein\\AppData\\Local\\Temp\\_CL_f6bbe6d1ast -typedil -f Stokes5.c -Ze -D_MSC_EXTENSIONS -Zp16 -ZB64 -D_INTEGRAL_MAX_BITS=64 -pc \\:/ -D_MSC_VER=1922 -D_MSC_FULL_VER=192227905 -D_MSC_BUILD=0 -D_M_AMD64=100 -ZILP448 -D_M_X64=100 -D_WIN64 -D_WIN32 -nologo -W 1 -diagnostics:column -GF -Og -Oi -Ot -Oy -DCODE_ANALYSIS -D_MT -D_DLL -GS -D_M_FP_PRECISE -Fox64\\Release\\Stokes5.obj -Fdx64\\Release\\vc142.pdb -Gd -analyze:quiet -analyze:plugin C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.22.27905\\bin\\HostX86\\x86\\EspXEngine.dll -FC -errorreport:prompt -analyze:ruleset C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\Rule Sets\\NativeRecommendedRules.ruleset -analyze:projectdirectory C:\\projects\\CFDwavemaker -analyze:rulesetdirectory ;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\\\Rule Sets -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.22.27905\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.22.27905\\atlmfc\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\VS\\include -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\ucrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\um -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\shared -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\winrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\cppwinrt -I C:\\Program Files (x86)\\Windows Kits\\NETFXSDK\\4.7.2\\Include\\um"
+          "commandLine": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.23.28105\\bin\\HostX86\\x64\\c1.dll\" -ACf{1F7B090C-16DB-4822-966A-A93D26ED4681} -ACpmspft140.dll -Alint -D_PREFAST_ -D_AST_FE_ -Analyze -zm0x00CB3170 -il C:\\Users\\oland\\AppData\\Local\\Temp\\_CL_cb44ba7aast -typedil -f Stokes5.c -Ze -D_MSC_EXTENSIONS -Zp16 -ZB64 -D_INTEGRAL_MAX_BITS=64 -pc \\:/ -D_MSC_VER=1923 -D_MSC_FULL_VER=192328105 -D_MSC_BUILD=4 -D_M_AMD64=100 -ZILP448 -D_M_X64=100 -D_WIN64 -D_WIN32 -nologo -W 1 -diagnostics:column -GF -Og -Oi -Ot -Oy -DCODE_ANALYSIS -D_MT -D_DLL -GS -D_M_FP_PRECISE -Fox64\\Release\\Stokes5.obj -Fdx64\\Release\\vc142.pdb -Gd -analyze:quiet -analyze:plugin C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.23.28105\\bin\\HostX86\\x86\\EspXEngine.dll -FC -errorreport:prompt -analyze:ruleset C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\Rule Sets\\NativeRecommendedRules.ruleset -analyze:projectdirectory C:\\projects\\c++\\CFDwavemaker\\CFDwavemaker -analyze:rulesetdirectory ;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\\\Rule Sets -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.23.28105\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.23.28105\\atlmfc\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\VS\\include -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\ucrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\um -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\shared -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\winrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\cppwinrt -I C:\\projects\\c++\\CFDwavemaker\\CFDwavemaker\\Include\\um"
         }
       ],
       "files": {
-        "file:///c:/projects/cfdwavemaker/stokes5.c": {
+        "file:///c:/projects/c++/cfdwavemaker/cfdwavemaker/stokes5.c": {
           "roles": [
             "analysisTarget",
             "resultFile"
           ]
         },
-        "file:///c:/projects/cfdwavemaker/stokes5.h": {
+        "file:///c:/projects/c++/cfdwavemaker/cfdwavemaker/stokes5.h": {
           "roles": [
             "resultFile"
           ]
@@ -1153,6 +1153,17 @@
             },
             "helpUri": ""
           },
+          "26812": {
+            "id": "26812",
+            "name": "",
+            "shortDescription": "",
+            "fullDescription": "",
+            "configuration": {
+              "enabled": true,
+              "defaultLevel": "warning"
+            },
+            "helpUri": ""
+          },
           "6328": {
             "id": "6328",
             "name": "",
@@ -1804,6 +1815,17 @@
           },
           "26454": {
             "id": "26454",
+            "name": "",
+            "shortDescription": "",
+            "fullDescription": "",
+            "configuration": {
+              "enabled": true,
+              "defaultLevel": "warning"
+            },
+            "helpUri": ""
+          },
+          "26478": {
+            "id": "26478",
             "name": "",
             "shortDescription": "",
             "fullDescription": "",
