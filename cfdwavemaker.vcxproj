@@ -103,7 +103,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
-    <ClCompile Include="input_file_reader.cpp" />
     <ClCompile Include="Stokes5.c" />
   </ItemGroup>
   <ItemGroup>

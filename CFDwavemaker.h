@@ -16,6 +16,11 @@
 #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
+// Define some constants
+#define PI 3.1415926535897
+#define G 9.81
+#define RHO 1025.0
+
 // Functions available in CFDwavemaker.cpp
 #ifdef __cplusplus
 extern "C" {

@@ -21,9 +21,6 @@
     <ClCompile Include="Stokes5.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="input_file_reader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h">
