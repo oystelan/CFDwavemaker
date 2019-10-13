@@ -1,0 +1,23 @@
+# Wavedata CFDwavemaker2
+
+[wave type]
+# WAVETYPE 
+# 1. irregular
+# 2. pistonwavemaker
+# 4. spectralwave
+# 5. stokes5
+pistonwavemaker
+
+[general input data]
+# DEPTH  MTHETA(deg)
+76.40  0.0000      
+
+[ramps]
+#time rampup
+0.0000
+#Xramp x_start x_end
+0 5.0 5.5
+#Yramp y_start y_end
+0 10.0 11.0
+
+[wave properties]

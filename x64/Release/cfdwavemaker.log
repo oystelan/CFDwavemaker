@@ -1,5 +1,2 @@
 ﻿  CFDwavemaker.cpp
-C:\projects\c++\CFDwavemaker\CFDwavemaker\CFDwavemaker.cpp(470): warning C4715: 'read_inputdata_v2': not all control paths return a value
-  Stokes5.c
-     Creating library C:\projects\c++\CFDwavemaker\CFDwavemaker\x64\Release\cfdwavemaker.lib and object C:\projects\c++\CFDwavemaker\CFDwavemaker\x64\Release\cfdwavemaker.exp
   cfdwavemaker.vcxproj -> C:\projects\c++\CFDwavemaker\CFDwavemaker\x64\Release\cfdwavemaker.exe

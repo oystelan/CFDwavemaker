@@ -12,7 +12,8 @@
 // --------------------------------------------------------------------------------
 #include <stdio.h>
 #include <math.h>
-#include <stdlib.h>
+#include <cstdlib>
+//#include <stdlib.h>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -21,16 +22,16 @@
 #include <limits>
 #include <cfloat>
 #include <ctime>
-#include <cctype>
-#include <locale>
 #include "omp.h"
 #include <algorithm>
-#include <direct.h> // windows only functio
+//#include <direct.h> // windows only function
+#//include <cctype>
+//#include <locale>
 #include "CFDwavemaker.h" 
 
 //#include <fftw3.h>
 
-using namespace std;
+//using namespace std;
 
 double *UX;
 double *UY;
@@ -97,21 +98,21 @@ void wait(int seconds)
 }
 
 // trim from start (in place)
-static inline void ltrim(string& s) {
+static inline void ltrim(std::string& s) {
 	s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) {
 		return !isspace(ch);
 		}));
 }
 
 // trim from end (in place)
-static inline void rtrim(string& s) {
+static inline void rtrim(std::string& s) {
 	s.erase(find_if(s.rbegin(), s.rend(), [](int ch) {
 		return !isspace(ch);
 		}).base(), s.end());
 }
 
 // trim from both ends (in place)
-static inline void trim(string& s) {
+static inline void trim(std::string& s) {
 	ltrim(s);
 	rtrim(s);
 }
@@ -143,10 +144,10 @@ int check_license()
 
 
 
-    	cout << (now.tm_year + 1900) << '-'
+    	std::cout << (now.tm_year + 1900) << '-'
     		<< (now.tm_mon + 1) << '-'
     		<< now.tm_mday
-    		<< endl;
+    		<< std::endl;
     	if ((now.tm_year + 1900) > expyear) {
     		licensecheck = 0;
     	}
@@ -200,12 +201,10 @@ int check_license()
 //}
 
 
-
-
 int read_inputdata_v2() {
-	string lineA;
-	ifstream fid;
-	string res;
+	std::string lineA;
+	std::ifstream fid;
+	std::string res;
 
 	// READ INPUT FILE AND REMOVE COMMENT LINES
 	fid.open("./waveinput.dat");
@@ -216,12 +215,12 @@ int read_inputdata_v2() {
 	}
 	// Error check
 	if (fid.fail()) {
-		cerr << "Could not open file (is it really there?) " << endl;
+		std::cerr << "Could not open file (is it really there?) " << std::endl;
 		return -1;
 		exit(1);
 	}
 	else {
-		cout << "Reading data from file: waveinput.dat..." << endl;
+		std::cout << "Reading data from file: waveinput.dat..." << std::endl;
 	}
 	while (fid.good()) {
 		getline(fid, lineA);
@@ -234,28 +233,69 @@ int read_inputdata_v2() {
 	}
 	fid.close();
 
-	istringstream buf;
-	istringstream f(res);
+	std::istringstream buf;
+	std::istringstream f(res);
 	//get and write data lines
 	while (!f.eof()) {
 		getline(f, lineA);
 		trim(lineA);
-		cout << lineA << endl;
+		std::cout << lineA << std::endl;
 
 		if (!lineA.compare("[wave type]")) {
 			getline(f, lineA);
-			wavetype = stoi(lineA);
+			trim(lineA);
+			// check if valid wave type is given
+			if (!lineA.compare("irregular")) {
+				wavetype = 1;
+				std::cout << "Irregular perturbation wave theory specified" << std::endl;
+			}
+			else if (!lineA.compare("pistonwavemaker")) {
+				wavetype = 2;
+				std::cout << "Piston wave maker theory specified" << std::endl;
+			}
+			else if (!lineA.compare("spectral wave")) {
+				wavetype = 4;
+				std::cout << "spectral wave (HOSM) specified" << std::endl;
+			}
+			else if (!lineA.compare("stokes5")) {
+				wavetype = 5;
+				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
+			}
+			else {
+				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
+				std::cout << "irregular" << std::endl;
+				std::cout << "pistonwavemaker" << std::endl;
+				std::cout << "spectral wave" << std::endl;
+				std::cout << "stokes5" << std::endl;
+				//exit(1);
+			}
+			// define default values
+			ampl = 1.;
+			normalizeA = 0;
+			mtheta = 0.;
+			extmet = 0;
+			pertmet = 0;
+			bandwidth = 1000;
+			tofmax = 0.;
+			fpoint[0] = 0.;
+			fpoint[1] = 0.;
 		}
-		if (!lineA.compare("[general wave data]")) {
+		if (!lineA.compare("[general input data]")) { //mandatory
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> ampl;
-			buf >> normalizeA;
 			buf >> depth;
 			buf >> mtheta;
 			buf.clear();
 		}
-		if (!lineA.compare("[perturbation]")) {
+		if (!lineA.compare("[normalize]")) { //optional
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> ampl;
+			buf >> normalizeA;
+			buf.clear();
+			
+		}
+		if (!lineA.compare("[perturbation method]")) { //optional
 			getline(f, lineA);
 			buf.str(lineA);
 			buf >> extmet;
@@ -263,7 +303,7 @@ int read_inputdata_v2() {
 			buf >> bandwidth;
 			buf.clear();
 		}
-		if (!lineA.compare("[wave origin]")) {
+		if (!lineA.compare("[wave reference point]")) { //optional
 			getline(f, lineA);
 			buf.str(lineA);
 			buf >> tofmax;
@@ -271,7 +311,7 @@ int read_inputdata_v2() {
 			buf >> fpoint[1];
 			buf.clear();
 		}
-		if (!lineA.compare("[ramps]")) {
+		if (!lineA.compare("[ramps]")) { //optional
 			// read time ramp data
 			getline(f, lineA);
 			buf.str(lineA);
@@ -298,9 +338,64 @@ int read_inputdata_v2() {
 			buf >> yrampdata[2];
 			buf.clear();
 		}
-		if (!lineA.compare("[wave type specific data]")) {
-			// Wave specific data
+		// Wave properties: this is where the wave type specific data is given
+		if (!lineA.compare("[wave properties]")) {
+			// In case of irregular wave is specified
 			if (wavetype == 1) {
+				// Can be specified in a variety of ways.
+				// Alternatives: userdefined, userdefined1
+				// Todo: add jonswap3, jonswap5, Torsethaugen04, Torsethaugen1996, pm
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare("userdefined")) {
+
+				}
+				// User defined wave. List of frequency components given
+				// frequency, spectral ampl, wave number, phase, direction (rad)
+				else if (!lineA.compare("userdefined1") == 0) {
+					// read number wave components
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> nfreq;
+					buf.clear();
+					ndir = 1;
+
+					// Read frequency data (omega, ampltude, wavenumber, phase (rad), direction (rad))
+					w = new double[nfreq];
+					Ampspec = new double[nfreq];
+					k = new double[nfreq];
+					phas = new double[nfreq];
+					thetaA = new double[nfreq];
+					D = new double[nfreq];
+					for (int i = 0; i < nfreq; i++) {
+						getline(f, lineA);
+						buf.str(lineA);
+						buf >> w[i];
+						buf >> Ampspec[i];
+						buf >> k[i];
+						buf >> phas[i];
+						buf >> thetaA[i];
+						buf.clear();
+						D[i] = 1.0;
+					}
+				}
+
+			}
+			else {
+				std::cout << "Unknown irregular wave property specification. Alternatives are: userdefined, userdefined1 for now." << std::endl;
+			}
+		}
+			
+			
+			// Types
+			// Alternatives: none (uniform), user_defined, spreading_function, spreading_function2 (single component)
+			// Spreading functions
+			// Alternatives: cosntheta, cos2stheta2, uniform, user_defined
+		
+
+		/*
+		if (!lineA.compare("[wave type specific data]")) {
+
 				// read spreading function data
 				getline(f, lineA);
 				buf.str(lineA);
@@ -460,21 +555,41 @@ int read_inputdata_v2() {
 				delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
 
 			}
-		}
-		if (!lineA.compare("[grid]")) {
+			*/
 
+
+		if (!lineA.compare("[grid]")) {
+			// Nothing to be done yet
 		}
 	}
-	cout << "Input file read successfully." << endl;
+	std::cout << "Input file read successfully." << std::endl;
+
+	
+	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
+	double* Sw = new double[nfreq];
+	Sw = Ampspec;
+	if (normalizeA) {
+		for (int i = 0; i < nfreq; i++) {
+			Ampspec[i] = ampl * Sw[i] / sum(Sw, nfreq);
+		}
+	}
+	else {
+		for (int i = 0; i < nfreq; i++) {
+			Ampspec[i] = ampl * Sw[i];
+		}
+	}
+	delete[] Sw;
+
+	return 0;
 
 }
 
-
+/*
 int read_inputdata()
 {
-	string lineA;
-	ifstream fid;
-	string res;
+	std::string lineA;
+	std::ifstream fid;
+	std::string res;
 
 	// READ INPUT FILE AND REMOVE COMMENT LINES
 	fid.open("./waveinput.dat");
@@ -485,12 +600,12 @@ int read_inputdata()
 	}
 	// Error check
 	if (fid.fail()) {
-		cerr << "Could not open file (is it really there?) " << endl;
+		std::cerr << "Could not open file (is it really there?) " << std::endl;
 		return -1;
 		exit(1);
 	}
 	else {
-		cout << "Reading data from file: waveinput.dat..." << endl;
+		std::cout << "Reading data from file: waveinput.dat..." << std::endl;
 	}
 	while (fid.good()) {
 		getline(fid, lineA);
@@ -1116,6 +1231,7 @@ int read_inputdata()
 	return 0;
 }
 
+*/
 
 
 //Define some useful functions
@@ -1250,7 +1366,7 @@ double waveelev_2order(double t, double xx, double yy) {
 			//	p = i + 1 + f_bw;
 			//}
 			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
+			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m*ndir + j;
 				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
@@ -1308,7 +1424,7 @@ double uu_2order(double t, double xx, double yy, double zz) {
 			//	p = i + 1 + f_bw;
 			//}
 			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
+			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m*ndir + j;
 				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
@@ -1368,7 +1484,7 @@ double vv_2order(double t, double xx, double yy, double zz) {
 			//	p = i + 1 + f_bw;
 			//}
 			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
+			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m*ndir + j;
 				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
@@ -1426,7 +1542,7 @@ double ww_2order(double t, double xx, double yy, double zz) {
 			//	p = i + 1 + f_bw;
 			//}
 			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
+			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m*ndir + j;
 				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
@@ -1482,7 +1598,7 @@ double phi_pot_2order(double t, double xx, double yy, double zz) {
 			//	p = i + 1 + f_bw;
 			//}
 			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
+			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m*ndir + j;
 				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
@@ -1672,7 +1788,7 @@ void initialize_kinematics(double tpt) {
 	UYL = new double[NXL*NYL*NZL];
 	UZL = new double[NXL*NYL*NZL];
 
-	cout << "Memory allocation successful for storage of kinematics." << endl;
+	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
 	dx = (domainsize[1] - domainsize[0]) / double(NX-1);
 	dy = (domainsize[3] - domainsize[2]) / double(NY-1);
@@ -1686,7 +1802,7 @@ void initialize_kinematics(double tpt) {
 	#pragma omp parallel // start parallell initialization
 	{
 		#pragma omp master
-		cout << "Number of available threads: " << omp_get_num_threads() << endl;
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		double xpt, ypt, zpt;
 		double eta_temp;
@@ -1732,9 +1848,9 @@ void initialize_kinematics(double tpt) {
 		}
 	} // End parallel initialization
 
-	cout << "Generation of upper domain kinematics data completed. ";
+	std::cout << "Generation of upper domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
-	cout << "Initialization time: " << dd << " seconds." << endl;
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 
 	dd = omp_get_wtime();
 	#pragma omp parallel // start parallel initialization
@@ -1758,10 +1874,10 @@ void initialize_kinematics(double tpt) {
 			}
 		}
 	} // End parallel
-	cout << "Generation of lower domain kinematics data completed. ";
+	std::cout << "Generation of lower domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
-	cout << "Initialization time: " << dd << " seconds." << endl;
-	cout << "Interpolation can commence..." << endl;
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	std::cout << "Interpolation can commence..." << std::endl;
 	initkin = 1;
 }
 
@@ -1772,7 +1888,7 @@ void initialize_surface_elevation(double tpt) {
 	// Allocating memory for storage of surface elevation and velocities
 	ETA = new double[NX*NY];
 
-	cout << "Memory allocation successful for Surface elevation storage." << endl;
+	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
 
 	dx = (domainsize[1] - domainsize[0]) / double(NX - 1);
 	dy = (domainsize[3] - domainsize[2]) / double(NY - 1);
@@ -1796,16 +1912,16 @@ void initialize_surface_elevation(double tpt) {
 	}
 	dd = omp_get_wtime()-dd;
 
-	cout << "Surface Elevation generated successfully. ";
-	cout << "Initialization time: " << dd << " seconds." << endl;
+	std::cout << "Surface Elevation generated successfully. ";
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	initsurf = 1;
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
 double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) {
-	double nxp = min(double(NX), max(0., (xpt - domainsize[0]) / dx));
-	double nyp = min(double(NY), max(0., (ypt - domainsize[2]) / dy));
-	double nzp = min(double(NZ), max(0., (zpt - domainsize[5]) / dz));
+	double nxp = std::min(double(NX), std::max(0., (xpt - domainsize[0]) / dx));
+	double nyp = std::min(double(NY), std::max(0., (ypt - domainsize[2]) / dy));
+	double nzp = std::min(double(NZ), std::max(0., (zpt - domainsize[5]) / dz));
 
 	double C000 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + floor(nzp))];
 	double C001 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + ceil(nzp))];
@@ -1832,9 +1948,9 @@ double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
 double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt) {
 	
-	double nxp = min(double(NXL),max(0.,(xpt - domainsize[0]) / dxl));
-	double nyp = min(double(NYL), max(0., (ypt - domainsize[2]) / dyl));
-	double nzp = min(double(NZL), max(0., (zpt - domainsize[4]) / dzl));
+	double nxp = std::min(double(NXL), std::max(0.,(xpt - domainsize[0]) / dxl));
+	double nyp = std::min(double(NYL), std::max(0., (ypt - domainsize[2]) / dyl));
+	double nzp = std::min(double(NZL), std::max(0., (zpt - domainsize[4]) / dzl));
 
 	double C000 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + floor(nzp))];
 	double C001 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + ceil(nzp))];
@@ -1862,8 +1978,8 @@ double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt)
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
 double bilinear_interpolation(double *VAR, double xpt, double ypt) {
 	
-	double nxp = min(double(NX), max(0.,(xpt - domainsize[0]) / dx));
-	double nyp = min(double(NY), max(0.,(ypt - domainsize[2]) / dy));
+	double nxp = std::min(double(NX), std::max(0.,(xpt - domainsize[0]) / dx));
+	double nyp = std::min(double(NY), std::max(0.,(ypt - domainsize[2]) / dy));
 
 	double C00 = VAR[int(floor(nxp)*NY + floor(nyp))];
 	double C01 = VAR[int(floor(nxp)*NY + ceil(nyp))];
@@ -1890,40 +2006,40 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {
 
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
+	zpt = std::max(-depth, zpt);
 	double z;
 
 	switch (meth) {
 	// Linear wave theory, expenential profile used above free surface
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
 	// Linear wave theory, constant profile used above free surface
 	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
 	// Second order wave theory, exponential profile used above free surface
 	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
 	// Second order wave theory, constant profile used above free surface
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 5:
-		z = min(0., zpt);
+		z = std::min(0., zpt);
 		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
 				((uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z)) + phi_dxdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 	case 6:
 		return u_piston(tpt);
 	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_u(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_u(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (initkin == 0) {
-			cout << "Generating kinematics for interpolation:" << endl;
+			std::cout << "Generating kinematics for interpolation:" << std::endl;
 			initialize_kinematics(0.0);
 		}
 		/*
@@ -1956,31 +2072,31 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
+	zpt = std::max(-depth, zpt);
 	double z;
 
 	switch (meth) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, exponential profile used above free surface
 	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, constant profile used above free surface
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 5:
-		z = min(0., zpt);
+		z = std::min(0., zpt);
 		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
 				((vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z)) + phi_dydz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 	case 6:
@@ -2006,37 +2122,37 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
+	zpt = std::max(-depth, zpt);
 	double z;
 
 	switch (meth) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, exponential profile used above free surface
 	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, constant profile used above free surface
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 5:
-		z = min(0., zpt);
+		z = std::min(0., zpt);
 		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
+			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
 				((ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z)) + phi_dzdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		}
 	case 6:
 		return 0.0;
 	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_v(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_v(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (zpt < domainsize[5]) {
 			return trilinear_interpolationL(UZL, xpt, ypt, zpt);
@@ -2054,18 +2170,18 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 //EXPORT double DynamicPressure(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
+	zpt = std::max(-depth, zpt);
 	double z;
 
 	switch (meth) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 
 	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
+		z = std::min(0., zpt);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
 	/*
 		// Second order wave theory, exponential profile used above free surface
 	case 3:
@@ -2101,25 +2217,25 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, exponential profile used above free surface
 	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Second order wave theory, constant profile used above free surface
 	case 4:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 5:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 6:
 		return wave_elev_piston(tpt);
 	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_eta(&wave, tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_eta(&wave, tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (initsurf == 0) {
-			cout << "Initializing surface elevation storage:" << endl;
+			std::cout << "Initializing surface elevation storage:" << std::endl;
 			initialize_surface_elevation(0.0);
 			return bilinear_interpolation(ETA, xpt, ypt);
 		}
@@ -2162,34 +2278,34 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 //EXPORT int Init(double& tmin_in, double& tmax_in)
 int wave_Initialize()
 {
-	cout << "---------------------------------------" << endl;
-	cout << "CFD WAVEMAKER v.1.07" << endl;
-	cout << "---------------------------------------" << endl;
+	std::cout << "---------------------------------------" << std::endl;
+	std::cout << "CFD WAVEMAKER v.2.0.1" << std::endl;
+	std::cout << "---------------------------------------" << std::endl;
 	
 	// Check if license has expired
 	if (check_license() == 1){
-		cout << "License checks out...carry on..." << endl;
+		std::cout << "License checks out...carry on..." << std::endl;
 	}
 	else {
-		cout << "License for CFDwavemaker has expired. Please contact Oeystein Lande to update the program." << endl << endl;
-		cout << "This program will auto-distruct in \n5..." << endl;
+		std::cout << "License for CFDwavemaker has expired. Please contact Oeystein Lande to update the program." << std::endl << std::endl;
+		std::cout << "This program will auto-distruct in \n5..." << std::endl;
 		wait(1);
-		cout << "4..." << endl;
+		std::cout << "4..." << std::endl;
 		wait(1);
-		cout << "3..." << endl;
+		std::cout << "3..." << std::endl;
 		wait(1);
-		cout << "2..." << endl;
+		std::cout << "2..." << std::endl;
 		wait(1);
-		cout << "1..." << endl;
+		std::cout << "1..." << std::endl;
 		wait(1);
-		cout << "Bang!" << endl;
+		std::cout << "Bang!" << std::endl;
 
 		return -1;
 	}
 	//for (int i = 0; i < nfreq; i++) {
 	//	k[i] = pow(2. * pi * f[i], 2.) / 9.81;
 	//}
-	int i = read_inputdata();
+	int i = read_inputdata_v2();
 
 	return 0;
 }

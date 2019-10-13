@@ -1,24 +1,26 @@
-# Wavedata version 2 input
-# Default focus point is t=x=0. Target amplitude of event: 10.05 m
+# Wavedata CFDwavemaker2
+
 [wave type]
 # WAVETYPE 
-#   1 = focused wave groups
-#   2 = irregular short-crested waves (separate frequency and heading given) 
-#   3 = Irregular short-crested waves (one heading pr frequency, faster)
-#   4 = wave maker theory
-#   5 = stokes 5th order regular wave
-#   6 = swd file (spectral wave data library)
-3
+# 1. irregular
+# 2. pistonwavemaker
+# 4. spectralwave
+# 5. stokes5
+irregular
 
-[general wave data]
-# AMPL  NORMALIZE  DEPTH  MTHETA(deg)
-1.0700  0          76.40  0.0000      
+[general input data]
+# DEPTH  MTHETA(deg)
+76.40  0.0000      
 
-[perturbation]
+[normalize]
+# AMPL  NORMALIZE 
+1.0     0
+
+[perturbation method]
 # EXTMETH PERTMET BANDWIDTH
     2       2       1000
 
-[wave origin]
+[wave reference point]
 # for focused waves this will correspond to the focus point in time and space
 # Time(s)  x(m)  y(m)
 50.00      0.00  0.00
@@ -31,7 +33,9 @@
 #Yramp y_start y_end
 0 10.0 11.0
 
-[wave components]
+[wave properties]
+# for irregular waves
+userdefined1
 # NFREQ
 200
 # OMEGA [rad/s] S(omega) K   Phase   theta
@@ -236,9 +240,10 @@
     0.91814400     0.13433347     0.08593188    96.71537171     0.38831872
     0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
-[grid]
+[grid interpolation]
 # grid used for kinematics interpolation
-manual
+# alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
+manualbox
 # XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
 -882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
 #NX NY NZ
