@@ -18,7 +18,7 @@
     <ClCompile Include="CFDwavemaker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Stokes5.c">
+    <ClCompile Include="Stokes5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -28,6 +28,7 @@
 #//include <cctype>
 //#include <locale>
 #include "CFDwavemaker.h" 
+#include "Stokes5.h"
 
 //#include <fftw3.h>
 
@@ -47,7 +48,8 @@ int NX, NY, NZ, NXL, NYL, NZL;
 double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
 double fp, alpha_z, alpha_u, ramp_time, x_pos, y_pos, current_speed, wave_length, wave_height;
 
-
+// Stokes 5 clas
+Stokes5 stokes5;
 
 //fftw_plan p;
 
@@ -65,12 +67,6 @@ double* PD_velo;
 double* PD_eta;
 double* domainsize;
 double* index;
-
-extern "C" {
-#include "Stokes5.h"
-}
-
-Stokes5 wave; // declare wave
 
 int initialized;
 int initsurf = 0;
@@ -2036,7 +2032,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	case 6:
 		return u_piston(tpt);
 	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_u(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
@@ -2152,7 +2148,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	case 6:
 		return 0.0;
 	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_v(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.v(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (zpt < domainsize[5]) {
 			return trilinear_interpolationL(UZL, xpt, ypt, zpt);
@@ -2232,7 +2228,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	case 6:
 		return wave_elev_piston(tpt);
 	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_eta(&wave, tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.eta(tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 	case 8:
 		if (initsurf == 0) {
 			std::cout << "Initializing surface elevation storage:" << std::endl;

@@ -108,7 +108,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
-    <ClCompile Include="Stokes5.c" />
+    <ClCompile Include="Stokes5.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
