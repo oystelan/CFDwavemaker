@@ -18,7 +18,7 @@
     <ClCompile Include="CFDwavemaker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Stokes5.c">
+    <ClCompile Include="Stokes5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,6 +27,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Stokes5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Irregular.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
