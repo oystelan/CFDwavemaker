@@ -1322,7 +1322,7 @@ double interp1(double *x, int x_tam, double *y, double xx)
 
 
 
-/* wave elevation for a sinus wave */
+/* First order wave elevation */
 double waveelev(double t, double xx, double yy) {
 
 	double welev = 0.0;
@@ -1341,7 +1341,7 @@ double waveelev(double t, double xx, double yy) {
 
 }
 
-
+/* Second order wave elevation */
 double waveelev_2order(double t, double xx, double yy) {
 
 
@@ -1632,6 +1632,8 @@ double phi_pot_2order(double t, double xx, double yy, double zz) {
 	return phisum2;
 }
 
+
+/*
 // First order velocity potential
 double phi_pot(double t, double xx, double yy, double zz) {
 
@@ -1647,117 +1649,8 @@ double phi_pot(double t, double xx, double yy, double zz) {
 	return phisum;
 
 }
+*/
 
-double uu(double t, double xx, double yy, double zz) {
-
-	double usum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		usum += cos(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return usum;
-
-}
-
-
-/* horizontal velocity U for a sinus wave */
-double vv(double t, double xx, double yy, double zz) {
-
-	double vsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		vsum += sin(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return vsum;
-
-}
-
-
-/* vertical velocity for a sinus wave */
-double ww(double t, double xx, double yy, double zz) {
-
-	double wsum = 0.0;
-	double phi;
-
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-
-		phi = w[i] * tofmax + phas[i];
-		wsum += D[i] * Ampspec[i] * w[i] * (sinh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return wsum;
-
-}
-
-double pp(double t, double xx, double yy, double zz) {
-
-	double psum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		psum += Ampspec[i] * D[i] * RHO * G * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return psum;
-
-}
-
-/* vertical velocity gradient at z=0 for velocity component U */
-double phi_dxdz(double t, double xx, double yy) {
-
-	double usum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		usum += cos(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] * cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return usum;
-
-}
-
-
-
-/* vertical velocity gradient at z=0 for velocity component V */
-double phi_dydz(double t, double xx, double yy) {
-
-	double vsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		vsum += sin(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] *cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return vsum;
-
-}
-
-
-/* vertical velocity gradient at z=0 for velocity component W */
-double phi_dzdz(double t, double xx, double yy) {
-
-	double wsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-
-		phi = w[i] * tofmax + phas[i];
-		wsum += D[i] * Ampspec[i] * w[i] * k[i] * (cosh(k[i] * depth) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return wsum;
-
-}
 
 
 /* Horizontal velocity taken directly from the timeseries*/

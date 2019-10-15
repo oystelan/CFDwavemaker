@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -108,10 +108,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
+    <ClCompile Include="Irregular.cpp" />
     <ClCompile Include="Stokes5.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
+    <ClInclude Include="Irregular.h" />
     <ClInclude Include="Stokes5.h" />
   </ItemGroup>
   <ItemGroup>

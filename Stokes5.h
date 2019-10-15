@@ -1,9 +1,6 @@
 #ifndef Stokes5_H
 #define Stokes5_H
 
-#include<stdio.h>
-#include<math.h>
-
 class Stokes5 {
 private:
 	double A11, A22, A31, A33, A42, A44, A51, A53, A55,

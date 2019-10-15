@@ -29,6 +29,9 @@
     <ClInclude Include="Stokes5.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Irregular.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="waveinput.dat">
