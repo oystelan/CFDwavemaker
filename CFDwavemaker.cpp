@@ -347,12 +347,10 @@ int read_inputdata_v2() {
 				// Todo: add jonswap3, jonswap5, Torsethaugen04, Torsethaugen1996, pm
 				getline(f, lineA);
 				trim(lineA);
-				if (!lineA.compare("userdefined")) {
-
-				}
+				
 				// User defined wave. List of frequency components given
 				// frequency, spectral ampl, wave number, phase, direction (rad)
-				else if (!lineA.compare("userdefined1") == 0) {
+				if (!lineA.compare("userdefined1") == 0) {
 					// read number wave components
 					getline(f, lineA);
 					buf.str(lineA);
@@ -379,6 +377,60 @@ int read_inputdata_v2() {
 						D[i] = 1.0;
 					}
 				}
+				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
+				else if (!lineA.compare("userdefined")) {
+					// read number of frequencies and directions
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> nfreq;
+					buf >> ndir;
+					buf.clear();
+
+					// Read frequency data (omega, Sw and K)
+					double* w_temp = new double[nfreq];
+					double* Ampspec_temp = new double[nfreq];
+					double* k_temp = new double[nfreq];
+					double* phas_temp = new double[nfreq];
+					for (int i = 0; i < nfreq; i++) {
+						getline(f, lineA);
+						buf.str(lineA);
+						buf >> w_temp[i];
+						buf >> Ampspec_temp[i];
+						buf >> k_temp[i];
+						buf >> phas_temp[i];
+						buf.clear();
+					}
+
+					// Read directional data
+					double* theta_temp = new double[ndir];
+					double* D_temp = new double[ndir];
+					for (int i = 0; i < ndir; i++) {
+						getline(f, lineA);
+						buf.str(lineA);
+						buf >> theta_temp[i];
+						buf >> D_temp[i];
+						buf.clear();
+					}
+
+					// Restack frequency and direction dimentions into 1 dimentional arrays
+					w = new double[nfreq * ndir];
+					k = new double[nfreq * ndir];
+					phas = new double[nfreq * ndir];
+					Ampspec = new double[nfreq * ndir];
+					thetaA = new double[nfreq * ndir];
+
+					for (int i = 0; i < nfreq; i++) {
+						for (int j = 0; j < ndir; j++) {
+							w[i * ndir + j] = w_temp[i];
+							k[i * ndir + j] = k_temp[i];
+							Ampspec[i * ndir + j] = Ampspec_temp[i]*D_temp[j];
+							phas[i * ndir + j] = phas_temp[i];
+							thetaA[i * ndir + j] = theta_temp[j];
+
+						}
+					}
+					delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
+				}
 
 			}
 			else {
@@ -390,7 +442,7 @@ int read_inputdata_v2() {
 			// Types
 			// Alternatives: none (uniform), user_defined, spreading_function, spreading_function2 (single component)
 			// Spreading functions
-			// Alternatives: cosntheta, cos2stheta2, uniform, user_defined
+			// Alternatives: cosn, cos2s, uniform, user_defined
 		
 
 		/*
@@ -402,53 +454,6 @@ int read_inputdata_v2() {
 				buf >> spreadfunc;
 				buf >> s;
 				buf.clear();
-
-				// read number of frequencies and directions
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> nfreq;
-				buf >> ndir;
-				buf.clear();
-
-				// Read frequency data (omega, Sw and K)
-				double* w_temp = new double[nfreq];
-				double* Sw = new double[nfreq];
-				double* k_temp = new double[nfreq];
-				double* phas_temp = new double[nfreq];
-				for (int i = 0; i < nfreq; i++) {
-					getline(f, lineA);
-					buf.str(lineA);
-					buf >> w_temp[i];
-					buf >> Sw[i];
-					buf >> k_temp[i];
-					buf >> phas_temp[i];
-					buf.clear();
-				}
-
-
-				// Read directions
-				double* theta_temp = new double[ndir];
-				for (int i = 0; i < ndir; i++) {
-					getline(f, lineA);
-					buf.str(lineA);
-					buf >> theta_temp[i];
-					buf.clear();
-				}
-
-				// Normalize amplitude spectrum if Normalize is switched on
-				double* Ampspec_temp = new double[nfreq];
-				if (normalizeA) {
-					for (int i = 0; i < nfreq; i++) {
-						Ampspec_temp[i] = ampl * Sw[i] / sum(Sw, nfreq);
-					}
-				}
-				else {
-					for (int i = 0; i < nfreq; i++) {
-						Ampspec_temp[i] = ampl * Sw[i];
-					}
-				}
-				delete[] Sw;
-
 
 				// Assign wave spreading based on specified spreading function parameters
 				D = new double[nfreq * ndir];
@@ -535,24 +540,7 @@ int read_inputdata_v2() {
 					}
 				}
 
-				// Restack frequency and direction dimentions into 1 dimentional arrays
-				w = new double[nfreq * ndir];
-				k = new double[nfreq * ndir];
-				phas = new double[nfreq * ndir];
-				Ampspec = new double[nfreq * ndir];
-				thetaA = new double[nfreq * ndir];
-
-				for (int i = 0; i < nfreq; i++) {
-					for (int j = 0; j < ndir; j++) {
-						w[i * ndir + j] = w_temp[i];
-						k[i * ndir + j] = k_temp[i];
-						Ampspec[i * ndir + j] = Ampspec_temp[i];
-						phas[i * ndir + j] = phas_temp[i];
-						thetaA[i * ndir + j] = theta_temp[j];
-
-					}
-				}
-				delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
+				
 
 			}
 			*/
@@ -1996,12 +1984,6 @@ double bilinear_interpolation(double *VAR, double xpt, double ypt) {
 }
 
 
-
-//extern "C" {
-
-// For comflow 3.9 pointer are sent. For later releases, the entire variables are sent
-
-//EXPORT double VelocityX(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {
 
@@ -2067,8 +2049,6 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 
 }
 
-//
-//EXPORT double VelocityY(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
@@ -2116,9 +2096,6 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 }
 
 
-
-//
-//EXPORT double VelocityZ(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
@@ -2167,7 +2144,6 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 
 //
 double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
-//EXPORT double DynamicPressure(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
@@ -2209,10 +2185,8 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 }
 
 //
-//EXPORT double SurfaceElevation(int& ii, int& jj, double& xpt, double& ypt, double& tpt)
 double wave_SurfElev(double xpt, double ypt, double tpt)
 {
-
 	switch (meth) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
@@ -2328,9 +2302,6 @@ int wave_Cleanup()
 	}
 	return 0;
 }
-//}
-
-
 
 // external functions used by COMFLOW
 double VelocityX(int i, int j, int kk, double xpt, double ypt, double zpt, double time) {

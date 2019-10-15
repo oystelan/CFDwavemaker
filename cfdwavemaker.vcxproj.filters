@@ -43,5 +43,8 @@
     <None Include="waveinput5.dat">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="waveinput_jonswap3.dat">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

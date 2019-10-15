@@ -1,0 +1,45 @@
+# Input to CFDwavemaker2
+
+[wave type]
+# WAVETYPE 
+irregular
+
+[general input data]
+# DEPTH  MTHETA(deg)
+100.0  0.0      
+
+[perturbation method]
+# EXTMETH PERTMET BANDWIDTH
+    2       2       1000
+
+[wave reference point]
+# for focused waves this will correspond to the focus point in time and space
+# Time(s)  x(m)  y(m)
+50.00      0.00  0.00
+
+[wave properties]
+# for irregular waves
+jonswap
+# f_min(rad) f_max(rad) N_f 
+0.01 0.6 60
+# Hs Tp Gamma
+10.0 14.0 3.0
+spreading
+# theta_min(deg) theta_max(deg) N_theta
+-45. 45. 15
+# Spread_function parameter
+cosn 4
+seed
+# integer 
+1234
+
+[grid interpolation]
+# grid used for kinematics interpolation
+# alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
+manualbox
+# XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
+-882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
+#NX NY NZ
+130 130 12
+#NXL NYL NZL
+130 130 61
