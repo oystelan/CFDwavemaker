@@ -49,8 +49,11 @@ int NX, NY, NZ, NXL, NYL, NZL;
 double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
 double fp, alpha_z, alpha_u, ramp_time, x_pos, y_pos, current_speed, wave_length, wave_height;
 
-// Stokes 5 clas
+// Stokes 5 class
 Stokes5 stokes5;
+
+// Irregular class
+Irregular irregular;
 
 //fftw_plan p;
 
@@ -246,8 +249,12 @@ int read_inputdata_v2() {
 				wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
+			if (!lineA.compare("irregular_gridded")) {
+				wavetype = 1;
+				std::cout << "Irregular perturbation wave theory specified, precalculated to a 3D grid for fast interpolation onto a fine mesh." << std::endl;
+			}
 			else if (!lineA.compare("pistonwavemaker")) {
-				wavetype = 2;
+				wavetype = 3;
 				std::cout << "Piston wave maker theory specified" << std::endl;
 			}
 			else if (!lineA.compare("spectral wave")) {
@@ -1442,15 +1449,15 @@ void initialize_kinematics(double tpt) {
 			xpt = domainsize[0] + dx*i;
 			for (int j = 0; j < NY; j++) {
 				ypt = domainsize[2] + dy*j;
-				eta_temp = waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt);
+				eta_temp = irregular.eta(tpt, xpt, ypt);
 
-				double Ux0 = uu(tpt, xpt, ypt, 0.0) + uu_2order(tpt, xpt, ypt, 0.0);
-				double Uy0 = vv(tpt, xpt, ypt, 0.0) + vv_2order(tpt, xpt, ypt, 0.0);
-				double Uz0 = ww(tpt, xpt, ypt, 0.0) + ww_2order(tpt, xpt, ypt, 0.0);
+				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
+				double Uy0 = irregular.v1(tpt, xpt, ypt, 0.0) + irregular.v2(tpt, xpt, ypt, 0.0);
+				double Uz0 = irregular.w1(tpt, xpt, ypt, 0.0) + irregular.w2(tpt, xpt, ypt, 0.0);
 
-				double PHI_dxdz = phi_dxdz(tpt, xpt, ypt);
-				double PHI_dydz = phi_dydz(tpt, xpt, ypt);
-				double PHI_dzdz = phi_dzdz(tpt, xpt, ypt);
+				double PHI_dxdz = irregular.phi1_dxdz(tpt, xpt, ypt);
+				double PHI_dydz = irregular.phi1_dydz(tpt, xpt, ypt);
+				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
 
 				for (int m = 0; m < NZ; m++) {
 					zpt = domainsize[5] + dz*m;
@@ -1465,9 +1472,9 @@ void initialize_kinematics(double tpt) {
 						UZ[i*NY*NZ + j*NZ + m] = Uz0 + PHI_dzdz*zpt;
 					}
 					else {
-						UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt);
-						UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt);
-						UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt);
+						UX[i*NY*NZ + j*NZ + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
+						UY[i*NY*NZ + j*NZ + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
+						UZ[i*NY*NZ + j*NZ + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
 					}
 					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
 					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
@@ -1496,9 +1503,9 @@ void initialize_kinematics(double tpt) {
 				ypt = domainsize[2] + dyl*j;
 				for (int m = 0; m < NZL; m++) {
 					zpt = domainsize[4] + dzl*m;
-					UXL[i*NYL*NZL + j*NZL + m] = uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt);
-					UYL[i*NYL*NZL + j*NZL + m] = vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt);
-					UZL[i*NYL*NZL + j*NZL + m] = ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt);
+					UXL[i*NYL*NZL + j*NZL + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
+					UYL[i*NYL*NZL + j*NZL + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
+					UZL[i*NYL*NZL + j*NZL + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
 				}
 			}
 		}
@@ -1535,7 +1542,7 @@ void initialize_surface_elevation(double tpt) {
 			xpt = domainsize[0] + dx*i;
 			for (int j = 0; j < NY; j++) {
 				ypt = domainsize[2] + dy*j;
-				ETA[i*NY + j] = waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt);
+				ETA[i*NY + j] = irregular.eta1(tpt, xpt, ypt) + irregular.eta2(tpt, xpt, ypt);
 			}
 		}
 	}
@@ -1630,37 +1637,13 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
-	double z;
 
 	switch (meth) {
-	// Linear wave theory, expenential profile used above free surface
+	// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
-	// Linear wave theory, constant profile used above free surface
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.u(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
+	// irregular gridded waves
 	case 2:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-	// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	// Second order wave theory, constant profile used above free surface
-	case 4:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = std::min(0., zpt);
-		if (zpt <= 0) {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
-		}
-		else {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z)) + phi_dxdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		}
-	case 6:
-		return u_piston(tpt);
-	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
 		if (initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
 			initialize_kinematics(0.0);
@@ -1683,6 +1666,14 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		else {
 			return trilinear_interpolation(UX, xpt, ypt, zpt);
 		}
+	case 3:
+		return u_piston(tpt);
+	case 4:
+		return 0.0;
+	
+	case 5:
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		
 	default:
 		return 0.0;
 	}
@@ -1694,43 +1685,43 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
-	double z;
 
 	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.v(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		// irregular gridded waves
 	case 2:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = std::min(0., zpt);
-		if (zpt <= 0) {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (initkin == 0) {
+			std::cout << "Generating kinematics for interpolation:" << std::endl;
+			initialize_kinematics(0.0);
 		}
-		else {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z)) + phi_dydz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		/*
+		// Check if coordinates are within bounding box
+		if (xpt < domainsize[0] || xpt > domainsize[1]) {
+			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
 		}
-	case 6:
-		return 0.0;
-	case 7:
-		return 0.0; // todo: implement directionality of stokes5th wave
-	case 8:
+		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
+			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
+		}
+		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
+			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
+		}
+		*/
 		if (zpt < domainsize[5]) {
 			return trilinear_interpolationL(UYL, xpt, ypt, zpt);
 		}
 		else {
 			return trilinear_interpolation(UY, xpt, ypt, zpt);
 		}
+	case 3:
+		return 0.0;
+	case 4:
+		return 0.0;
+
+	case 5:
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.v(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+
 	default:
 		return 0.0;
 	}
@@ -1741,43 +1732,43 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
-	double z;
 
 	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.w(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		// irregular gridded waves
 	case 2:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = std::min(0., zpt);
-		if (zpt <= 0) {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (initkin == 0) {
+			std::cout << "Generating kinematics for interpolation:" << std::endl;
+			initialize_kinematics(0.0);
 		}
-		else {
-			return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z)) + phi_dzdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		/*
+		// Check if coordinates are within bounding box
+		if (xpt < domainsize[0] || xpt > domainsize[1]) {
+			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
 		}
-	case 6:
-		return 0.0;
-	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.v(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
+		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
+			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
+		}
+		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
+			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
+		}
+		*/
 		if (zpt < domainsize[5]) {
 			return trilinear_interpolationL(UZL, xpt, ypt, zpt);
 		}
 		else {
 			return trilinear_interpolation(UZ, xpt, ypt, zpt);
 		}
+	case 3:
+		return 0.0;
+	case 4:
+		return 0.0;
+
+	case 5:
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.w(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+
 	default:
 		return 0.0;
 	}
@@ -1788,39 +1779,44 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
-	double z;
 
 	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
-
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.u(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		// irregular gridded waves
 	case 2:
-		z = std::min(0., zpt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-	/*
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = min(0., zpt);
-		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (initkin == 0) {
+			std::cout << "Generating kinematics for interpolation:" << std::endl;
+			initialize_kinematics(0.0);
+		}
+		/*
+		// Check if coordinates are within bounding box
+		if (xpt < domainsize[0] || xpt > domainsize[1]) {
+			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
+		}
+		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
+			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
+		}
+		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
+			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
+		}
+		*/
+		if (zpt < domainsize[5]) {
+			return trilinear_interpolationL(UXL, xpt, ypt, zpt);
 		}
 		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z)) + phi_dzdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+			return trilinear_interpolation(UX, xpt, ypt, zpt);
 		}
-	case 6:
+	case 3:
+		return u_piston(tpt);
+	case 4:
 		return 0.0;
-		*/
+
+	case 5:
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.u(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+
 	default:
-		//cout << "WARNING: HIGHER ORDER PRESSURE CALCULATION NOT YET SUPPORTED." << endl;
 		return 0.0;
 	}
 }
