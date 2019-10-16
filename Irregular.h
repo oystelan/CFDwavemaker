@@ -16,6 +16,9 @@ private:
 	double* phase;
 	double* dsum2;
 
+	double phi1_pot(double t, double xx, double yy, double zz);
+	double phi2_pot(double t, double xx, double yy, double zz);
+
 public:
 	// First order
 	double eta1(double t, double xx, double yy); // wave elevation

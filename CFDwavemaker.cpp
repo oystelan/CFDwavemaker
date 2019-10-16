@@ -1309,97 +1309,6 @@ double interp1(double *x, int x_tam, double *y, double xx)
 }
 
 
-//--------------------------------------------------------------------
-// -------------------------------------------------------------------
-//
-//  WAVEFUNCTIONS
-//
-//
-
-
-
-
-
-
-
-/* Second order component of velocity potential 
-Warning: Unsure if this is finished...should be checked thoroughly at some point*/
-double phi_pot_2order(double t, double xx, double yy, double zz) {
-	//double eta1_t = 0;
-	double phisum2 = 0;
-
-	for (int i = 0; i < nfreq - 1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adiusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-
-
-				double beta_nm_minus = D_nm_minus / (2 * k[ci] * k[cm] * (w[ci] - w[cm]));
-				double beta_nm_plus = D_nm_plus / (2 * k[ci] * k[cm] * (w[ci] + w[cm]));
-
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-					beta_nm_minus = 0.;
-				}
-
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				phisum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm]) *
-					(beta_nm_minus*cos(phi_i - phi_m)*(k[ci] * cos(thetaA[ci] + (mtheta*PI / 180.)) - k[cm] * cos(thetaA[cm] + (mtheta*PI / 180.)))*(cosh(k_nm_minus*(zz + depth)) / cosh(k_nm_minus*depth)) +
-						beta_nm_plus*cos(phi_i + phi_m)*(k[ci] * cos(thetaA[ci] + (mtheta*PI / 180.)) + k[cm] * cos(thetaA[cm] + (mtheta*PI / 180.)))*(cosh(k_nm_plus*(zz + depth)) / cosh(k_nm_plus*depth)));
-
-
-
-			}
-		}
-	}
-	return phisum2;
-}
-
-
-/*
-// First order velocity potential
-double phi_pot(double t, double xx, double yy, double zz) {
-
-	double phisum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		phisum += Ampspec[i] * D[i] * (w[i] / k[i]) * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return phisum;
-
-}
-*/
-
-
-
 /* Horizontal velocity taken directly from the timeseries*/
 double u_piston(double t) {
 	double ux = interp1(PD_time, n_timesteps, PD_velo, t);
@@ -1672,7 +1581,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 	
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		
 	default:
 		return 0.0;
@@ -1720,7 +1629,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.v(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.v(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 
 	default:
 		return 0.0;
@@ -1767,7 +1676,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.w(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.w(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 
 	default:
 		return 0.0;
@@ -1814,7 +1723,7 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.u(tpt, xpt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.u(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 
 	default:
 		return 0.0;
@@ -1828,23 +1737,9 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.eta(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 6:
-		return wave_elev_piston(tpt);
-	case 7:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.eta(tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
 		if (initsurf == 0) {
 			std::cout << "Initializing surface elevation storage:" << std::endl;
 			initialize_surface_elevation(0.0);
@@ -1855,6 +1750,14 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			//cout << xpt << " " << ypt << " " << tpt << endl;
 			return bilinear_interpolation(ETA, xpt, ypt);
 		}
+	case 3:
+		return wave_elev_piston(tpt);
+	case 4:
+		return 0.0;
+	case 5:
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.eta(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+	case 8:
+		
 	default:
 		return 0.0;
 	}
