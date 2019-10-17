@@ -1,12 +1,26 @@
 #ifndef Irregular_H
 #define Irregular_H
+
+#include <iostream>
+
 class Irregular {
 private:
+	double phi1_pot(double t, double xx, double yy, double zz);
+	double phi2_pot(double t, double xx, double yy, double zz);
+
+	double sum(double ll[], int nsum);
+
+public:
+	~Irregular() {
+		std::cout << "Irregular class destroyed." << std::endl;
+		delete[] omega, Ampspec, D, k, thetaA, phase;
+	};
+
 	// Variables
-	int nfreq, ndir, extmet, bandwidth;
+	int nfreq, ndir, extmet, bandwidth, normalize;
 	int pertmet = 0;
 	double ampl, depth, s, mtheta, tofmax, fpoint[2];
-	
+
 	// Declaration of pointers where data will be stored
 	double* omega;
 	double* Ampspec;
@@ -14,12 +28,7 @@ private:
 	double* thetaA;
 	double* D;
 	double* phase;
-	double* dsum2;
 
-	double phi1_pot(double t, double xx, double yy, double zz);
-	double phi2_pot(double t, double xx, double yy, double zz);
-
-public:
 	// First order
 	double eta1(double t, double xx, double yy); // wave elevation
 	double u1(double t, double xx, double yy, double zz); // velocity component x
@@ -44,7 +53,23 @@ public:
 	double u(double t, double x, double y, double z); 
 	double v(double t, double x, double y, double z);
 	double w(double t, double x, double y, double z);
+	double dp(double t, double x, double y, double z);
 
+	void normalize_data();
+
+	void init() {
+		ampl = 1.;
+		normalize = 0;
+		mtheta = 0.;
+		extmet = 0;
+		pertmet = 0;
+		bandwidth = 1000;
+		tofmax = 0.;
+		fpoint[0] = 0.;
+		fpoint[1] = 0.;
+	};
+
+	
 
 };
 

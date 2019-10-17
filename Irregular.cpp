@@ -57,6 +57,11 @@ double Irregular::w(double t, double x, double y, double z) {
 	}
 };
 
+double Irregular::dp(double t, double x, double y, double z) {
+	//todo: implement second order pressure component
+	return dp1(t, x, y, z);
+};
+
 /* First order wave elevation */
 double Irregular::eta1(double t, double xx, double yy) {
 
@@ -490,3 +495,28 @@ double Irregular::phi2_pot(double t, double xx, double yy, double zz) {
 	}
 	return phisum2;
 }
+
+double Irregular::sum(double ll[], int nsum) {
+	double ss = 0.0;
+	for (int i = 0; i < nsum; i++) {
+		ss += ll[i];
+	}
+	return ss;
+}
+
+void Irregular::normalize_data() {
+	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
+	double* Sw = new double[nfreq];
+	Sw = Ampspec;
+	if (normalize) {
+		for (int i = 0; i < nfreq; i++) {
+			Ampspec[i] = ampl * Sw[i] / sum(Sw, nfreq);
+		}
+	}
+	else {
+		for (int i = 0; i < nfreq; i++) {
+			Ampspec[i] = ampl * Sw[i];
+		}
+	}
+	delete[] Sw;
+};

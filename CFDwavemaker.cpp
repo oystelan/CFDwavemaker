@@ -30,24 +30,20 @@
 #include "CFDwavemaker.h" 
 #include "Stokes5.h"
 #include "Irregular.h"
+#include "Utils.h"
 
 //#include <fftw3.h>
 
-//using namespace std;
-
-double *UX;
-double *UY;
-double *UZ;
-double *UXL;
-double *UYL;
-double *UZL;
-double *ETA;
 
 // Variables
-int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
-int NX, NY, NZ, NXL, NYL, NZL;
-double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
-double fp, alpha_z, alpha_u, ramp_time, x_pos, y_pos, current_speed, wave_length, wave_height;
+//int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
+
+int n_timesteps;
+//double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
+double fp, alpha_z, alpha_u, x_pos, y_pos, current_speed, wave_length, wave_height;
+
+double depth;
+double mtheta;
 
 // Stokes 5 class
 Stokes5 stokes5;
@@ -55,9 +51,14 @@ Stokes5 stokes5;
 // Irregular class
 Irregular irregular;
 
+// Grid class
+Grid grid;
+
 //fftw_plan p;
 
 // Declaration of pointers where data will be stored
+
+/*
 double* w;
 double* Ampspec;
 double* k;
@@ -65,18 +66,21 @@ double* thetaA;
 double* D;
 double* phas;
 double* dsum2;
+*/
 double* PD_time;
 double* PD_ampl;
 double* PD_velo;
 double* PD_eta;
-double* domainsize;
+//double* domainsize;
 double* index;
 
-int initialized;
-int initsurf = 0;
-int initkin = 0;
-double dx, dy, dz, dxl, dyl, dzl;
+int wavetype;
 
+double ramp_time=0.;
+int rampswitch = 0;
+double xrampdata[3];
+double yrampdata[3];
+double trampdata[3];
 
 //#define GetCurrentDir _getcwd
 
@@ -117,13 +121,7 @@ static inline void trim(std::string& s) {
 	rtrim(s);
 }
 
-double sum(double ll[], int nsum) {
-	double ss = 0.0;
-	for (int i = 0; i < nsum; i++) {
-		ss += ll[i];
-	}
-	return ss;
-}
+
 
 int check_license()
 {
@@ -273,16 +271,8 @@ int read_inputdata_v2() {
 				std::cout << "stokes5" << std::endl;
 				//exit(1);
 			}
-			// define default values
-			ampl = 1.;
-			normalizeA = 0;
-			mtheta = 0.;
-			extmet = 0;
-			pertmet = 0;
-			bandwidth = 1000;
-			tofmax = 0.;
-			fpoint[0] = 0.;
-			fpoint[1] = 0.;
+			// set initial values for irregular wave
+			irregular.init();
 		}
 		if (!lineA.compare("[general input data]")) { //mandatory
 			getline(f, lineA);
@@ -294,25 +284,25 @@ int read_inputdata_v2() {
 		if (!lineA.compare("[normalize]")) { //optional
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> ampl;
-			buf >> normalizeA;
+			buf >> irregular.ampl;
+			buf >> irregular.normalize;
 			buf.clear();
 			
 		}
 		if (!lineA.compare("[perturbation method]")) { //optional
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> extmet;
-			buf >> pertmet;
-			buf >> bandwidth;
+			buf >> irregular.extmet;
+			buf >> irregular.pertmet;
+			buf >> irregular.bandwidth;
 			buf.clear();
 		}
 		if (!lineA.compare("[wave reference point]")) { //optional
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> tofmax;
-			buf >> fpoint[0];
-			buf >> fpoint[1];
+			buf >> irregular.tofmax;
+			buf >> irregular.fpoint[0];
+			buf >> irregular.fpoint[1];
 			buf.clear();
 		}
 		if (!lineA.compare("[ramps]")) { //optional
@@ -346,6 +336,8 @@ int read_inputdata_v2() {
 		if (!lineA.compare("[wave properties]")) {
 			// In case of irregular wave is specified
 			if (wavetype == 1) {
+				irregular.depth = depth;
+				irregular.mtheta = mtheta;
 				// Can be specified in a variety of ways.
 				// Alternatives: userdefined, userdefined1
 				// Todo: add jonswap3, jonswap5, Torsethaugen04, Torsethaugen1996, pm
@@ -358,27 +350,27 @@ int read_inputdata_v2() {
 					// read number wave components
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> nfreq;
+					buf >> irregular.nfreq;
 					buf.clear();
-					ndir = 1;
+					irregular.ndir = 1;
 
 					// Read frequency data (omega, ampltude, wavenumber, phase (rad), direction (rad))
-					w = new double[nfreq];
-					Ampspec = new double[nfreq];
-					k = new double[nfreq];
-					phas = new double[nfreq];
-					thetaA = new double[nfreq];
-					D = new double[nfreq];
-					for (int i = 0; i < nfreq; i++) {
+					irregular.omega = new double[irregular.nfreq];
+					irregular.Ampspec = new double[irregular.nfreq];
+					irregular.k = new double[irregular.nfreq];
+					irregular.phase = new double[irregular.nfreq];
+					irregular.thetaA = new double[irregular.nfreq];
+					irregular.D = new double[irregular.nfreq];
+					for (int i = 0; i < irregular.nfreq; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
-						buf >> w[i];
-						buf >> Ampspec[i];
-						buf >> k[i];
-						buf >> phas[i];
-						buf >> thetaA[i];
+						buf >> irregular.omega[i];
+						buf >> irregular.Ampspec[i];
+						buf >> irregular.k[i];
+						buf >> irregular.phase[i];
+						buf >> irregular.thetaA[i];
 						buf.clear();
-						D[i] = 1.0;
+						irregular.D[i] = 1.0;
 					}
 				}
 				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
@@ -386,16 +378,16 @@ int read_inputdata_v2() {
 					// read number of frequencies and directions
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> nfreq;
-					buf >> ndir;
+					buf >> irregular.nfreq;
+					buf >> irregular.ndir;
 					buf.clear();
 
 					// Read frequency data (omega, Sw and K)
-					double* w_temp = new double[nfreq];
-					double* Ampspec_temp = new double[nfreq];
-					double* k_temp = new double[nfreq];
-					double* phas_temp = new double[nfreq];
-					for (int i = 0; i < nfreq; i++) {
+					double* w_temp = new double[irregular.nfreq];
+					double* Ampspec_temp = new double[irregular.nfreq];
+					double* k_temp = new double[irregular.nfreq];
+					double* phas_temp = new double[irregular.nfreq];
+					for (int i = 0; i < irregular.nfreq; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
 						buf >> w_temp[i];
@@ -406,9 +398,9 @@ int read_inputdata_v2() {
 					}
 
 					// Read directional data
-					double* theta_temp = new double[ndir];
-					double* D_temp = new double[ndir];
-					for (int i = 0; i < ndir; i++) {
+					double* theta_temp = new double[irregular.ndir];
+					double* D_temp = new double[irregular.ndir];
+					for (int i = 0; i < irregular.ndir; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
 						buf >> theta_temp[i];
@@ -417,25 +409,27 @@ int read_inputdata_v2() {
 					}
 
 					// Restack frequency and direction dimentions into 1 dimentional arrays
-					w = new double[nfreq * ndir];
-					k = new double[nfreq * ndir];
-					phas = new double[nfreq * ndir];
-					Ampspec = new double[nfreq * ndir];
-					thetaA = new double[nfreq * ndir];
+					irregular.omega = new double[irregular.nfreq * irregular.ndir];
+					irregular.k = new double[irregular.nfreq * irregular.ndir];
+					irregular.phase = new double[irregular.nfreq * irregular.ndir];
+					irregular.Ampspec = new double[irregular.nfreq * irregular.ndir];
+					irregular.thetaA = new double[irregular.nfreq * irregular.ndir];
 
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							w[i * ndir + j] = w_temp[i];
-							k[i * ndir + j] = k_temp[i];
-							Ampspec[i * ndir + j] = Ampspec_temp[i]*D_temp[j];
-							phas[i * ndir + j] = phas_temp[i];
-							thetaA[i * ndir + j] = theta_temp[j];
+					for (int i = 0; i < irregular.nfreq; i++) {
+						for (int j = 0; j < irregular.ndir; j++) {
+							irregular.omega[i * irregular.ndir + j] = w_temp[i];
+							irregular.k[i * irregular.ndir + j] = k_temp[i];
+							irregular.Ampspec[i * irregular.ndir + j] = Ampspec_temp[i];
+							irregular.D[i * irregular.ndir + j] =  D_temp[j];
+							irregular.phase[i * irregular.ndir + j] = phas_temp[i];
+							irregular.thetaA[i * irregular.ndir + j] = theta_temp[j];
 
 						}
 					}
 					delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
 				}
 
+				irregular.normalize_data();
 			}
 			else {
 				std::cout << "Unknown irregular wave property specification. Alternatives are: userdefined, userdefined1 for now." << std::endl;
@@ -555,22 +549,6 @@ int read_inputdata_v2() {
 		}
 	}
 	std::cout << "Input file read successfully." << std::endl;
-
-	
-	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
-	double* Sw = new double[nfreq];
-	Sw = Ampspec;
-	if (normalizeA) {
-		for (int i = 0; i < nfreq; i++) {
-			Ampspec[i] = ampl * Sw[i] / sum(Sw, nfreq);
-		}
-	}
-	else {
-		for (int i = 0; i < nfreq; i++) {
-			Ampspec[i] = ampl * Sw[i];
-		}
-	}
-	delete[] Sw;
 
 	return 0;
 
@@ -1322,223 +1300,7 @@ double wave_elev_piston(double t) {
 }
 
 
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void initialize_kinematics(double tpt) {
-	// Allocating memory for storage of surface elevation and velocities
-	UX = new double[NX*NY*NZ];
-	UY = new double[NX*NY*NZ];
-	UZ = new double[NX*NY*NZ];
 
-	UXL = new double[NXL*NYL*NZL];
-	UYL = new double[NXL*NYL*NZL];
-	UZL = new double[NXL*NYL*NZL];
-
-	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
-
-	dx = (domainsize[1] - domainsize[0]) / double(NX-1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY-1);
-	dz = (domainsize[6] - domainsize[5]) / double(NZ-1);
-	
-	double dd = omp_get_wtime();
-
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-	#pragma omp parallel // start parallell initialization
-	{
-		#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
-
-		double xpt, ypt, zpt;
-		double eta_temp;
-
-		// Main grid
-		#pragma omp for
-		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx*i;
-			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy*j;
-				eta_temp = irregular.eta(tpt, xpt, ypt);
-
-				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
-				double Uy0 = irregular.v1(tpt, xpt, ypt, 0.0) + irregular.v2(tpt, xpt, ypt, 0.0);
-				double Uz0 = irregular.w1(tpt, xpt, ypt, 0.0) + irregular.w2(tpt, xpt, ypt, 0.0);
-
-				double PHI_dxdz = irregular.phi1_dxdz(tpt, xpt, ypt);
-				double PHI_dydz = irregular.phi1_dydz(tpt, xpt, ypt);
-				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
-
-				for (int m = 0; m < NZ; m++) {
-					zpt = domainsize[5] + dz*m;
-					if (zpt > (eta_temp + dz)) {
-						UX[i*NY*NZ + j*NZ + m] = 0.0;
-						UY[i*NY*NZ + j*NZ + m] = 0.0;
-						UZ[i*NY*NZ + j*NZ + m] = 0.0;
-					}
-					else if (zpt > 0.) {
-						UX[i*NY*NZ + j*NZ + m] = Ux0 + PHI_dxdz*zpt;
-						UY[i*NY*NZ + j*NZ + m] = Uy0 + PHI_dydz*zpt;
-						UZ[i*NY*NZ + j*NZ + m] = Uz0 + PHI_dzdz*zpt;
-					}
-					else {
-						UX[i*NY*NZ + j*NZ + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
-						UY[i*NY*NZ + j*NZ + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
-						UZ[i*NY*NZ + j*NZ + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
-					}
-					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
-					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
-					UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);*/
-				}
-			}
-		}
-	} // End parallel initialization
-
-	std::cout << "Generation of upper domain kinematics data completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-
-	dd = omp_get_wtime();
-	#pragma omp parallel // start parallel initialization
-	{
-		double xpt, ypt, zpt;
-		// Secondary grid (coarse res at depth)
-		dxl = (domainsize[1] - domainsize[0]) / double(NXL - 1);
-		dyl = (domainsize[3] - domainsize[2]) / double(NYL - 1);
-		dzl = (domainsize[5] - domainsize[4]) / double(NZL - 1);
-		#pragma omp for
-		for (int i = 0; i < NXL; i++) {
-			xpt = domainsize[0] + dxl*i;
-			for (int j = 0; j < NYL; j++) {
-				ypt = domainsize[2] + dyl*j;
-				for (int m = 0; m < NZL; m++) {
-					zpt = domainsize[4] + dzl*m;
-					UXL[i*NYL*NZL + j*NZL + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
-					UYL[i*NYL*NZL + j*NZL + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
-					UZL[i*NYL*NZL + j*NZL + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
-				}
-			}
-		}
-	} // End parallel
-	std::cout << "Generation of lower domain kinematics data completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
-	initkin = 1;
-}
-
-
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void initialize_surface_elevation(double tpt) {
-
-	// Allocating memory for storage of surface elevation and velocities
-	ETA = new double[NX*NY];
-
-	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
-
-	dx = (domainsize[1] - domainsize[0]) / double(NX - 1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY - 1);
-	
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-	#pragma omp parallel
-	{
-		double xpt, ypt;
-		// Main grid
-		#pragma omp for
-		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx*i;
-			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy*j;
-				ETA[i*NY + j] = irregular.eta1(tpt, xpt, ypt) + irregular.eta2(tpt, xpt, ypt);
-			}
-		}
-	}
-	dd = omp_get_wtime()-dd;
-
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	initsurf = 1;
-}
-
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) {
-	double nxp = std::min(double(NX), std::max(0., (xpt - domainsize[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0., (ypt - domainsize[2]) / dy));
-	double nzp = std::min(double(NZ), std::max(0., (zpt - domainsize[5]) / dz));
-
-	double C000 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + floor(nzp))];
-	double C001 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + ceil(nzp))];
-	double C010 = VAR[int(floor(nxp)*NY*NZ + ceil(nyp)*NZ + floor(nzp))];
-	double C011 = VAR[int(floor(nxp)*NY*NZ + ceil(nyp)*NZ + ceil(nzp))];
-	double C100 = VAR[int(ceil(nxp)*NY*NZ + floor(nyp)*NZ + floor(nzp))];
-	double C101 = VAR[int(ceil(nxp)*NY*NZ + floor(nyp)*NZ + ceil(nzp))];
-	double C110 = VAR[int(ceil(nxp)*NY*NZ + ceil(nyp)*NZ + floor(nzp))];
-	double C111 = VAR[int(ceil(nxp)*NY*NZ + ceil(nyp)*NZ + ceil(nzp))];
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-	double zd = nzp - floor(nzp);
-
-	double C00 = C000*(1. - xd) + C100*xd;
-	double C01 = C001*(1. - xd) + C101*xd;
-	double C10 = C010*(1. - xd) + C110*xd;
-	double C11 = C011*(1. - xd) + C111*xd;
-
-	double C0 = C00*(1. - yd) + C10*yd;
-	double C1 = C01*(1. - yd) + C11*yd;
-
-	return C0*(1. - zd) + C1*zd;
-}
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
-double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt) {
-	
-	double nxp = std::min(double(NXL), std::max(0.,(xpt - domainsize[0]) / dxl));
-	double nyp = std::min(double(NYL), std::max(0., (ypt - domainsize[2]) / dyl));
-	double nzp = std::min(double(NZL), std::max(0., (zpt - domainsize[4]) / dzl));
-
-	double C000 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + floor(nzp))];
-	double C001 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + ceil(nzp))];
-	double C010 = VAR[int(floor(nxp)*NYL*NZL + ceil(nyp)*NZL + floor(nzp))];
-	double C011 = VAR[int(floor(nxp)*NYL*NZL + ceil(nyp)*NZL + ceil(nzp))];
-	double C100 = VAR[int(ceil(nxp)*NYL*NZL + floor(nyp)*NZL + floor(nzp))];
-	double C101 = VAR[int(ceil(nxp)*NYL*NZL + floor(nyp)*NZL + ceil(nzp))];
-	double C110 = VAR[int(ceil(nxp)*NYL*NZL + ceil(nyp)*NZL + floor(nzp))];
-	double C111 = VAR[int(ceil(nxp)*NYL*NZL + ceil(nyp)*NZL + ceil(nzp))];
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-	double zd = nzp - floor(nzp);
-
-	double C00 = C000*(1. - xd) + C100*xd;
-	double C01 = C001*(1. - xd) + C101*xd;
-	double C10 = C010*(1. - xd) + C110*xd;
-	double C11 = C011*(1. - xd) + C111*xd;
-
-	double C0 = C00*(1. - yd) + C10*yd;
-	double C1 = C01*(1. - yd) + C11*yd;
-
-	return C0*(1. - zd) + C1*zd;
-}
-
-/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double bilinear_interpolation(double *VAR, double xpt, double ypt) {
-	
-	double nxp = std::min(double(NX), std::max(0.,(xpt - domainsize[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0.,(ypt - domainsize[2]) / dy));
-
-	double C00 = VAR[int(floor(nxp)*NY + floor(nyp))];
-	double C01 = VAR[int(floor(nxp)*NY + ceil(nyp))];
-	double C10 = VAR[int(ceil(nxp)*NY + floor(nyp))];
-	double C11 = VAR[int(ceil(nxp)*NY + ceil(nyp))];
-	
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-
-	double C0 = C00*(1. - xd) + C10*xd;
-	double C1 = C01*(1. - xd) + C11*xd;
-
-	return C0*(1. - yd) + C1*yd;
-}
 
 
 double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
@@ -1547,15 +1309,15 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
 
-	switch (meth) {
+	switch (wavetype) {
 	// irregular waves
 	case 1:
 		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.u(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
 	// irregular gridded waves
 	case 2:
-		if (initkin == 0) {
+		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			initialize_kinematics(0.0);
+			grid.initialize_kinematics(&irregular, 0.0);
 		}
 		/*
 		// Check if coordinates are within bounding box
@@ -1569,11 +1331,11 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UXL, xpt, ypt, zpt);
+		if (zpt < grid.domainsize[5]) {
+			return grid.trilinear_interpolationL(grid.UXL, xpt, ypt, zpt);
 		}
 		else {
-			return trilinear_interpolation(UX, xpt, ypt, zpt);
+			return grid.trilinear_interpolation(grid.UX, xpt, ypt, zpt);
 		}
 	case 3:
 		return u_piston(tpt);
@@ -1595,15 +1357,15 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
 
-	switch (meth) {
+	switch (wavetype) {
 		// irregular waves
 	case 1:
 		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.v(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 		// irregular gridded waves
 	case 2:
-		if (initkin == 0) {
+		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			initialize_kinematics(0.0);
+			grid.initialize_kinematics(&irregular,0.0);
 		}
 		/*
 		// Check if coordinates are within bounding box
@@ -1617,11 +1379,11 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UYL, xpt, ypt, zpt);
+		if (zpt < grid.domainsize[5]) {
+			return grid.trilinear_interpolationL(grid.UYL, xpt, ypt, zpt);
 		}
 		else {
-			return trilinear_interpolation(UY, xpt, ypt, zpt);
+			return grid.trilinear_interpolation(grid.UY, xpt, ypt, zpt);
 		}
 	case 3:
 		return 0.0;
@@ -1642,15 +1404,15 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
 
-	switch (meth) {
+	switch (wavetype) {
 		// irregular waves
 	case 1:
 		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.w(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 		// irregular gridded waves
 	case 2:
-		if (initkin == 0) {
+		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			initialize_kinematics(0.0);
+			grid.initialize_kinematics(&irregular, 0.0);
 		}
 		/*
 		// Check if coordinates are within bounding box
@@ -1664,11 +1426,11 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UZL, xpt, ypt, zpt);
+		if (zpt < grid.domainsize[5]) {
+			return grid.trilinear_interpolationL(grid.UZL, xpt, ypt, zpt);
 		}
 		else {
-			return trilinear_interpolation(UZ, xpt, ypt, zpt);
+			return grid.trilinear_interpolation(grid.UZ, xpt, ypt, zpt);
 		}
 	case 3:
 		return 0.0;
@@ -1689,41 +1451,20 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 	// Quickfix 07022018 To avoid issues with values below mudline
 	zpt = std::max(-depth, zpt);
 
-	switch (meth) {
+	switch (wavetype) {
 		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.u(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.dp(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
 		// irregular gridded waves
 	case 2:
-		if (initkin == 0) {
-			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			initialize_kinematics(0.0);
-		}
-		/*
-		// Check if coordinates are within bounding box
-		if (xpt < domainsize[0] || xpt > domainsize[1]) {
-			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
-		}
-		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
-			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
-		}
-		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
-			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
-		}
-		*/
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UXL, xpt, ypt, zpt);
-		}
-		else {
-			return trilinear_interpolation(UX, xpt, ypt, zpt);
-		}
+		return 0.;
 	case 3:
-		return u_piston(tpt);
+		return 0.;
 	case 4:
-		return 0.0;
+		return 0.;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.u(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return 0.0;
 
 	default:
 		return 0.0;
@@ -1733,22 +1474,22 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 //
 double wave_SurfElev(double xpt, double ypt, double tpt)
 {
-	switch (meth) {
+	switch (wavetype) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
 		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.eta(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
-		if (initsurf == 0) {
+		if (grid.initsurf == 0) {
 			std::cout << "Initializing surface elevation storage:" << std::endl;
-			initialize_surface_elevation(0.0);
-			return bilinear_interpolation(ETA, xpt, ypt);
+			grid.initialize_surface_elevation(&irregular, 0.0);
+			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
 		}
 		else {
 			//cout << "asking for surface elevation..." << endl;
 			//cout << xpt << " " << ypt << " " << tpt << endl;
-			return bilinear_interpolation(ETA, xpt, ypt);
+			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
 		}
 	case 3:
 		return wave_elev_piston(tpt);
@@ -1827,19 +1568,12 @@ int wave_Initialize()
 
 int wave_Cleanup()
 {
-	if (wavetype == 1) {
-		delete[] w, Ampspec, D, k, thetaA, phas;
-	}
-	else if (wavetype == 2) {
-		delete[] w, Ampspec, k, thetaA, phas;
-	}
-	else if (wavetype == 3) {
-		delete[] w, Ampspec, k, thetaA, phas;
-		delete[] ETA, UX, UY, UZ, index;
+	/*if (wavetype == 1) {
+		delete irregular;
 	}
 	else if (wavetype == 4) {
 		delete[] PD_time, PD_ampl, PD_velo, PD_eta;
-	}
+	}*/
 	return 0;
 }
 

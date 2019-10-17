@@ -16,11 +16,6 @@
 #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
-// Define some constants
-#define PI 3.1415926535897
-#define G 9.81
-#define RHO 1025.0
-
 // Functions available in CFDwavemaker.cpp
 #ifdef __cplusplus
 extern "C" {
@@ -34,7 +29,6 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
-	
 
 	// external functions used by COMFLOW
 	EXPORT double VelocityX(int, int, int, double, double, double, double);
