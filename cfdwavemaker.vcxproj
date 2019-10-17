@@ -121,6 +121,7 @@
   <ItemGroup>
     <None Include="waveinput.dat" />
     <None Include="waveinput2.dat" />
+    <None Include="waveinput3.dat" />
     <None Include="waveinput4.dat" />
     <None Include="waveinput5.dat" />
     <None Include="waveinput_jonswap3.dat" />

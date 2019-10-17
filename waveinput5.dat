@@ -1,0 +1,32 @@
+# Wavedata CFDwavemaker2
+
+[wave type]
+# WAVETYPE 
+# 1. irregular
+# 2. pistonwavemaker
+# 4. spectralwave
+# 5. stokes5
+stokes5
+
+[general input data]
+# mandatory
+# DEPTH  MTHETA(deg)
+76.40  0.0000   
+
+[wave properties]
+#mandatory properties for stokes wave
+# WAVE_LENGTH  WAVE_HEIGHT   
+   2           0.05          
+
+[current speed]
+# optional
+0.0
+
+[still water level]
+# optional
+0.0
+
+[wave reference point]
+# for focused waves this will correspond to the focus point in time and space
+# Time(s)  x(m)  y(m)
+0.00      0.00  0.00

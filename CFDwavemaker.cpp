@@ -431,6 +431,82 @@ int read_inputdata_v2() {
 
 				irregular.normalize_data();
 			}
+			else if (wavetype == 3) {
+				
+				// read alpha values
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> alpha_z;
+				buf >> alpha_u;
+				buf.clear();
+
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> n_timesteps;
+				//n_timesteps = stoi(lineA);
+				std::cout << "Number of timesteps: " << wavetype << std::endl;
+
+				// declare some vectors to store piston data
+				PD_time = new double[n_timesteps];
+				PD_ampl = new double[n_timesteps];
+				PD_velo = new double[n_timesteps];
+				PD_eta = new double[n_timesteps];
+
+				for (int i = 0; i < n_timesteps; i++) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> PD_time[i];
+					buf >> PD_ampl[i];
+					buf >> PD_velo[i];
+					buf >> PD_eta[i];
+					buf.clear();
+				}
+			}
+			else if (wavetype == 5) {
+			
+				// read Line 1
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wave_length;
+				buf >> wave_height;
+				buf >> depth;
+				buf >> current_speed;
+				buf >> mtheta;
+				buf >> ramp_time;
+				buf.clear();
+				if (ramp_time > 0) {
+					rampswitch = 1;
+				}
+				else {
+					rampswitch = 0;
+				}
+
+				// read Line 2
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> x_pos; // initial position of max
+				buf >> y_pos; // position of still water level
+				buf.clear();
+
+				// read Line 4
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> xrampdata[0];
+				buf >> xrampdata[1];
+				buf >> xrampdata[2];
+				buf.clear();
+
+				// read Line 5
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> yrampdata[0];
+				buf >> yrampdata[1];
+				buf >> yrampdata[2];
+				buf.clear();
+
+				// set the properties of the wave
+				stokes5.set_stokes5_properties(wave_length, wave_height, depth, x_pos, y_pos);
+			}
 			else {
 				std::cout << "Unknown irregular wave property specification. Alternatives are: userdefined, userdefined1 for now." << std::endl;
 			}
