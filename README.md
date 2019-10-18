@@ -16,6 +16,7 @@ Version2 will replace the old version as soon as tests have been carried out, bu
 New to Version 2:
 - The entire code have been restructured to make use of classes
 - previous stokes c code is now converted to a c++ class.
+
 To come:
 - a new wave spectrum class for generating waves directly from various wave spectra will soon be included.
 - a spreading function class
