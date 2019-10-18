@@ -11,3 +11,6 @@ Supported wave theories:
 outputs: 
 - surface elevation at any position (x,y)
 - velocity components
+
+The master branch is the old version of CFDwavemaker (v1)
+A new version is under development under branch "version2".
