@@ -222,3 +222,33 @@ double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
 
 	return C0 * (1. - yd) + C1 * yd;
 }
+
+// -------------------------------------------------------------------------------------------------
+// ramp class function
+// -------------------------------------------------------------------------------------------------
+
+//Define some useful functions
+/* Rampfunction */
+// NB: Not yet implemented inverse ramp
+double Ramp::ramp1d(double x, double xsign, double xstart, double xend) {
+
+	if (xsign > 0.) {
+		if (x <= xstart) {
+			return 1.0;
+		}
+		else if (x >= xend) {
+			return 0.0;
+		}
+		else {
+			return 1. - ((x - xstart) / (xend - xstart));
+		}
+	}
+	else {
+		return 1.0;
+	}
+}
+
+// Todo: implement ramps
+double Ramp::ramp(double t, double x, double y) {
+	return 0.0;
+}

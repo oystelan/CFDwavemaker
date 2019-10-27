@@ -35,6 +35,18 @@ public:
 	double bilinear_interpolation(double* VAR, double xpt, double ypt);
 
 };
+// Ramp class contains various ramp functions
+class Ramp {
+private:
+	double ramp1d(double x, double xsign, double xstart, double xend);
+public:
+	int timeramp, xramp, yramp; // logical operators for switching on and of rampfunctions
+	double time_rampup_start, time_rampup_end, time_rampdown_start, time_rampdown_end;
+	double x_rampup_start, x_rampup_end, x_rampdown_start, x_rampdown_end;
+	double y_rampup_start, y_rampup_end, y_rampdown_start, y_rampdown_end;
+
+	double ramp(double time, double x, double y);
+};
 
 
 

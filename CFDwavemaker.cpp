@@ -54,6 +54,9 @@ Irregular irregular;
 // Grid class
 Grid grid;
 
+// Ramp class
+Ramp ramp;
+
 //fftw_plan p;
 
 // Declaration of pointers where data will be stored
@@ -1280,49 +1283,6 @@ int read_inputdata()
 */
 
 
-//Define some useful functions
-/* Rampfunction */
-// NB: Not yet implemented inverse ramp
-static double ramp(double x,double xsign, double xstart, double xend) {
-
-	if (xsign > 0.){
-		if (x <= xstart) {
-			return 1.0;
-		}
-		else if (x >= xend) {
-			return 0.0;
-		}
-		else {
-			return 1. - ((x - xstart) / (xend - xstart));
-		}
-	}
-	else {
-		return 1.0;
-	}
-}
-
-
-//Define some useful functions
-/* Rampfunction */
-// NB: Not yet implemented inverse ramp
-static double timeramp(double t, double tsign, double tstart, double tend) {
-
-	if (tsign > 0.) {
-		if (t <= tstart) {
-			return 0.0;
-		}
-		else if (t >= tend) {
-			return 1.0;
-		}
-		else {
-			return ((t - tstart) / (tend - tstart));
-		}
-	}
-	else {
-		return 1.0;
-	}
-}
-
 
 // Linear interpolation function
 
@@ -1388,7 +1348,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	switch (wavetype) {
 	// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.u(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
+		return ramp.ramp(tpt,xpt,ypt)*irregular.u(tpt, xpt, ypt, zpt);
 	// irregular gridded waves
 	case 2:
 		if (grid.initkin == 0) {
@@ -1419,7 +1379,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 	
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.u(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
 		
 	default:
 		return 0.0;
@@ -1436,7 +1396,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	switch (wavetype) {
 		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.v(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
 		// irregular gridded waves
 	case 2:
 		if (grid.initkin == 0) {
@@ -1467,7 +1427,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.v(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 
 	default:
 		return 0.0;
@@ -1483,7 +1443,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	switch (wavetype) {
 		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.w(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
 		// irregular gridded waves
 	case 2:
 		if (grid.initkin == 0) {
@@ -1514,7 +1474,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return 0.0;
 
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * stokes5.w(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 
 	default:
 		return 0.0;
@@ -1530,7 +1490,7 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 	switch (wavetype) {
 		// irregular waves
 	case 1:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * irregular.dp(tpt, xpt, ypt, zpt) * timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.dp(tpt, xpt, ypt, zpt);
 		// irregular gridded waves
 	case 2:
 		return 0.;
@@ -1554,7 +1514,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*irregular.eta(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
 		if (grid.initsurf == 0) {
@@ -1572,7 +1532,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	case 4:
 		return 0.0;
 	case 5:
-		return std::min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*stokes5.eta(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
 	case 8:
 		
 	default:
