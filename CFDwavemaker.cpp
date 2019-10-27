@@ -20,7 +20,6 @@
 #include <iostream>
 #include <algorithm>
 #include <limits>
-#include <cfloat>
 #include <ctime>
 #include "omp.h"
 #include <algorithm>
@@ -31,6 +30,7 @@
 #include "Stokes5.h"
 #include "Irregular.h"
 #include "Utils.h"
+#include "Wavemaker.h"
 
 //#include <fftw3.h>
 
@@ -38,9 +38,9 @@
 // Variables
 //int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
 
-int n_timesteps;
+
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
-double fp, alpha_z, alpha_u, x_pos, y_pos, current_speed, wave_length, wave_height;
+double fp, x_pos, y_pos, current_speed, wave_length, wave_height;
 
 double depth;
 double mtheta;
@@ -50,6 +50,9 @@ Stokes5 stokes5;
 
 // Irregular class
 Irregular irregular;
+
+// Wavemaker theory class
+Wavemaker wavemaker;
 
 // Grid class
 Grid grid;
@@ -70,12 +73,9 @@ double* D;
 double* phas;
 double* dsum2;
 */
-double* PD_time;
-double* PD_ampl;
-double* PD_velo;
-double* PD_eta;
+
 //double* domainsize;
-double* index;
+//double* index;
 
 int wavetype;
 
@@ -439,29 +439,29 @@ int read_inputdata_v2() {
 				// read alpha values
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> alpha_z;
-				buf >> alpha_u;
+				buf >> wavemaker.alpha_z;
+				buf >> wavemaker.alpha_u;
 				buf.clear();
 
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> n_timesteps;
+				buf >> wavemaker.n_timesteps;
 				//n_timesteps = stoi(lineA);
 				std::cout << "Number of timesteps: " << wavetype << std::endl;
 
 				// declare some vectors to store piston data
-				PD_time = new double[n_timesteps];
-				PD_ampl = new double[n_timesteps];
-				PD_velo = new double[n_timesteps];
-				PD_eta = new double[n_timesteps];
+				wavemaker.PD_time = new double[wavemaker.n_timesteps];
+				wavemaker.PD_ampl = new double[wavemaker.n_timesteps];
+				wavemaker.PD_velo = new double[wavemaker.n_timesteps];
+				wavemaker.PD_eta = new double[wavemaker.n_timesteps];
 
-				for (int i = 0; i < n_timesteps; i++) {
+				for (int i = 0; i < wavemaker.n_timesteps; i++) {
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> PD_time[i];
-					buf >> PD_ampl[i];
-					buf >> PD_velo[i];
-					buf >> PD_eta[i];
+					buf >> wavemaker.PD_time[i];
+					buf >> wavemaker.PD_ampl[i];
+					buf >> wavemaker.PD_velo[i];
+					buf >> wavemaker.PD_eta[i];
 					buf.clear();
 				}
 			}
@@ -1284,61 +1284,6 @@ int read_inputdata()
 
 
 
-// Linear interpolation function
-
-int findNearestNeighbourIndex(double value, double *x, int len)
-{
-	double dist;
-	int idx;
-	int i;
-	idx = -1;
-	dist = DBL_MAX;
-	for (i = 0; i < len; i++) {
-		double newDist = value - x[i];
-		if (newDist >= 0 && newDist < dist) {
-			dist = newDist;
-			idx = i;
-		}
-	}
-	return idx;
-}
-double interp1(double *x, int x_tam, double *y, double xx)
-{
-	double dx, dy, slope, intercept, yy;
-	int indiceEnVector;
-
-
-	indiceEnVector = findNearestNeighbourIndex(xx, x, x_tam);
-	if (indiceEnVector != -1) {
-		dx = x[indiceEnVector + 1] - x[indiceEnVector];
-		dy = y[indiceEnVector + 1] - y[indiceEnVector];
-		slope = dy / dx;
-		intercept = y[indiceEnVector] - x[indiceEnVector] * slope;
-		yy = slope * xx + intercept;
-	}
-	else
-		yy = DBL_MAX;
-
-	return yy;
-}
-
-
-/* Horizontal velocity taken directly from the timeseries*/
-double u_piston(double t) {
-	double ux = interp1(PD_time, n_timesteps, PD_velo, t);
-
-	return ux+alpha_u*ux;
-}
-
-/* Wave elevation taken directly from piston timeseries*/
-double wave_elev_piston(double t) {
-	return alpha_z*interp1(PD_time, n_timesteps, PD_eta, t);
-}
-
-
-
-
-
 double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {
 
@@ -1374,7 +1319,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			return grid.trilinear_interpolation(grid.UX, xpt, ypt, zpt);
 		}
 	case 3:
-		return u_piston(tpt);
+		return wavemaker.u_piston(tpt);
 	case 4:
 		return 0.0;
 	
@@ -1528,7 +1473,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
 		}
 	case 3:
-		return wave_elev_piston(tpt);
+		return wavemaker.wave_elev_piston(tpt);
 	case 4:
 		return 0.0;
 	case 5:

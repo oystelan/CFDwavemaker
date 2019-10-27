@@ -111,12 +111,14 @@
     <ClCompile Include="Irregular.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="Wavemaker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="Irregular.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="Wavemaker.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="waveinput.dat" />
