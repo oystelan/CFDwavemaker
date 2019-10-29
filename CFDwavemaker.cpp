@@ -200,7 +200,7 @@ int read_inputdata_v2() {
 	std::string res;
 
 	// READ INPUT FILE AND REMOVE COMMENT LINES
-	fid.open("./wave_input_files/waveinput5.dat");
+	fid.open("./waveinput.dat");
 
 	// check one step up in the folder tree (this is used in the latest comflow version)
 	if (fid.fail()) {
@@ -506,26 +506,57 @@ int read_inputdata_v2() {
 		}
 		if (!lineA.compare("[still water level]")) { //optional
 			getline(f, lineA);
-			std::cout << "still water level [m]:" << lineA << std::endl;
+			std::cout << "still water level: " << lineA << "m" << std::endl;
 			
 			buf.str(lineA);
 			buf >> swl;
 			buf.clear();
 		}
 
-		if (!lineA.compare("[grid]")) {
-			// Nothing to be done yet
+		if (!lineA.compare("[grid interpolation]")) {
+			// Special case for fast initialization of domain
+			getline(f, lineA);
+			trim(lineA);
+			std::cout << "Grid interpolation type: " << lineA << std::endl;
+			if (!lineA.compare("manualbox2")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> grid.domainsize[0];
+				buf >> grid.domainsize[1];
+				buf >> grid.domainsize[2];
+				buf >> grid.domainsize[3];
+				buf >> grid.domainsize[4];
+				buf >> grid.domainsize[5];
+				buf >> grid.domainsize[6];
+				buf.clear();
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> grid.NX;
+				buf >> grid.NY;
+				buf >> grid.NZ;
+				buf.clear();
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> grid.NXL;
+				buf >> grid.NYL;
+				buf >> grid.NZL;
+				buf.clear();
+				wavetype = 2;
+			}
+			else if (!lineA.compare("none")) {
+				std::cout << "Grid interpolation turned off." << std::endl;
+			}
 		}
 	}
 	std::cout << "Input file read successfully." << std::endl;
 
-	if (wavetype == 1) {
+	if (wavetype == 1 || wavetype == 2) {
 		irregular.depth = depth;
 		irregular.mtheta = mtheta;
 		irregular.tofmax = tofmax;
 		irregular.fpoint[0] = x_pos;
 		irregular.fpoint[1] = y_pos;
-		irregular.z0 = swl;
+		irregular.swl = swl;
 		irregular.normalize_data();
 
 	}

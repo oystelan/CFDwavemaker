@@ -5,14 +5,12 @@
 
 class Grid {
 public:
-	// Surface grid
-	double* UX;
-	double* UY;
-	double* UZ;
-	// lower grid used in the depth, where less exciting things are happening
-	double* UXL;
-	double* UYL;
-	double* UZL;
+	// Volume grid, used for fast initialization
+	double* UX, UY, UZ, UXL, UYL, UZL;
+
+	// Wall grids, used for faster running of calculation demanding kinematics codes
+	double* UX0, UY0, UZ0, UX1, UY1, UZ1;
+
 	// Surface grid (2D)
 	double* ETA;
 

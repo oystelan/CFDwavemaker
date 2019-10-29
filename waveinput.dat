@@ -250,10 +250,10 @@ userdefined1
 [grid interpolation]
 # grid used for kinematics interpolation
 # alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
-manualbox
+manualbox2
 # XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
 -882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
 #NX NY NZ
-130 130 12
+15 15 12
 #NXL NYL NZL
-130 130 61
+15 15 6
