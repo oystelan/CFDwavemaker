@@ -230,25 +230,30 @@ double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
 //Define some useful functions
 /* Rampfunction */
 // NB: Not yet implemented inverse ramp
-double Ramp::ramp1d(double x, double xsign, double xstart, double xend) {
+double Ramp::ramp1d(double x, double xstart, double xend, double inv) {
 
-	if (xsign > 0.) {
-		if (x <= xstart) {
-			return 1.0;
-		}
-		else if (x >= xend) {
-			return 0.0;
-		}
-		else {
-			return 1. - ((x - xstart) / (xend - xstart));
-		}
+	if (inv < 0.){
+		return std::max(std::min(((x - xstart) / (xend - xstart)),1.), 0.);
 	}
 	else {
-		return 1.0;
+		return std::max(std::min(1. - ((x - xstart) / (xend - xstart)), 1.), 0.);
 	}
+}
+
+bool comp(double a, double b)
+{
+	return (a < b);
 }
 
 // Todo: implement ramps
 double Ramp::ramp(double t, double x, double y) {
-	return 0.0;
+	double ramps[6];
+	ramps[0] = ramp1d(t, time_rampup_start, time_rampup_end, 1);
+	ramps[1] = ramp1d(t, time_rampdown_start, time_rampdown_end, 1);
+	ramps[2] = ramp1d(x, x_rampup_start, x_rampup_end, 1);
+	ramps[3] = ramp1d(x, x_rampdown_start, x_rampdown_end, 1);
+	ramps[4] = ramp1d(y, y_rampup_start, y_rampup_end, 1);
+	ramps[5] = ramp1d(y, y_rampdown_start, y_rampdown_end, 1);
+	int min = *std::min_element(std::begin(ramps), std::end(ramps));
+	return ramps[min];
 }

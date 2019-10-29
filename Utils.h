@@ -38,7 +38,7 @@ public:
 // Ramp class contains various ramp functions
 class Ramp {
 private:
-	double ramp1d(double x, double xsign, double xstart, double xend);
+	double ramp1d(double x, double xstart, double xend, double inv);
 public:
 	int timeramp, xramp, yramp; // logical operators for switching on and of rampfunctions
 	double time_rampup_start, time_rampup_end, time_rampdown_start, time_rampdown_end;

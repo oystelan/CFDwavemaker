@@ -79,7 +79,7 @@ double* dsum2;
 
 int wavetype;
 
-double ramp_time=0.;
+double ramp_time = 0.;
 int rampswitch = 0;
 double xrampdata[3];
 double yrampdata[3];
@@ -511,7 +511,7 @@ int read_inputdata_v2() {
 				stokes5.set_stokes5_properties(wave_length, wave_height, depth, x_pos, y_pos);
 			}
 			else {
-				std::cout << "Unknown irregular wave property specification. Alternatives are: userdefined, userdefined1 for now." << std::endl;
+				std::cout << "Unknown wavetype specified" << std::endl;
 			}
 		}
 			
