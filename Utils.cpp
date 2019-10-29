@@ -248,13 +248,25 @@ bool comp(double a, double b)
 // Todo: implement ramps
 double Ramp::ramp(double t, double x, double y) {
 	if (ramp_init) {
-		double ramps[6];
-		ramps[0] = ramp1d(t, time_rampup_start, time_rampup_end, false);
-		ramps[1] = ramp1d(t, time_rampdown_start, time_rampdown_end, true);
-		ramps[2] = ramp1d(x, x_rampup_start, x_rampup_end, false);
-		ramps[3] = ramp1d(x, x_rampdown_start, x_rampdown_end, true);
-		ramps[4] = ramp1d(y, y_rampup_start, y_rampup_end, false);
-		ramps[5] = ramp1d(y, y_rampdown_start, y_rampdown_end, true);
+		double ramps[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+		if (ramp_init_time_up) {
+			ramps[0] = ramp1d(t, time_rampup_start, time_rampup_end, false);
+		}
+		if (ramp_init_time_down) {
+			ramps[1] = ramp1d(t, time_rampdown_start, time_rampdown_end, true);
+		}
+		if (ramp_init_x_up) {
+			ramps[2] = ramp1d(x, x_rampup_start, x_rampup_end, false);
+		}
+		if (ramp_init_x_down) {
+			ramps[3] = ramp1d(x, x_rampdown_start, x_rampdown_end, true);
+		}
+		if (ramp_init_y_up) {
+			ramps[4] = ramp1d(y, y_rampup_start, y_rampup_end, false);
+		}
+		if (ramp_init_y_down) {
+			ramps[5] = ramp1d(y, y_rampdown_start, y_rampdown_end, true);
+		}
 		int min = *std::min_element(std::begin(ramps), std::end(ramps));
 		return ramps[min];
 	}

@@ -309,36 +309,57 @@ int read_inputdata_v2() {
 			buf.clear();
 		}
 		if (!lineA.compare("[ramps]")) { //optional
+			ramp.ramp_init = true;
 			// read time ramp data
+			
+			// read time rampup
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> ramp_time;
+			buf >> ramp.ramp_init_time_up;
+			buf >> ramp.time_rampup_start;
+			buf >> ramp.time_rampup_end;;
 			buf.clear();
-			if (ramp_time > 0) {
-				rampswitch = 1;
-			}
-			else {
-				rampswitch = 0;
-			}
-			// read ramp in x direction
+			// read time rampdown
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> xrampdata[0];
-			buf >> xrampdata[1];
-			buf >> xrampdata[2];
+			buf >> ramp.ramp_init_time_down;
+			buf >> ramp.time_rampdown_start;
+			buf >> ramp.time_rampdown_end;;
 			buf.clear();
-			// read ramp in y direction
+			// read x-direction rampup
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> yrampdata[0];
-			buf >> yrampdata[1];
-			buf >> yrampdata[2];
+			buf >> ramp.ramp_init_x_up;
+			buf >> ramp.x_rampup_start;
+			buf >> ramp.x_rampup_end;;
 			buf.clear();
+			// read x-direction rampdown
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> ramp.ramp_init_x_down;
+			buf >> ramp.x_rampdown_start;
+			buf >> ramp.x_rampdown_end;;
+			buf.clear();
+			// read y-direction rampup
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> ramp.ramp_init_y_up;
+			buf >> ramp.y_rampup_start;
+			buf >> ramp.y_rampup_end;;
+			buf.clear();
+			// read y-direction rampdown
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> ramp.ramp_init_y_down;
+			buf >> ramp.y_rampdown_start;
+			buf >> ramp.y_rampdown_end;;
+			buf.clear();
+			
 		}
 		// Wave properties: this is where the wave type specific data is given
 		if (!lineA.compare("[wave properties]")) {
-			// In case of irregular wave is specified
 			if (wavetype == 1) {
+				// In case of irregular wave is specified
 				irregular.depth = depth;
 				irregular.mtheta = mtheta;
 				// Can be specified in a variety of ways.
@@ -435,7 +456,7 @@ int read_inputdata_v2() {
 				irregular.normalize_data();
 			}
 			else if (wavetype == 3) {
-				
+				// Wavemaker theory (piston)
 				// read alpha values
 				getline(f, lineA);
 				buf.str(lineA);

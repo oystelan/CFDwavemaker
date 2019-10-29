@@ -26,19 +26,26 @@ irregular
 50.00      0.00  0.00
 
 [ramps]
-#time rampup
-0.0000
-#Xramp x_start x_end
-0 5.0 5.5
-#Yramp y_start y_end
-0 10.0 11.0
+#time_rampup rampup_start rampup_end
+1            0.0000       1.0
+#time_rampdown rampdown_start rampdown_end
+0              0.0000         1.0
+#x_rampup rampup_start rampup_end
+0         -11.0000     -10.0
+#x_rampdown rampdown_start rampdown_end
+0           11.0000        12.0
+#y_rampup rampup_start rampup_end
+0         -11.0000     -10.0
+#y_rampdown rampdown_start rampdown_end
+0           11.0000        12.0
+
 
 [wave properties]
 # for irregular waves
 userdefined1
 # NFREQ
 200
-# OMEGA [rad/s] S(omega) K   Phase   theta
+# OMEGA [rad/s]    A[m]           K             Phase[rad]     theta[rad]
     0.80684460     0.09098686     0.06636591    22.09105101    -0.51238946
     0.57527858     0.08989138     0.03410555    -8.15520380    -1.01219701
     0.59315305     0.20143761     0.03615181    -8.35009702    -0.92729522

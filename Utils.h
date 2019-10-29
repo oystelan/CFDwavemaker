@@ -45,6 +45,12 @@ public:
 	double x_rampup_start, x_rampup_end, x_rampdown_start, x_rampdown_end;
 	double y_rampup_start, y_rampup_end, y_rampdown_start, y_rampdown_end;
 	bool ramp_init = false;
+	bool ramp_init_time_up = false;
+	bool ramp_init_time_down = false;
+	bool ramp_init_x_up = false;
+	bool ramp_init_x_down = false;
+	bool ramp_init_y_up = false;
+	bool ramp_init_y_down = false;
 
 	double ramp(double time, double x, double y);
 };

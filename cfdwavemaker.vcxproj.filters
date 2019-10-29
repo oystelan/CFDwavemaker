@@ -55,9 +55,6 @@
     <None Include="wave_input_files\waveinput_jonswap3.dat">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="wave_input_files\waveinput2.dat">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="wave_input_files\waveinput3.dat">
       <Filter>Resource Files</Filter>
     </None>

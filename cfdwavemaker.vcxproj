@@ -122,7 +122,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="waveinput.dat" />
-    <None Include="wave_input_files\waveinput2.dat" />
     <None Include="wave_input_files\waveinput3.dat" />
     <None Include="wave_input_files\waveinput4.dat" />
     <None Include="wave_input_files\waveinput5.dat" />
