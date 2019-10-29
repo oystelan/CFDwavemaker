@@ -2,6 +2,7 @@
 #define Irregular_H
 
 #include <iostream>
+#include "Wavespectra.h"
 
 class Irregular {
 private:
@@ -10,7 +11,21 @@ private:
 
 	double sum(double ll[], int nsum);
 
+	Wavespectra wavespec;
+
 public:
+	Irregular() {
+		ampl = 1.;
+		normalize = 0;
+		mtheta = 0.;
+		extmet = 0;
+		pertmet = 0;
+		bandwidth = 1000;
+		tofmax = 0.;
+		fpoint[0] = 0.;
+		fpoint[1] = 0.;
+	};
+
 	~Irregular() {
 		std::cout << "Irregular class destroyed." << std::endl;
 		delete[] omega, Ampspec, D, k, thetaA, phase;
@@ -57,18 +72,17 @@ public:
 
 	void normalize_data();
 
-	void init() {
-		ampl = 1.;
-		normalize = 0;
-		mtheta = 0.;
-		extmet = 0;
-		pertmet = 0;
-		bandwidth = 1000;
-		tofmax = 0.;
-		fpoint[0] = 0.;
-		fpoint[1] = 0.;
-	};
+	void allocate_arrays(int array_length) {
+		// allocate memory for storage of spectral component data
+		omega = new double[array_length];
+		k = new double[array_length];
+		phase = new double[array_length];
+		Ampspec = new double[array_length];
+		thetaA = new double[array_length];
+		D = new double[array_length];
+	}
 
+	
 	
 
 };

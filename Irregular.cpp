@@ -520,3 +520,5 @@ void Irregular::normalize_data() {
 	}
 	delete[] Sw;
 };
+
+

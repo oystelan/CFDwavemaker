@@ -245,12 +245,13 @@ int read_inputdata_v2() {
 		if (!lineA.compare("[wave type]")) {
 			getline(f, lineA);
 			trim(lineA);
+			std::cout << lineA << std::endl;
 			// check if valid wave type is given
-			if (!lineA.compare("irregular")) {
+			if (!lineA.compare("irregular") || !lineA.compare("1")) {
 				wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
-			if (!lineA.compare("irregular_gridded")) {
+			else if (!lineA.compare("irregular_gridded")) {
 				wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified, precalculated to a 3D grid for fast interpolation onto a fine mesh." << std::endl;
 			}
@@ -274,11 +275,10 @@ int read_inputdata_v2() {
 				std::cout << "stokes5" << std::endl;
 				//exit(1);
 			}
-			// set initial values for irregular wave
-			irregular.init();
 		}
 		if (!lineA.compare("[general input data]")) { //mandatory
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> depth;
 			buf >> mtheta;
@@ -286,6 +286,7 @@ int read_inputdata_v2() {
 		}
 		if (!lineA.compare("[normalize]")) { //optional
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> irregular.ampl;
 			buf >> irregular.normalize;
@@ -294,6 +295,7 @@ int read_inputdata_v2() {
 		}
 		if (!lineA.compare("[perturbation method]")) { //optional
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> irregular.extmet;
 			buf >> irregular.pertmet;
@@ -302,6 +304,7 @@ int read_inputdata_v2() {
 		}
 		if (!lineA.compare("[wave reference point]")) { //optional
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> irregular.tofmax;
 			buf >> irregular.fpoint[0];
@@ -314,6 +317,7 @@ int read_inputdata_v2() {
 			
 			// read time rampup
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_time_up;
 			buf >> ramp.time_rampup_start;
@@ -321,6 +325,7 @@ int read_inputdata_v2() {
 			buf.clear();
 			// read time rampdown
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_time_down;
 			buf >> ramp.time_rampdown_start;
@@ -328,6 +333,7 @@ int read_inputdata_v2() {
 			buf.clear();
 			// read x-direction rampup
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_x_up;
 			buf >> ramp.x_rampup_start;
@@ -335,6 +341,7 @@ int read_inputdata_v2() {
 			buf.clear();
 			// read x-direction rampdown
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_x_down;
 			buf >> ramp.x_rampdown_start;
@@ -342,6 +349,7 @@ int read_inputdata_v2() {
 			buf.clear();
 			// read y-direction rampup
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_y_up;
 			buf >> ramp.y_rampup_start;
@@ -349,6 +357,7 @@ int read_inputdata_v2() {
 			buf.clear();
 			// read y-direction rampdown
 			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
 			buf >> ramp.ramp_init_y_down;
 			buf >> ramp.y_rampdown_start;
@@ -362,31 +371,27 @@ int read_inputdata_v2() {
 				// In case of irregular wave is specified
 				irregular.depth = depth;
 				irregular.mtheta = mtheta;
-				// Can be specified in a variety of ways.
-				// Alternatives: userdefined, userdefined1
-				// Todo: add jonswap3, jonswap5, Torsethaugen04, Torsethaugen1996, pm
 				getline(f, lineA);
 				trim(lineA);
-				
+				std::cout << lineA << std::endl;
 				// User defined wave. List of frequency components given
 				// frequency, spectral ampl, wave number, phase, direction (rad)
-				if (!lineA.compare("userdefined1") == 0) {
+				if (!lineA.compare("userdefined1")) {
+					std::cout << "Irregular seas, one directional component for each frequency specified" << std::endl;
 					// read number wave components
 					getline(f, lineA);
+					std::cout << "Number of frequency components: " << lineA << std::endl;
 					buf.str(lineA);
 					buf >> irregular.nfreq;
 					buf.clear();
 					irregular.ndir = 1;
 
-					// Read frequency data (omega, ampltude, wavenumber, phase (rad), direction (rad))
-					irregular.omega = new double[irregular.nfreq];
-					irregular.Ampspec = new double[irregular.nfreq];
-					irregular.k = new double[irregular.nfreq];
-					irregular.phase = new double[irregular.nfreq];
-					irregular.thetaA = new double[irregular.nfreq];
-					irregular.D = new double[irregular.nfreq];
+					irregular.allocate_arrays(irregular.nfreq);
+
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
 					for (int i = 0; i < irregular.nfreq; i++) {
 						getline(f, lineA);
+						std::cout << lineA << std::endl;
 						buf.str(lineA);
 						buf >> irregular.omega[i];
 						buf >> irregular.Ampspec[i];
@@ -399,22 +404,27 @@ int read_inputdata_v2() {
 				}
 				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
 				else if (!lineA.compare("userdefined")) {
+					std::cout << "Irregular seas, directional spreading defined separately" << std::endl;
 					// read number of frequencies and directions
 					getline(f, lineA);
 					buf.str(lineA);
 					buf >> irregular.nfreq;
 					buf >> irregular.ndir;
 					buf.clear();
+					std::cout << "Number of frequency components: " << irregular.nfreq << std::endl;
+					std::cout << "Number of directional components: " << irregular.ndir << std::endl;
 
 					// Read frequency data (omega, Sw and K)
-					double* w_temp = new double[irregular.nfreq];
+					double* omega_temp = new double[irregular.nfreq];
 					double* Ampspec_temp = new double[irregular.nfreq];
 					double* k_temp = new double[irregular.nfreq];
 					double* phas_temp = new double[irregular.nfreq];
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]" << std::endl;
 					for (int i = 0; i < irregular.nfreq; i++) {
 						getline(f, lineA);
+						std::cout << lineA << std::endl;
 						buf.str(lineA);
-						buf >> w_temp[i];
+						buf >> omega_temp[i];
 						buf >> Ampspec_temp[i];
 						buf >> k_temp[i];
 						buf >> phas_temp[i];
@@ -424,6 +434,7 @@ int read_inputdata_v2() {
 					// Read directional data
 					double* theta_temp = new double[irregular.ndir];
 					double* D_temp = new double[irregular.ndir];
+					std::cout << "# Theta [rad] D[]" << std::endl;
 					for (int i = 0; i < irregular.ndir; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
@@ -432,16 +443,11 @@ int read_inputdata_v2() {
 						buf.clear();
 					}
 
-					// Restack frequency and direction dimentions into 1 dimentional arrays
-					irregular.omega = new double[irregular.nfreq * irregular.ndir];
-					irregular.k = new double[irregular.nfreq * irregular.ndir];
-					irregular.phase = new double[irregular.nfreq * irregular.ndir];
-					irregular.Ampspec = new double[irregular.nfreq * irregular.ndir];
-					irregular.thetaA = new double[irregular.nfreq * irregular.ndir];
+					irregular.allocate_arrays(irregular.nfreq* irregular.ndir);
 
 					for (int i = 0; i < irregular.nfreq; i++) {
 						for (int j = 0; j < irregular.ndir; j++) {
-							irregular.omega[i * irregular.ndir + j] = w_temp[i];
+							irregular.omega[i * irregular.ndir + j] = omega_temp[i];
 							irregular.k[i * irregular.ndir + j] = k_temp[i];
 							irregular.Ampspec[i * irregular.ndir + j] = Ampspec_temp[i];
 							irregular.D[i * irregular.ndir + j] =  D_temp[j];
@@ -450,7 +456,7 @@ int read_inputdata_v2() {
 
 						}
 					}
-					delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
+					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_temp;
 				}
 
 				irregular.normalize_data();
@@ -1324,7 +1330,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			return grid.trilinear_interpolation(grid.UX, xpt, ypt, zpt);
 		}
 	case 3:
-		return wavemaker.u_piston(tpt);
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 	case 4:
 		return 0.0;
 	
@@ -1464,7 +1470,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
-		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
+		return irregular.eta(tpt, xpt, ypt);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
 		if (grid.initsurf == 0) {
@@ -1478,7 +1484,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
 		}
 	case 3:
-		return wavemaker.wave_elev_piston(tpt);
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 4:
 		return 0.0;
 	case 5:
@@ -1600,4 +1606,10 @@ int Cleanup() {
 int main() {
 	//cout << GetCurrentWorkingDir() << endl;
 	read_inputdata_v2();
+	std::cout << "wave elevation: " << wave_SurfElev(0.0, 0.0, 10.5) << std::endl;
+	std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
+	std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
+	std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << irregular.Ampspec[0] << std::endl;
+
 }
