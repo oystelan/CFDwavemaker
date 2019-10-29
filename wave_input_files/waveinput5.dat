@@ -16,7 +16,7 @@ stokes5
 [wave properties]
 #mandatory properties for stokes wave
 # WAVE_LENGTH  WAVE_HEIGHT   
-   2           0.05          
+   300.           20.0          
 
 [current speed]
 # optional

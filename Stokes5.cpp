@@ -5,7 +5,7 @@
 
 
 /* Stokes 5th order waves based on Fenton's paper */
-void Stokes5::set_stokes5_properties(double _wave_length, double _wave_height, double _depth, double _x0, double _y0)
+void Stokes5::set_stokes5_properties(double _wave_length, double _wave_height)
 
 /* set minimum required coefficients to calculate stokes wave*/
 {
@@ -14,13 +14,10 @@ void Stokes5::set_stokes5_properties(double _wave_length, double _wave_height, d
 	kd = k * depth;
 	eps = k * wave_height / 2.;
 	S = 1. / cosh(2. * kd);
-
 	wave_height = _wave_height;
-	wave_length = _wave_length;
-	depth = _depth;
+	wave_length = _wave_length;	
 	kH = k * _wave_height;
-	x0 = _x0;
-	y0 = _y0;
+	calculate_stokes_coefficients();
 }
 
 /* Compute coefficients based on wave properties and depth */
@@ -67,7 +64,7 @@ double Stokes5::eta(double t, double X, double Y)
 	double keta, kx;
 
 	//kx = (k) * (X - (c) * t - (x0)); // C is case sensitive
-	kx = (k) * (cos(theta * PI / 180.)*(X - (c)*t - (x0)) + sin(theta * PI / 180.)*(Y - (c)*t - (y0))); // C is case sensitive
+	kx = (k) * (cos(theta * PI / 180.)*(X - (c)*(t -t0) - (x0)) + sin(theta * PI / 180.)*(Y - (c)*(t-t0) - (y0))); // C is case sensitive
 	keta = kd + eps * cos(kx) +
 		pow(eps, 2) * (B22) * cos(2 * kx) +
 		pow(eps, 3) * (B31) * (cos(kx) - cos(3 * kx)) +
@@ -87,7 +84,7 @@ double Stokes5::u(double t, double X, double Y, double Z)
 	double kx, ky;
 
 	//kx = (k) * (X - (c) * t - (x0));
-	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*t - (x0)) + sin(theta * PI / 180.) * (Y - (c)*t - (y0))); // C is case sensitive
+	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*(t - t0) - (x0)) + sin(theta * PI / 180.) * (Y - (c)*(t -t0) - (y0))); // C is case sensitive
 	ky = (k) * (Z + depth - (z0));
 
 	return cos(theta * PI / 180.) * (c - u_mean +
@@ -110,7 +107,7 @@ double Stokes5::v(double t, double X, double Y, double Z)
 	double  kx, ky;
 	
 	//kx = (k) * (X - (c) * t - (x0));
-	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*t - (x0)) + sin(theta * PI / 180.) * (Y - (c)*t - (y0))); // C is case sensitive
+	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*(t - t0) - (x0)) + sin(theta * PI / 180.) * (Y - (c)*(t - t0) - (y0))); // C is case sensitive
 	ky = (k) * (Z + depth - (z0));
 
 	return sin(theta*PI/180.) * (c - u_mean +
@@ -130,7 +127,7 @@ double Stokes5::w(double t, double X, double Y, double Z)
 	double kx, ky;
 	
 	//kx = (k) * (X - (c) * t - (x0));
-	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*t - (x0)) + sin(theta * PI / 180.) * (Y - (c)*t - (y0))); // C is case sensitive
+	kx = (k) * (cos(theta * PI / 180.) * (X - (c)*(t - t0) - (x0)) + sin(theta * PI / 180.) * (Y - (c)*(t - t0) - (y0))); // C is case sensitive
 	ky = (k) * (Z + depth - (z0));
 
 	return (C0) * sqrt((gravity) / pow(k, 3)) * (pow(eps, 1) * (1 * k * (A11) * sinh(1 * ky) * sin(1 * kx)) +

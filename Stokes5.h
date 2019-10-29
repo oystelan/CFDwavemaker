@@ -20,11 +20,12 @@ public:
 	double current = 0.;
 	double depth;
 	double gravity = G;
-	double x0;
-	double y0;
+	double x0 = 0.;
+	double y0 = 0.;
 	double z0 = 0.; // Still water line
+	double t0 = 0.;
 	double theta = 0.;
-	void set_stokes5_properties(double _wave_length, double _wave_height, double _depth, double _x0, double _y0);
+	void set_stokes5_properties(double _wave_length, double _wave_height);
 	double eta(double t, double X, double Y);
 	double u(double t, double X, double Y, double Z);
 	double v(double t, double X, double Y, double Z);

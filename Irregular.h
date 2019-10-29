@@ -35,6 +35,7 @@ public:
 	int nfreq, ndir, extmet, bandwidth, normalize;
 	int pertmet = 0;
 	double ampl, depth, s, mtheta, tofmax, fpoint[2];
+	double swl; // still water level
 
 	// Declaration of pointers where data will be stored
 	double* omega;

@@ -9,57 +9,57 @@
 
 double Irregular::eta(double t, double x, double y) {
 	if (pertmet == 2) {
-		return (eta1(t, x, y) + eta2(t, x, y));
+		return (swl + eta1(t, x, y) + eta2(t, x, y));
 	}
 	else {
-		return eta1(t, x, y);
+		return (swl + eta1(t, x, y));
 	}
 };
 
 double Irregular::u(double t, double x, double y, double z) {
 
 	if (pertmet == 2) {
-		int z0 = std::min(0., z);
-		return (u1(t, x, y, z) + u2(t, x, y, z) + phi1_dxdz(t, x, y) * std::max(0., z));
+		int z0 = std::min(0., z - swl);
+		return (u1(t, x, y, z0) + u2(t, x, y, z0) + phi1_dxdz(t, x, y) * std::max(0., z - swl));
 	}
 	else if (pertmet == 1) {
-		z = std::min(0., z);
+		z = std::min(0., z - swl);
 		return (u1(t, x, y, z) + u2(t, x, y, z));
 	}
 	else {
-		return u1(t, x, y, z);
+		return u1(t, x, y, z - swl);
 	}
 };
 double Irregular::v(double t, double x, double y, double z) {
 	if (pertmet == 2) {
-		int z0 = std::min(0., z);
-		return (v1(t, x, y, z) + v2(t, x, y, z) + phi1_dydz(t, x, y) * std::max(0., z));
+		int z0 = std::min(0., z - swl);
+		return (v1(t, x, y, z0) + v2(t, x, y, z0) + phi1_dydz(t, x, y) * std::max(0., z - swl));
 	}
 	else if (pertmet == 1) {
-		z = std::min(0., z);
+		z = std::min(0., z - swl);
 		return (v1(t, x, y, z) + v2(t, x, y, z));
 	}
 	else {
-		return v1(t, x, y, z);
+		return v1(t, x, y, z - swl);
 	}
 };
 double Irregular::w(double t, double x, double y, double z) {
 	if (pertmet == 2) {
-		int z0 = std::min(0., z);
-		return (w1(t, x, y, z) + w2(t, x, y, z) + phi1_dzdz(t, x, y) * std::max(0., z));
+		int z0 = std::min(0., z - swl);
+		return (w1(t, x, y, z0) + w2(t, x, y, z0) + phi1_dzdz(t, x, y) * std::max(0., z - swl));
 	}
 	else if (pertmet == 1) {
-		z = std::min(0., z);
+		z = std::min(0., z - swl);
 		return (w1(t, x, y, z) + w2(t, x, y, z));
 	}
 	else {
-		return w1(t, x, y, z);
+		return w1(t, x, y, z - swl);
 	}
 };
 
 double Irregular::dp(double t, double x, double y, double z) {
 	//todo: implement second order pressure component
-	return dp1(t, x, y, z);
+	return dp1(t, x, y, z - swl);
 };
 
 /* First order wave elevation */

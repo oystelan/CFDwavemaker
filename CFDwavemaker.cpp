@@ -11,8 +11,7 @@
 // Date: 2019-09-30
 // --------------------------------------------------------------------------------
 #include <stdio.h>
-#include <math.h>
-#include <cstdlib>
+//#include <cstdlib>
 //#include <stdlib.h>
 #include <fstream>
 #include <string>
@@ -21,7 +20,6 @@
 #include <algorithm>
 #include <limits>
 #include <ctime>
-#include "omp.h"
 #include <algorithm>
 //#include <direct.h> // windows only function
 #//include <cctype>
@@ -40,10 +38,10 @@
 
 
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
-double fp, x_pos, y_pos, current_speed, wave_length, wave_height;
-
+double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
 double depth;
 double mtheta;
+double swl = 0.;
 
 // Stokes 5 class
 Stokes5 stokes5;
@@ -78,12 +76,6 @@ double* dsum2;
 //double* index;
 
 int wavetype;
-
-double ramp_time = 0.;
-int rampswitch = 0;
-double xrampdata[3];
-double yrampdata[3];
-double trampdata[3];
 
 //#define GetCurrentDir _getcwd
 
@@ -208,7 +200,7 @@ int read_inputdata_v2() {
 	std::string res;
 
 	// READ INPUT FILE AND REMOVE COMMENT LINES
-	fid.open("./waveinput.dat");
+	fid.open("./wave_input_files/waveinput5.dat");
 
 	// check one step up in the folder tree (this is used in the latest comflow version)
 	if (fid.fail()) {
@@ -306,9 +298,9 @@ int read_inputdata_v2() {
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> irregular.tofmax;
-			buf >> irregular.fpoint[0];
-			buf >> irregular.fpoint[1];
+			buf >> tofmax;
+			buf >> x_pos;
+			buf >> y_pos;
 			buf.clear();
 		}
 		if (!lineA.compare("[ramps]")) { //optional
@@ -369,8 +361,6 @@ int read_inputdata_v2() {
 		if (!lineA.compare("[wave properties]")) {
 			if (wavetype == 1) {
 				// In case of irregular wave is specified
-				irregular.depth = depth;
-				irregular.mtheta = mtheta;
 				getline(f, lineA);
 				trim(lineA);
 				std::cout << lineA << std::endl;
@@ -434,7 +424,7 @@ int read_inputdata_v2() {
 					// Read directional data
 					double* theta_temp = new double[irregular.ndir];
 					double* D_temp = new double[irregular.ndir];
-					std::cout << "# Theta [rad] D[]" << std::endl;
+					std::cout << "# Theta [rad] D(theta)" << std::endl;
 					for (int i = 0; i < irregular.ndir; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
@@ -459,7 +449,7 @@ int read_inputdata_v2() {
 					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_temp;
 				}
 
-				irregular.normalize_data();
+				
 			}
 			else if (wavetype == 3) {
 				// Wavemaker theory (piston)
@@ -493,152 +483,63 @@ int read_inputdata_v2() {
 				}
 			}
 			else if (wavetype == 5) {
-			
-				// read Line 1
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> wave_length;
-				buf >> wave_height;
-				buf >> depth;
-				buf >> current_speed;
-				buf >> mtheta;
-				buf >> ramp_time;
-				buf.clear();
-				if (ramp_time > 0) {
-					rampswitch = 1;
-				}
-				else {
-					rampswitch = 0;
-				}
-
 				// read Line 2
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> x_pos; // initial position of max
-				buf >> y_pos; // position of still water level
+				buf >> stokes5.wave_length; // wave length
+				buf >> stokes5.wave_height;  // Wave height
 				buf.clear();
 
-				// set the properties of the wave
-				stokes5.set_stokes5_properties(wave_length, wave_height, depth, x_pos, y_pos);
 			}
 			else {
 				std::cout << "Unknown wavetype specified" << std::endl;
 			}
 		}
+
+		if (!lineA.compare("[current speed]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
+			buf.str(lineA);
+			buf >> stokes5.current;
+			buf.clear();
+		}
+		if (!lineA.compare("[still water level]")) { //optional
+			getline(f, lineA);
+			std::cout << "still water level [m]:" << lineA << std::endl;
 			
-			
-			// Types
-			// Alternatives: none (uniform), user_defined, spreading_function, spreading_function2 (single component)
-			// Spreading functions
-			// Alternatives: cosn, cos2s, uniform, user_defined
-		
-
-		/*
-		if (!lineA.compare("[wave type specific data]")) {
-
-				// read spreading function data
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> spreadfunc;
-				buf >> s;
-				buf.clear();
-
-				// Assign wave spreading based on specified spreading function parameters
-				D = new double[nfreq * ndir];
-				double dsum = 0.;
-				dsum2 = new double[nfreq];
-				if (spreadfunc == 0) { // Uniform-distribution
-					for (int i = 0; i < ndir; i++) {
-						D[i] = 1.0;
-						dsum += D[i];
-					}
-					for (int i = 0; i < ndir; i++) {
-						D[i] = D[i] / dsum;
-					}
-					// Repeat Directional distribution nfreq times
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = D[j];
-						}
-					}
-				}
-				else if (spreadfunc == 1) { // cos(theta)^s
-					for (int i = 0; i < ndir; i++) {
-						D[i] = pow(cos((theta_temp[i] - (mtheta * PI / 180.))), s);
-						dsum += D[i];
-					}
-					for (int i = 0; i < ndir; i++) {
-						D[i] = D[i] / dsum;
-					}
-					// Repeat Directional distribution nfreq times
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = D[j];
-						}
-					}
-				}
-				else if (spreadfunc == 2) { // cos(theta/2)^2s
-					for (int i = 0; i < ndir; i++) {
-						D[i] = pow(cos((theta_temp[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s);
-						dsum += D[i];
-					}
-					for (int i = 0; i < ndir; i++) {
-						D[i] = D[i] / dsum;
-					}
-					// Repeat Directional distribution nfreq times
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = D[j];
-						}
-					}
-				}
-				else if (spreadfunc == 3) { // Ewans simplified spreading function (frequency dependent spreading)
-					for (int i = 0; i < nfreq; i++) {
-						if (((w[i] / (2. * PI)) / fp) < 1.) {
-							s = 15.5 * pow((w[i] / (2. * PI)) / fp, 9.47);
-						}
-						else {
-							s = 13.1 * pow((w[i] / (2. * PI)) / fp, -1.94);
-						}
-						dsum2[i] = 0.;
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = pow(cos((theta_temp[j] - (mtheta * PI / 180.)) / 2.), 2. * s);
-							dsum2[i] += D[i * ndir + j];
-						}
-					}
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = D[i * ndir + j] / dsum2[i];
-						}
-					}
-				}
-				else if (spreadfunc == 4) { //johannessen cos(theta/2)^s special case (johannessen 1997)
-					for (int i = 0; i < ndir; i++) {
-						D[i] = pow(cos((theta_temp[i] - (mtheta * PI / 180.)) / 2.), s);
-						dsum += D[i];
-					}
-					for (int i = 0; i < ndir; i++) {
-						D[i] = D[i] / dsum;
-					}
-					// Repeat Directional distribution nfreq times
-					for (int i = 0; i < nfreq; i++) {
-						for (int j = 0; j < ndir; j++) {
-							D[i * ndir + j] = D[j];
-						}
-					}
-				}
-
-				
-
-			}
-			*/
-
+			buf.str(lineA);
+			buf >> swl;
+			buf.clear();
+		}
 
 		if (!lineA.compare("[grid]")) {
 			// Nothing to be done yet
 		}
 	}
 	std::cout << "Input file read successfully." << std::endl;
+
+	if (wavetype == 1) {
+		irregular.depth = depth;
+		irregular.mtheta = mtheta;
+		irregular.tofmax = tofmax;
+		irregular.fpoint[0] = x_pos;
+		irregular.fpoint[1] = y_pos;
+		irregular.z0 = swl;
+		irregular.normalize_data();
+
+	}
+	else if (wavetype == 5) {
+		stokes5.depth = depth;
+		stokes5.theta = mtheta;
+		stokes5.x0 = x_pos;
+		stokes5.y0 = y_pos;
+		stokes5.t0 = tofmax;
+		stokes5.z0 = swl;
+		// set the properties of the wave
+		stokes5.set_stokes5_properties(wave_length, wave_height);
+	}
+	
 
 	return 0;
 
