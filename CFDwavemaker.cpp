@@ -516,35 +516,56 @@ int read_inputdata_v2() {
 		if (!lineA.compare("[grid interpolation]")) {
 			// Special case for fast initialization of domain
 			getline(f, lineA);
-			trim(lineA);
-			std::cout << "Grid interpolation type: " << lineA << std::endl;
-			if (!lineA.compare("manualbox2")) {
+			buf.str(lineA);
+			buf >> grid.numgrids;
+			buf.clear();
+
+			for (int i = 0; i < grid.numgrids; i++) {
 				getline(f, lineA);
-				buf.str(lineA);
-				buf >> grid.domainsize[0];
-				buf >> grid.domainsize[1];
-				buf >> grid.domainsize[2];
-				buf >> grid.domainsize[3];
-				buf >> grid.domainsize[4];
-				buf >> grid.domainsize[5];
-				buf >> grid.domainsize[6];
-				buf.clear();
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> grid.NX;
-				buf >> grid.NY;
-				buf >> grid.NZ;
-				buf.clear();
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> grid.NXL;
-				buf >> grid.NYL;
-				buf >> grid.NZL;
-				buf.clear();
-				wavetype = 2;
-			}
-			else if (!lineA.compare("none")) {
-				std::cout << "Grid interpolation turned off." << std::endl;
+				trim(lineA);
+				std::cout << "Grid interpolation type: " << lineA << std::endl;
+				if (!lineA.compare("manualbox2")) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.domainsize[0];
+					buf >> grid.domainsize[1];
+					buf >> grid.domainsize[2];
+					buf >> grid.domainsize[3];
+					buf >> grid.domainsize[4];
+					buf >> grid.domainsize[5];
+					buf >> grid.domainsize[6];
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.NX;
+					buf >> grid.NY;
+					buf >> grid.NZ;
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.NXL;
+					buf >> grid.NYL;
+					buf >> grid.NZL;
+					buf.clear();
+					wavetype = 2;
+				}
+				if (!lineA.compare("manualwallx")) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.wallxsize[0];
+					buf >> grid.wallxsize[1];
+					buf >> grid.wallxsize[2];
+					buf >> grid.wallxsize[3];
+					buf >> grid.wallxsize[4];
+					buf >> grid.wallxsize[5];
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.wallx_nx;
+					buf >> grid.wallx_nz;
+					buf.clear();
+					wavetype = 2;
+				}
 			}
 		}
 	}

@@ -248,6 +248,8 @@ userdefined1
     0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
 [grid interpolation]
+#number of grids to read in
+2
 # grid used for kinematics interpolation
 # alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
 manualbox2
@@ -257,3 +259,6 @@ manualbox2
 15 15 12
 #NXL NYL NZL
 15 15 6
+# second grid, which is a wall grid used for t > 0;
+manualwall
+x

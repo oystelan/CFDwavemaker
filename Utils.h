@@ -5,24 +5,39 @@
 
 class Grid {
 public:
+	Grid() {
+
+	};
+	~Grid() {
+		delete[] UX, UY, UZ, UXL, UYL, UZL, ETA;
+		delete[] UX0, VX0, WX0, UX1, VX1, WX1;
+		delete[] UY0, VY0, WY0, UY1, VY1, WY1;
+		delete[] ETAX0, ETAX1, ETAY0, ETAY1;
+	};
 	// Volume grid, used for fast initialization
-	double* UX, UY, UZ, UXL, UYL, UZL;
+	double * UX, * UY, * UZ, * UXL, * UYL, * UZL; // 3D grids	
+	double* ETA;// Surface grid (2D)
 
+	
 	// Wall grids, used for faster running of calculation demanding kinematics codes
-	double* UX0, UY0, UZ0, UX1, UY1, UZ1;
-
-	// Surface grid (2D)
-	double* ETA;
+	double* UX0, * VX0, * WX0, * UX1, * VX1, * WX1; // X wall grid (2D)
+	double* UY0, * VY0, * WY0, * UY1, * VY1, * WY1; // Y wall grid (2D)
+	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (1D)
 
 	int NX, NY, NZ;
 	int NXL, NYL, NZL;
 
 	double domainsize[7];
+	double wallxsize[6];
+	double wallysize[6];
+	int wallx_nx, wallx_nz;
+	int wally_ny, wally_nz;
+
 	int initialized;
 	int initsurf = 0;
 	int initkin = 0;
 	double dx, dy, dz, dxl, dyl, dzl;
-
+	int numgrids;
 
 	void initialize_kinematics(Irregular* irregular, double tpt);
 	void initialize_surface_elevation(Irregular* irregular, double tpt);
