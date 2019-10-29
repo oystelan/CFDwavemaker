@@ -491,22 +491,6 @@ int read_inputdata_v2() {
 				buf >> y_pos; // position of still water level
 				buf.clear();
 
-				// read Line 4
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> xrampdata[0];
-				buf >> xrampdata[1];
-				buf >> xrampdata[2];
-				buf.clear();
-
-				// read Line 5
-				getline(f, lineA);
-				buf.str(lineA);
-				buf >> yrampdata[0];
-				buf >> yrampdata[1];
-				buf >> yrampdata[2];
-				buf.clear();
-
 				// set the properties of the wave
 				stokes5.set_stokes5_properties(wave_length, wave_height, depth, x_pos, y_pos);
 			}
