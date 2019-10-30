@@ -17,21 +17,21 @@ public:
 	// Volume grid, used for fast initialization
 	double * UX, * UY, * UZ, * UXL, * UYL, * UZL; // 3D grids	
 	double* ETA;// Surface grid (2D)
+	int NX, NY, NZ;
+	int NXL, NYL, NZL;
+	double domain_start[3], domain_end[3];
+	double domain_start_L[3], domain_end_L[3];
 
-	
 	// Wall grids, used for faster running of calculation demanding kinematics codes
 	double* UX0, * VX0, * WX0, * UX1, * VX1, * WX1; // X wall grid (2D)
 	double* UY0, * VY0, * WY0, * UY1, * VY1, * WY1; // Y wall grid (2D)
 	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (1D)
 
-	int NX, NY, NZ;
-	int NXL, NYL, NZL;
-
-	double domainsize[7];
 	double wallxsize[6];
 	double wallysize[6];
-	int wallx_nx, wallx_nz;
-	int wally_ny, wally_nz;
+	int wallx_nx, wallx_ny, wallx_nz;
+	int wally_nx, wally_ny, wally_nz;
+	double t0, t1, dt;
 
 	int initialized;
 	int initsurf = 0;
@@ -43,10 +43,15 @@ public:
 	void initialize_surface_elevation(Irregular* irregular, double tpt);
 
 	// Grid interpolation functions
-	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt);
-	double trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt);
-	double bilinear_interpolation(double* VAR, double xpt, double ypt);
+	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _nz, double _dx, double _dy, double _dz, double* domain);
+	//double trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt);
+	double bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double* domain);
 
+	// routines for extracting kinematics
+	double u(double xpt, double ypt, double zpt);
+	double v(double xpt, double ypt, double zpt);
+	double w(double xpt, double ypt, double zpt);
+	double eta(double xpt, double ypt);
 };
 // Ramp class contains various ramp functions
 class Ramp {

@@ -527,13 +527,19 @@ int read_inputdata_v2() {
 				if (!lineA.compare("manualbox2")) {
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> grid.domainsize[0];
-					buf >> grid.domainsize[1];
-					buf >> grid.domainsize[2];
-					buf >> grid.domainsize[3];
-					buf >> grid.domainsize[4];
-					buf >> grid.domainsize[5];
-					buf >> grid.domainsize[6];
+					buf >> grid.domain_start[0];
+					buf >> grid.domain_end[0];
+					buf >> grid.domain_start[1];
+					buf >> grid.domain_end[1];
+					buf >> grid.domain_start_L[2];
+					buf >> grid.domain_end_L[2];
+					buf >> grid.domain_end[2];
+					grid.domain_start[2] = grid.domain_end_L[2];
+					grid.domain_start_L[0] = grid.domain_start[0];
+					grid.domain_start_L[1] = grid.domain_start[1];
+					grid.domain_end_L[0] = grid.domain_end[0];
+					grid.domain_end_L[1] = grid.domain_end[1];
+
 					buf.clear();
 					getline(f, lineA);
 					buf.str(lineA);
@@ -562,7 +568,12 @@ int read_inputdata_v2() {
 					getline(f, lineA);
 					buf.str(lineA);
 					buf >> grid.wallx_nx;
+					buf >> grid.wallx_ny;
 					buf >> grid.wallx_nz;
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> grid.dt;
 					buf.clear();
 					wavetype = 2;
 				}
@@ -1276,12 +1287,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < grid.domainsize[5]) {
-			return grid.trilinear_interpolationL(grid.UXL, xpt, ypt, zpt);
-		}
-		else {
-			return grid.trilinear_interpolation(grid.UX, xpt, ypt, zpt);
-		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.u(xpt, ypt, zpt);
 	case 3:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 	case 4:
@@ -1324,12 +1330,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < grid.domainsize[5]) {
-			return grid.trilinear_interpolationL(grid.UYL, xpt, ypt, zpt);
-		}
-		else {
-			return grid.trilinear_interpolation(grid.UY, xpt, ypt, zpt);
-		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.v(xpt, ypt, zpt);
 	case 3:
 		return 0.0;
 	case 4:
@@ -1371,12 +1372,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
 		}
 		*/
-		if (zpt < grid.domainsize[5]) {
-			return grid.trilinear_interpolationL(grid.UZL, xpt, ypt, zpt);
-		}
-		else {
-			return grid.trilinear_interpolation(grid.UZ, xpt, ypt, zpt);
-		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.w(xpt, ypt, zpt);
 	case 3:
 		return 0.0;
 	case 4:
@@ -1423,19 +1419,14 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
-		return irregular.eta(tpt, xpt, ypt);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
 		if (grid.initsurf == 0) {
 			std::cout << "Initializing surface elevation storage:" << std::endl;
 			grid.initialize_surface_elevation(&irregular, 0.0);
-			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
 		}
-		else {
-			//cout << "asking for surface elevation..." << endl;
-			//cout << xpt << " " << ypt << " " << tpt << endl;
-			return grid.bilinear_interpolation(grid.ETA, xpt, ypt);
-		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.eta(xpt, ypt);
 	case 3:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 4:

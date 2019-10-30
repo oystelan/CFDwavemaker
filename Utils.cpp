@@ -7,6 +7,8 @@
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
+	t0 = tpt;
+	t1 = tpt;
 	// Allocating memory for storage of surface elevation and velocities
 	UX = new double[NX * NY * NZ];
 	UY = new double[NX * NY * NZ];
@@ -18,16 +20,16 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 
 	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
-	dx = (domainsize[1] - domainsize[0]) / double(NX - 1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY - 1);
-	dz = (domainsize[6] - domainsize[5]) / double(NZ - 1);
+	dx = (domain_end[0] - domain_start[0]) / double(NX - 1);
+	dy = (domain_end[1] - domain_start[1]) / double(NY - 1);
+	dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
 	omp_set_num_threads(omp_get_max_threads());
 
-#pragma omp parallel // start parallell initialization
+#pragma omp parallel // start parallel initialization
 	{
 #pragma omp master
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
@@ -38,9 +40,9 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 		// Main grid
 #pragma omp for
 		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx * i;
+			xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy * j;
+				ypt = domain_start[1] + dy * j;
 				eta_temp = irregular->eta(tpt, xpt, ypt);
 
 				double Ux0 = irregular->u1(tpt, xpt, ypt, 0.0) + irregular->u2(tpt, xpt, ypt, 0.0);
@@ -52,7 +54,7 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 				double PHI_dzdz = irregular->phi1_dzdz(tpt, xpt, ypt);
 
 				for (int m = 0; m < NZ; m++) {
-					zpt = domainsize[5] + dz * m;
+					zpt = domain_start[2] + dz * m;
 					if (zpt > (eta_temp + dz)) {
 						UX[i * NY * NZ + j * NZ + m] = 0.0;
 						UY[i * NY * NZ + j * NZ + m] = 0.0;
@@ -85,16 +87,16 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 	{
 		double xpt, ypt, zpt;
 		// Secondary grid (coarse res at depth)
-		dxl = (domainsize[1] - domainsize[0]) / double(NXL - 1);
-		dyl = (domainsize[3] - domainsize[2]) / double(NYL - 1);
-		dzl = (domainsize[5] - domainsize[4]) / double(NZL - 1);
+		dxl = (domain_end_L[0] - domain_start_L[0]) / double(NXL - 1);
+		dyl = (domain_end_L[1] - domain_start_L[1]) / double(NYL - 1);
+		dzl = (domain_end_L[2] - domain_start_L[2]) / double(NZL - 1);
 #pragma omp for
 		for (int i = 0; i < NXL; i++) {
-			xpt = domainsize[0] + dxl * i;
+			xpt = domain_start_L[0] + dxl * i;
 			for (int j = 0; j < NYL; j++) {
-				ypt = domainsize[2] + dyl * j;
+				ypt = domain_start_L[1] + dyl * j;
 				for (int m = 0; m < NZL; m++) {
-					zpt = domainsize[4] + dzl * m;
+					zpt = domain_start_L[2] + dzl * m;
 					UXL[i * NYL * NZL + j * NZL + m] = irregular->u1(tpt, xpt, ypt, zpt) + irregular->u2(tpt, xpt, ypt, zpt);
 					UYL[i * NYL * NZL + j * NZL + m] = irregular->v1(tpt, xpt, ypt, zpt) + irregular->v2(tpt, xpt, ypt, zpt);
 					UZL[i * NYL * NZL + j * NZL + m] = irregular->w1(tpt, xpt, ypt, zpt) + irregular->w2(tpt, xpt, ypt, zpt);
@@ -118,8 +120,8 @@ void Grid::initialize_surface_elevation(Irregular* irregular, double tpt) {
 
 	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
 
-	dx = (domainsize[1] - domainsize[0]) / double(NX - 1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY - 1);
+	dx = (domain_end[0] - domain_start[0]) / double(NX - 1);
+	dy = (domain_end[1] - domain_start[1]) / double(NY - 1);
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
@@ -131,9 +133,9 @@ void Grid::initialize_surface_elevation(Irregular* irregular, double tpt) {
 		// Main grid
 #pragma omp for
 		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx * i;
+			xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy * j;
+				ypt = domain_start[1] + dy * j;
 				ETA[i * NY + j] = irregular->eta1(tpt, xpt, ypt) + irregular->eta2(tpt, xpt, ypt);
 			}
 		}
@@ -146,19 +148,19 @@ void Grid::initialize_surface_elevation(Irregular* irregular, double tpt) {
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt) {
-	double nxp = std::min(double(NX), std::max(0., (xpt - domainsize[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0., (ypt - domainsize[2]) / dy));
-	double nzp = std::min(double(NZ), std::max(0., (zpt - domainsize[5]) / dz));
+double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _nz, double _dx, double _dy, double _dz, double *domain) {
+	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
+	double nyp = std::min(double(_ny), std::max(0., (ypt - domain[1]) / _dy));
+	double nzp = std::min(double(_nz), std::max(0., (zpt - domain[2]) / _dz));
 
-	double C000 = VAR[int(floor(nxp) * NY * NZ + floor(nyp) * NZ + floor(nzp))];
-	double C001 = VAR[int(floor(nxp) * NY * NZ + floor(nyp) * NZ + ceil(nzp))];
-	double C010 = VAR[int(floor(nxp) * NY * NZ + ceil(nyp) * NZ + floor(nzp))];
-	double C011 = VAR[int(floor(nxp) * NY * NZ + ceil(nyp) * NZ + ceil(nzp))];
-	double C100 = VAR[int(ceil(nxp) * NY * NZ + floor(nyp) * NZ + floor(nzp))];
-	double C101 = VAR[int(ceil(nxp) * NY * NZ + floor(nyp) * NZ + ceil(nzp))];
-	double C110 = VAR[int(ceil(nxp) * NY * NZ + ceil(nyp) * NZ + floor(nzp))];
-	double C111 = VAR[int(ceil(nxp) * NY * NZ + ceil(nyp) * NZ + ceil(nzp))];
+	double C000 = VAR[int(floor(nxp) * _ny * _nz + floor(nyp) * _nz + floor(nzp))];
+	double C001 = VAR[int(floor(nxp) * _ny * _nz + floor(nyp) * _nz + ceil(nzp))];
+	double C010 = VAR[int(floor(nxp) * _ny * _nz  + ceil(nyp) * _nz + floor(nzp))];
+	double C011 = VAR[int(floor(nxp) * _ny * _nz + ceil(nyp) * _nz + ceil(nzp))];
+	double C100 = VAR[int(ceil(nxp) * _ny * _nz + floor(nyp) * _nz + floor(nzp))];
+	double C101 = VAR[int(ceil(nxp) * _ny * _nz + floor(nyp) * _nz + ceil(nzp))];
+	double C110 = VAR[int(ceil(nxp) * _ny * _nz + ceil(nyp) * _nz + floor(nzp))];
+	double C111 = VAR[int(ceil(nxp) * _ny * _nz + ceil(nyp) * _nz + ceil(nzp))];
 	double xd = nxp - floor(nxp);
 	double yd = nyp - floor(nyp);
 	double zd = nzp - floor(nzp);
@@ -173,8 +175,10 @@ double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double
 
 	return C0 * (1. - zd) + C1 * zd;
 }
+
+
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
-double Grid::trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt) {
+/*double Grid::trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt) {
 
 	double nxp = std::min(double(NXL), std::max(0., (xpt - domainsize[0]) / dxl));
 	double nyp = std::min(double(NYL), std::max(0., (ypt - domainsize[2]) / dyl));
@@ -201,18 +205,18 @@ double Grid::trilinear_interpolationL(double* VAR, double xpt, double ypt, doubl
 	double C1 = C01 * (1. - yd) + C11 * yd;
 
 	return C0 * (1. - zd) + C1 * zd;
-}
+}*/
 
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
+double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double *domain) {
 
-	double nxp = std::min(double(NX), std::max(0., (xpt - domainsize[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0., (ypt - domainsize[2]) / dy));
+	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
+	double nyp = std::min(double(_ny), std::max(0., (ypt - domain[1]) / _dy));
 
-	double C00 = VAR[int(floor(nxp) * NY + floor(nyp))];
-	double C01 = VAR[int(floor(nxp) * NY + ceil(nyp))];
-	double C10 = VAR[int(ceil(nxp) * NY + floor(nyp))];
-	double C11 = VAR[int(ceil(nxp) * NY + ceil(nyp))];
+	double C00 = VAR[int(floor(nxp) * _ny + floor(nyp))];
+	double C01 = VAR[int(floor(nxp) * _ny + ceil(nyp))];
+	double C10 = VAR[int(ceil(nxp) * _ny + floor(nyp))];
+	double C11 = VAR[int(ceil(nxp) * _ny + ceil(nyp))];
 
 	double xd = nxp - floor(nxp);
 	double yd = nyp - floor(nyp);
@@ -222,6 +226,41 @@ double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
 
 	return C0 * (1. - yd) + C1 * yd;
 }
+
+
+double Grid::u(double xpt, double ypt, double zpt) {
+	if (zpt < domain_start[2]) {
+		return trilinear_interpolation(UXL, xpt, ypt, zpt, NXL, NYL, NZL, dxl, dyl, dzl, domain_start_L);
+	}
+	else {
+		return trilinear_interpolation(UX, xpt, ypt, zpt, NX, NY, NZL, dx, dy, dz, domain_start);
+	}
+}
+
+double Grid::v(double xpt, double ypt, double zpt) {
+	if (zpt < domain_start[2]) {
+		return trilinear_interpolation(UYL, xpt, ypt, zpt, NXL, NYL, NZL, dxl, dyl, dzl, domain_start_L);
+	}
+	else {
+		return trilinear_interpolation(UY, xpt, ypt, zpt, NX, NY, NZL, dx, dy, dz, domain_start);
+	}
+}
+
+double Grid::w(double xpt, double ypt, double zpt) {
+	if (zpt < domain_start[2]) {
+		return trilinear_interpolation(UZL, xpt, ypt, zpt, NXL, NYL, NZL, dxl, dyl, dzl, domain_start_L);
+	}
+	else {
+		return trilinear_interpolation(UZ, xpt, ypt, zpt, NX, NY, NZL, dx, dy, dz, domain_start);
+	}
+}
+
+double Grid::eta(double xpt, double ypt) {
+	return bilinear_interpolation(UZ, xpt, ypt, NX, NY, dx, dy, domain_start);
+}
+
+
+
 
 // -------------------------------------------------------------------------------------------------
 // ramp class function
