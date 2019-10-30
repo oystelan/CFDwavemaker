@@ -1,7 +1,7 @@
 #ifndef Utils_H
 #define Utils_H
 
-#include "irregular.h"
+#include "Irregular.h"
 
 class Grid {
 public:

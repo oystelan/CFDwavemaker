@@ -3,7 +3,7 @@
 #include "omp.h"
 #include <algorithm>
 #include <iostream>
-
+#include <cmath>
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void Grid::initialize_kinematics(Irregular *irregular, double tpt) {

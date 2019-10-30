@@ -161,10 +161,10 @@ int check_license()
       //time(&t)
       now = localtime(&t);
 
-    	cout << (now->tm_year + 1900) << '-'
+      std::cout << (now->tm_year + 1900) << '-'
     		<< (now->tm_mon + 1) << '-'
     		<< now->tm_mday
-    		<< endl;
+    		<< std::endl;
     	if ((now->tm_year + 1900) > expyear) {
     		licensecheck = 0;
     	}

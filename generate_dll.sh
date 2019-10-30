@@ -3,11 +3,11 @@
 
 export LIBRARY_PATH=/usr/lib64
 
-gcc -fPIC -pthread -std=c99 -O2 -c  Stokes5.c
-g++ -fPIC -pthread -std=c++11 -O2 -c  CFDwavemaker.cpp
+#gcc -fPIC -pthread -std=c99 -O2 -c  Stokes5.c
+g++ -fPIC -pthread -std=c++11 -O2 -c  CFDwavemaker.cpp Stokes5.cpp Wavespectra.cpp Utils.cpp Irregular.cpp Wavemaker.cpp
 
 #g++ -L/usr/lib64 -shared -pthread -o comflow_wavemaker.so wavemaker.o
-g++ -L/usr/lib64 -shared -pthread -o CFDwavemaker.so CFDwavemaker.o Stokes5.o
+g++ -L/usr/lib64 -shared -pthread -o CFDwavemaker.so CFDwavemaker.o Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o
 #g++ -L/usr/lib64  -pthread -o CFDwavemaker.a CFDwavemaker.o Stokes5.o
 #ar rvs CFDwavemaker.a CFDwavemaker.o Stokes5.o
 
