@@ -1275,18 +1275,6 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
 			grid.initialize_kinematics(&irregular, 0.0);
 		}
-		/*
-		// Check if coordinates are within bounding box
-		if (xpt < domainsize[0] || xpt > domainsize[1]) {
-			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
-		}
-		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
-			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
-		}
-		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
-			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
-		}
-		*/
 		return ramp.ramp(tpt, xpt, ypt) * grid.u(xpt, ypt, zpt);
 	case 3:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
@@ -1318,18 +1306,6 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
 			grid.initialize_kinematics(&irregular,0.0);
 		}
-		/*
-		// Check if coordinates are within bounding box
-		if (xpt < domainsize[0] || xpt > domainsize[1]) {
-			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
-		}
-		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
-			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
-		}
-		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
-			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
-		}
-		*/
 		return ramp.ramp(tpt, xpt, ypt) * grid.v(xpt, ypt, zpt);
 	case 3:
 		return 0.0;
@@ -1360,18 +1336,6 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
 			grid.initialize_kinematics(&irregular, 0.0);
 		}
-		/*
-		// Check if coordinates are within bounding box
-		if (xpt < domainsize[0] || xpt > domainsize[1]) {
-			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
-		}
-		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
-			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
-		}
-		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
-			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
-		}
-		*/
 		return ramp.ramp(tpt, xpt, ypt) * grid.w(xpt, ypt, zpt);
 	case 3:
 		return 0.0;

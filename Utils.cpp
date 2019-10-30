@@ -256,7 +256,7 @@ double Grid::w(double xpt, double ypt, double zpt) {
 }
 
 double Grid::eta(double xpt, double ypt) {
-	return bilinear_interpolation(UZ, xpt, ypt, NX, NY, dx, dy, domain_start);
+	return bilinear_interpolation(ETA, xpt, ypt, NX, NY, dx, dy, domain_start);
 }
 
 
