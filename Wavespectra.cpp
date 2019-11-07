@@ -6,10 +6,6 @@
 #define PI 3.1415926535897
 #endif
 
-void Wavespectra::jonswap3(double* S, double* omega, double hs, double tp, double gamma) {
-
-}
-
 double Wavespectra::gamma(double f, double Gamma, bool gg) {
 	// -------------------------------------------------------------------------
 	// Returns a Gamma spectrum for given omega, Hs, Tp, and Gamma
@@ -89,7 +85,7 @@ void Wavespectra::torsethaugen2004(double* S, double* omega, int nfreq, double h
 			double fn2 = f * Tpw2;
 			double gamma_w2 = 1;
 
-			S[i] = (1.0 / 16) * pow(Hw1, 2) * Tpw1 * gamma(fn1, gamma_w1, true) + (1.0 / 16) * pow(Hw2, 2) * Tpw2 * gamma(fn2, gamma_w2, false);
+			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hw1, 2) * Tpw1 * gamma(fn1, gamma_w1, true) + (1.0 / 16) * pow(Hw2, 2) * Tpw2 * gamma(fn2, gamma_w2, false);
 		}
 		else {
 			// SWELL DRIVEN SEA
@@ -105,7 +101,8 @@ void Wavespectra::torsethaugen2004(double* S, double* omega, int nfreq, double h
 			double Tps2 = af * pow(Hs2, (1.0 / 3));
 			double fn2 = f * Tps2;
 			double gamma_s2 = 1;
-			S[i] = (1.0 / 16) * pow(Hs1, 2) * Tps1 * gamma(fn1, gamma_s1, true) + (1.0 / 16) * pow(Hs2, 2) * Tps2 * gamma(fn2, gamma_s2, false);
+
+			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hs1, 2) * Tps1 * gamma(fn1, gamma_s1, true) + (1.0 / 16) * pow(Hs2, 2) * Tps2 * gamma(fn2, gamma_s2, false);
 
 		}
 	}
@@ -114,7 +111,26 @@ void Wavespectra::torsethaugen1996(double* S, double* omega, double hs, double t
 
 }
 
-void Wavespectra::PM(double* S, double* omega, double hs, double tp) {
+void Wavespectra::PM(double* S, double* omega, int nfreq, double hs, double tp) {
+	// The Pierson-Moskowitz spectrum (Ref. DNVGL-RP-C205, Oct 2019)
+	double omega_p = (2. * PI) / tp;
+	for (int i = 0; i < nfreq; i++) {
+		S[i] = (5. / 16.) * pow(hs, 2.) * pow(omega_p, 4.) * pow(omega[i], -5.) * exp((-5. / 4.) * pow(omega[i] / omega_p, -4.));
+	}
+}
+void Wavespectra::jonswap3(double* S, double* omega, int nfreq, double hs, double tp, double gam) {
+	// JONSWAP wave spectrum (Ref. DNVGL-RP-C205, oct 2019)
+	double omega_p = (2. * PI) / tp;
+	for (int i = 0; i < nfreq; i++) {
+		double S_pm = (5. / 16.) * pow(hs, 2.) * pow(omega_p, 4.) * pow(omega[i], -5.) * exp((-5. / 4.) * pow(omega[i] / omega_p, -4.));
+		
+		double A_gamma = 0.2 / (0.065 * pow(gam, 0.803) + 0.135);
+		double sigma = 0.09;
+		if (omega[i] <= omega_p) {
+			sigma = 0.07;
+		}
+		S[i] = A_gamma * S_pm * pow(gam, exp(-0.5 * pow((omega[i] - omega_p) / (sigma * omega_p), 2)));
+	}
 
 }
 
@@ -142,7 +158,7 @@ void Wavespectra::spreading_cos_theta_n(double* D, int nfreq, int ndir, double s
 	double dsum = 0.;
 
 	for (int i = 0; i < ndir; i++) {
-		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.))), s);
+		D[i] = sqrt(pow(cos((theta[i] - (mtheta * PI / 180.))), s));
 		dsum += D[i];
 	}
 	for (int i = 0; i < ndir; i++) {
@@ -162,7 +178,7 @@ void Wavespectra::spreading_cos_theta05_2s(double* D, int nfreq, int ndir, doubl
 	double dsum = 0.;
 	
 	for (int i = 0; i < ndir; i++) {
-		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s);
+		D[i] = sqrt(pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s));
 		dsum += D[i];
 	}
 	for (int i = 0; i < ndir; i++) {
@@ -192,7 +208,7 @@ void Wavespectra::spreading_ewans(double* D, int nfreq, int ndir, double mtheta,
 		}
 		dsum2[i] = 0.;
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s);
+			D[i * ndir + j] = sqrt(pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s));
 			dsum2[i] += D[i * ndir + j];
 		}
 	}
