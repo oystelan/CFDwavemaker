@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Wavespectra.h"
 
+
 class Irregular {
 private:
 	double phi1_pot(double t, double xx, double yy, double zz);
@@ -28,21 +29,20 @@ public:
 
 	~Irregular() {
 		std::cout << "Irregular class destroyed." << std::endl;
-		delete[] omega, Ampspec, D, k, thetaA, phase;
+		delete[] omega, A, k, theta, phase;
 	};
 
 	// Variables
 	int nfreq, ndir, extmet, bandwidth, normalize;
 	int pertmet = 0;
-	double ampl, depth, s, mtheta, tofmax, fpoint[2];
+	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl; // still water level
 
 	// Declaration of pointers where data will be stored
 	double* omega;
-	double* Ampspec;
+	double* A;
 	double* k;
-	double* thetaA;
-	double* D;
+	double* theta;
 	double* phase;
 
 	// First order
@@ -78,14 +78,9 @@ public:
 		omega = new double[array_length];
 		k = new double[array_length];
 		phase = new double[array_length];
-		Ampspec = new double[array_length];
-		thetaA = new double[array_length];
-		D = new double[array_length];
-	}
-
-	
-	
-
+		A = new double[array_length];
+		theta = new double[array_length];
+	}	
 };
 
 #endif

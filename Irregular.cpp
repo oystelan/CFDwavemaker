@@ -71,8 +71,8 @@ double Irregular::eta1(double t, double xx, double yy) {
 	for (int i = 0; i < ndir * nfreq; i++) {
 
 		phi = omega[i] * tofmax + phase[i];
-		welev += Ampspec[i] * D[i] * cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
-			+ sin(thetaA[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
+		welev += A[i] * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
+			+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
 
@@ -90,13 +90,13 @@ double Irregular::eta2(double t, double xx, double yy) {
 		for (int j = 0; j < ndir; j++) {
 			// Second order
 			int ci = i * ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[ci] 
+			double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] 
 				+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
+				double gamma_nm = cos(theta[ci] - theta[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2. * k[ci] * k[cm] * gamma_nm));
 				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2. * k[ci] * k[cm] * gamma_nm));
 
@@ -116,10 +116,10 @@ double Irregular::eta2(double t, double xx, double yy) {
 				double alpha_nm_plus = (((omega[ci] / omega[cm]) + (omega[cm] / omega[ci])) + (G * G / (omega[ci] * omega[cm])) *
 					((D_nm_plus - k[ci] * k[cm] * (gamma_nm - tanh(k[ci] * depth) * tanh(k[cm] * depth))) / (omega[ci] * omega[cm])));
 
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[cm] + 
+				double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] + 
 					(mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
-				eta2_t += ((Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * omega[ci] * omega[cm]) / (2. * G)) * (alpha_nm_minus * cos(phi_i - phi_m) + alpha_nm_plus * cos(phi_i + phi_m));
+				eta2_t += ((A[ci] * A[cm] * omega[ci] * omega[cm]) / (2. * G)) * (alpha_nm_minus * cos(phi_i - phi_m) + alpha_nm_plus * cos(phi_i + phi_m));
 			}
 		}
 	}
@@ -136,9 +136,9 @@ double Irregular::u1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		usum += cos(thetaA[i] + (mtheta * PI / 180.)) * Ampspec[i] * D[i] * omega[i] * (cosh(k[i]
-			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) 
-				* (xx - fpoint[0]) + sin(thetaA[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
+		usum += cos(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * (cosh(k[i]
+			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) 
+				* (xx - fpoint[0]) + sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
 	return usum;
@@ -154,9 +154,9 @@ double Irregular::v1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		vsum += sin(thetaA[i] + (mtheta * PI / 180.)) * Ampspec[i] * D[i] * omega[i] * (cosh(k[i] 
-			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
-				+ sin(thetaA[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
+		vsum += sin(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * (cosh(k[i] 
+			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
+				+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
 	return vsum;
@@ -172,8 +172,8 @@ double Irregular::w1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		wsum += D[i] * Ampspec[i] * omega[i] * (sinh(k[i] * (zz + depth)) / sinh(k[i] * depth)) 
-			* sin(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[i] + (mtheta 
+		wsum += A[i] * omega[i] * (sinh(k[i] * (zz + depth)) / sinh(k[i] * depth)) 
+			* sin(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] + (mtheta 
 				* PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
@@ -193,7 +193,7 @@ double Irregular::u2(double t, double xx, double yy, double zz) {
 		for (int j = 0; j < ndir; j++) {
 			// Second order
 			int ci = i * ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[ci] +
+			double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] +
 				(mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			//cout << "Rn: " << Rn << endl;
@@ -205,7 +205,7 @@ double Irregular::u2(double t, double xx, double yy, double zz) {
 			//else { p = nfreqs; }
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
+				double gamma_nm = cos(theta[ci] - theta[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2. * k[ci] * k[cm] * gamma_nm));
 				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2. * k[ci] * k[cm] * gamma_nm));
 
@@ -227,11 +227,11 @@ double Irregular::u2(double t, double xx, double yy, double zz) {
 					beta_nm_minus = 0.;
 				}
 
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
+				double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
-				usum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * omega[ci] * omega[cm]) *
-					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * cos(thetaA[ci] + (mtheta * PI / 180.)) - k[cm] * cos(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
-						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * cos(thetaA[ci] + (mtheta * PI / 180.)) + k[cm] * cos(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
+				usum2 += (A[ci] * A[cm] * omega[ci] * omega[cm]) *
+					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * cos(theta[ci] + (mtheta * PI / 180.)) - k[cm] * cos(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
+						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * cos(theta[ci] + (mtheta * PI / 180.)) + k[cm] * cos(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
 
 
 
@@ -252,7 +252,7 @@ double Irregular::v2(double t, double xx, double yy, double zz) {
 		for (int j = 0; j < ndir; j++) {
 			// Second order
 			int ci = i * ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
+			double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			//cout << "Rn: " << Rn << endl;
 
@@ -263,7 +263,7 @@ double Irregular::v2(double t, double xx, double yy, double zz) {
 			//else { p = nfreqs; }
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
+				double gamma_nm = cos(theta[ci] - theta[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2. * k[ci] * k[cm] * gamma_nm));
 				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2. * k[ci] * k[cm] * gamma_nm));
 
@@ -284,11 +284,11 @@ double Irregular::v2(double t, double xx, double yy, double zz) {
 					D_nm_minus = 0.;
 					beta_nm_minus = 0.;
 				}
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
+				double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
-				vsum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * omega[ci] * omega[cm]) *
-					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * sin(thetaA[ci] + (mtheta * PI / 180.)) - k[cm] * sin(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
-						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * sin(thetaA[ci] + (mtheta * PI / 180.)) + k[cm] * sin(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
+				vsum2 += (A[ci] * A[cm] * omega[ci] * omega[cm]) *
+					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * sin(theta[ci] + (mtheta * PI / 180.)) - k[cm] * sin(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
+						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * sin(theta[ci] + (mtheta * PI / 180.)) + k[cm] * sin(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
 
 
 
@@ -308,7 +308,7 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 		for (int j = 0; j < ndir; j++) {
 			// Second order
 			int ci = i * ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
+			double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			//cout << "Rn: " << Rn << endl;
 
@@ -319,7 +319,7 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 			//else { p = nfreqs; }
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
+				double gamma_nm = cos(theta[ci] - theta[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2. * k[ci] * k[cm] * gamma_nm));
 				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2. * k[ci] * k[cm] * gamma_nm));
 
@@ -340,9 +340,9 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 					beta_nm_minus = 0.;
 				}
 
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
+				double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
-				wsum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * omega[ci] * omega[cm]) *
+				wsum2 += (A[ci] * A[cm] * omega[ci] * omega[cm]) *
 					(beta_nm_minus * k_nm_minus * sin(phi_i - phi_m) * (sinh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
 						beta_nm_plus * k_nm_plus * sin(phi_i + phi_m) * (sinh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
 
@@ -361,8 +361,8 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 
 		for (int i = 0; i < ndir * nfreq; i++) {
 			phi = omega[i] * tofmax + phase[i];
-			psum += Ampspec[i] * D[i] * RHO * G * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth)) 
-				* cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[i] 
+			psum += A[i] * RHO * G * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth)) 
+				* cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] 
 					+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 		}
 
@@ -378,8 +378,8 @@ double Irregular::phi1_dxdz(double t, double xx, double yy) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		usum += cos(thetaA[i] + (mtheta * PI / 180.)) * Ampspec[i] * D[i] * omega[i] * k[i] 
-			* cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[i] 
+		usum += cos(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * k[i] 
+			* cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] 
 				+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 	return usum;
@@ -395,8 +395,8 @@ double Irregular::phi1_dydz(double t, double xx, double yy) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		vsum += sin(thetaA[i] + (mtheta * PI / 180.)) * Ampspec[i] * D[i] * omega[i] * k[i] 
-			* cos(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[i] 
+		vsum += sin(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * k[i] 
+			* cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] 
 				+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 	return vsum;
@@ -412,9 +412,9 @@ double Irregular::phi1_dzdz(double t, double xx, double yy) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		wsum += D[i] * Ampspec[i] * omega[i] * k[i] * (cosh(k[i] * depth) / sinh(k[i] 
-			* depth)) * sin(k[i] * (cos(thetaA[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
-				+ sin(thetaA[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
+		wsum += A[i] * omega[i] * k[i] * (cosh(k[i] * depth) / sinh(k[i] 
+			* depth)) * sin(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
+				+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 	return wsum;
 
@@ -431,7 +431,7 @@ double Irregular::phi1_pot(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i< ndir*nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		phisum += Ampspec[i] * D[i] * (omega[i] / k[i]) * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - omega[i] * t + phi);
+		phisum += A[i] * (omega[i] / k[i]) * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(theta[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(theta[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
 	return phisum;
@@ -449,7 +449,7 @@ double Irregular::phi2_pot(double t, double xx, double yy, double zz) {
 		for (int j = 0; j < ndir; j++) {
 			// Second order
 			int ci = i * ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
+			double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			//cout << "Rn: " << Rn << endl;
 
@@ -460,7 +460,7 @@ double Irregular::phi2_pot(double t, double xx, double yy, double zz) {
 			//else { p = nfreqs; }
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
+				double gamma_nm = cos(theta[ci] - theta[cm]);
 				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2. * k[ci] * k[cm] * gamma_nm));
 				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2. * k[ci] * k[cm] * gamma_nm));
 
@@ -482,11 +482,11 @@ double Irregular::phi2_pot(double t, double xx, double yy, double zz) {
 					beta_nm_minus = 0.;
 				}
 
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(thetaA[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
+				double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
-				phisum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * omega[ci] * omega[cm]) *
-					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * cos(thetaA[ci] + (mtheta * PI / 180.)) - k[cm] * cos(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
-						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * cos(thetaA[ci] + (mtheta * PI / 180.)) + k[cm] * cos(thetaA[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
+				phisum2 += (A[ci] * A[cm] * omega[ci] * omega[cm]) *
+					(beta_nm_minus * cos(phi_i - phi_m) * (k[ci] * cos(theta[ci] + (mtheta * PI / 180.)) - k[cm] * cos(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_minus * (zz + depth)) / cosh(k_nm_minus * depth)) +
+						beta_nm_plus * cos(phi_i + phi_m) * (k[ci] * cos(theta[ci] + (mtheta * PI / 180.)) + k[cm] * cos(theta[cm] + (mtheta * PI / 180.))) * (cosh(k_nm_plus * (zz + depth)) / cosh(k_nm_plus * depth)));
 
 
 
@@ -507,15 +507,15 @@ double Irregular::sum(double ll[], int nsum) {
 void Irregular::normalize_data() {
 	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
 	double* Sw = new double[nfreq];
-	Sw = Ampspec;
+	Sw = A;
 	if (normalize) {
 		for (int i = 0; i < nfreq; i++) {
-			Ampspec[i] = ampl * Sw[i] / sum(Sw, nfreq);
+			A[i] = ampl * Sw[i] / sum(Sw, nfreq);
 		}
 	}
 	else {
 		for (int i = 0; i < nfreq; i++) {
-			Ampspec[i] = ampl * Sw[i];
+			A[i] = ampl * Sw[i];
 		}
 	}
 	delete[] Sw;

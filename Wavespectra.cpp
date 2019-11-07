@@ -158,7 +158,7 @@ void Wavespectra::spreading_cos_theta_n(double* D, int nfreq, int ndir, double s
 	double dsum = 0.;
 
 	for (int i = 0; i < ndir; i++) {
-		D[i] = sqrt(pow(cos((theta[i] - (mtheta * PI / 180.))), s));
+		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.))), s);
 		dsum += D[i];
 	}
 	for (int i = 0; i < ndir; i++) {
@@ -178,7 +178,7 @@ void Wavespectra::spreading_cos_theta05_2s(double* D, int nfreq, int ndir, doubl
 	double dsum = 0.;
 	
 	for (int i = 0; i < ndir; i++) {
-		D[i] = sqrt(pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s));
+		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s);
 		dsum += D[i];
 	}
 	for (int i = 0; i < ndir; i++) {
@@ -192,7 +192,7 @@ void Wavespectra::spreading_cos_theta05_2s(double* D, int nfreq, int ndir, doubl
 	}
 }
 
-void Wavespectra::spreading_ewans(double* D, int nfreq, int ndir, double mtheta, double* theta, double* omega, double tp) {
+void Wavespectra::spreading_ewans(double tp, double mtheta) {
 	// Ewans simplified spreading function (frequency dependent spreading)
 	// EWANS, Kevin C.Observations of the directional spectrum of fetch - limited waves.Journal of Physical Oceanography, 1998, 28.3: 495 - 512.
 	double* dsum2 = new double[nfreq];
@@ -208,7 +208,7 @@ void Wavespectra::spreading_ewans(double* D, int nfreq, int ndir, double mtheta,
 		}
 		dsum2[i] = 0.;
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = sqrt(pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s));
+			D[i * ndir + j] = pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s);
 			dsum2[i] += D[i * ndir + j];
 		}
 	}

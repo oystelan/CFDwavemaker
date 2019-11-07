@@ -23,21 +23,29 @@ public:
 	double domain_start_L[3], domain_end_L[3];
 
 	// Wall grids, used for faster running of calculation demanding kinematics codes
-	double* UX0, * VX0, * WX0, * UX1, * VX1, * WX1; // X wall grid (2D)
-	double* UY0, * VY0, * WY0, * UY1, * VY1, * WY1; // Y wall grid (2D)
-	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (1D)
+	double* UX0, * VX0, * WX0, * UX1, * VX1, * WX1; // X wall grid (2x2D)
+	double* UY0, * VY0, * WY0, * UY1, * VY1, * WY1; // Y wall grid (2x2D)
+	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (2x1D)
 
 	double wallxsize[6];
 	double wallysize[6];
-	int wallx_nx, wallx_ny, wallx_nz;
-	int wally_nx, wally_ny, wally_nz;
+	int wallx_nx=2, wallx_ny, wallx_nz;
+	int wally_nx, wally_ny=2, wally_nz;
 	double t0, t1, dt;
+	double dx_wx, dy_wx, dz_wx;
+	double dx_wy, dy_wy, dz_wy;
 
 	int initialized;
 	int initsurf = 0;
 	int initkin = 0;
 	double dx, dy, dz, dxl, dyl, dzl;
 	int numgrids;
+
+	void update_boundary_arrays(Irregular* irregular, double tpt);
+
+	void update_boundary_wallx(Irregular* irregular);
+
+	void init_boundary_wallx(Irregular* irregular, double tpt);
 
 	void initialize_kinematics(Irregular* irregular, double tpt);
 	void initialize_surface_elevation(Irregular* irregular, double tpt);
@@ -52,6 +60,7 @@ public:
 	double v(double xpt, double ypt, double zpt);
 	double w(double xpt, double ypt, double zpt);
 	double eta(double xpt, double ypt);
+	void check_time(double tpt);
 };
 // Ramp class contains various ramp functions
 class Ramp {

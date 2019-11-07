@@ -5,10 +5,171 @@
 #include <iostream>
 #include <cmath>
 
+void Grid::update_boundary_arrays(Irregular* irregular, double tpt) {
+	t0 = t1;
+	t1 += dt;
+
+}
+
+void Grid::update_boundary_wallx(Irregular* irregular) {
+	t0 = t1;
+	t1 += dt;
+
+	double dd = omp_get_wtime();
+
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel // start parallel initialization
+	{
+#pragma omp master
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+
+		double xpt, ypt, zpt;
+		double eta0_temp, eta1_temp;
+
+		// Main grid
+#pragma omp for
+		for (int i = 0; i < wallx_nx; i++) {
+			xpt = wallxsize[0] + dx_wx * i;
+			for (int j = 0; j < wallx_ny; j++) {
+				ypt = wallxsize[2] + dy_wx * j;
+
+				eta1_temp = irregular->eta(t1, xpt, ypt);
+
+				double Ux1 = irregular->u1(t1, xpt, ypt, 0.0) + irregular->u2(t1, xpt, ypt, 0.0);
+				double Uy1 = irregular->v1(t1, xpt, ypt, 0.0) + irregular->v2(t1, xpt, ypt, 0.0);
+				double Uz1 = irregular->w1(t1, xpt, ypt, 0.0) + irregular->w2(t1, xpt, ypt, 0.0);
+
+				double PHI1_dxdz = irregular->phi1_dxdz(t1, xpt, ypt);
+				double PHI1_dydz = irregular->phi1_dydz(t1, xpt, ypt);
+				double PHI1_dzdz = irregular->phi1_dzdz(t1, xpt, ypt);
+
+				ETAX0[i * wallx_ny + j] = ETAX1[i * wallx_ny + j];
+
+				for (int m = 0; m < NZ; m++) {
+					UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m];
+					VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m];
+					WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m];
+
+					zpt = wallxsize[4] + dz_wx * m;
+					if (zpt > (std::max(ETAX0[i * wallx_ny + j], eta1_temp) + dz_wx)) {
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+					}
+					else if (zpt > 0.) {
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Ux1 + PHI1_dxdz * zpt;
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uy1 + PHI1_dydz * zpt;
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uz1 + PHI1_dzdz * zpt;
+					}
+					else {
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t1, xpt, ypt, zpt) + irregular->u2(t1, xpt, ypt, zpt);
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t1, xpt, ypt, zpt) + irregular->v2(t1, xpt, ypt, zpt);
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t1, xpt, ypt, zpt) + irregular->w2(t1, xpt, ypt, zpt);
+					}
+				}
+			}
+		}
+	} // End parallel initialization
+	dd = omp_get_wtime() - dd;
+	std::cout << "updated wallX boundaries in " << dd << " seconds." << std::endl;
+}
+
+void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
+	t0 = tpt;
+	t1 = tpt + dt;
+
+	// arrays for time t= t0
+	UX0 = new double[wallx_nx * wallx_ny * wallx_nz];
+	VX0 = new double[wallx_nx * wallx_ny * wallx_nz];
+	WX0 = new double[wallx_nx * wallx_ny * wallx_nz];
+	ETAX0 = new double[wallx_nx * wallx_ny];
+	// arrays for time t= t1
+	UX1 = new double[wallx_nx * wallx_ny * wallx_nz];
+	VX1 = new double[wallx_nx * wallx_ny * wallx_nz];
+	WX1 = new double[wallx_nx * wallx_ny * wallx_nz];
+	ETAX1 = new double[wallx_nx * wallx_ny];
+
+	dx_wx = (wallxsize[1] - wallxsize[0]) / double(wallx_nx - 1);
+	dy_wx = (wallxsize[3] - wallxsize[2]) / double(wallx_ny - 1);
+	dz_wx = (wallxsize[5] - wallxsize[4]) / double(wallx_nz - 1);
+	
+	double dd = omp_get_wtime();
+
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel // start parallel initialization
+	{
+#pragma omp master
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+
+		double xpt, ypt, zpt;
+		double eta0_temp, eta1_temp;
+
+		// Main grid
+#pragma omp for
+		for (int i = 0; i < wallx_nx; i++) {
+			xpt = wallxsize[0] + dx_wx * i;
+			for (int j = 0; j < wallx_ny; j++) {
+				ypt = wallxsize[2] + dy_wx * j;
+				eta0_temp = irregular->eta(t0, xpt, ypt);
+				eta1_temp = irregular->eta(t1, xpt, ypt);
+
+				double Ux0 = irregular->u1(t0, xpt, ypt, 0.0) + irregular->u2(t0, xpt, ypt, 0.0);
+				double Uy0 = irregular->v1(t0, xpt, ypt, 0.0) + irregular->v2(t0, xpt, ypt, 0.0);
+				double Uz0 = irregular->w1(t0, xpt, ypt, 0.0) + irregular->w2(t0, xpt, ypt, 0.0);
+				double Ux1 = irregular->u1(t1, xpt, ypt, 0.0) + irregular->u2(t1, xpt, ypt, 0.0);
+				double Uy1 = irregular->v1(t1, xpt, ypt, 0.0) + irregular->v2(t1, xpt, ypt, 0.0);
+				double Uz1 = irregular->w1(t1, xpt, ypt, 0.0) + irregular->w2(t1, xpt, ypt, 0.0);
+
+				double PHI0_dxdz = irregular->phi1_dxdz(t0, xpt, ypt);
+				double PHI0_dydz = irregular->phi1_dydz(t0, xpt, ypt);
+				double PHI0_dzdz = irregular->phi1_dzdz(t0, xpt, ypt);
+				double PHI1_dxdz = irregular->phi1_dxdz(t1, xpt, ypt);
+				double PHI1_dydz = irregular->phi1_dydz(t1, xpt, ypt);
+				double PHI1_dzdz = irregular->phi1_dzdz(t1, xpt, ypt);
+
+				ETAX0[i * wallx_ny + j] = eta0_temp;
+				ETAX1[i * wallx_ny + j] = eta1_temp;
+
+				for (int m = 0; m < NZ; m++) {
+					zpt = wallxsize[4] + dz_wx * m;
+					if (zpt > (std::max(eta0_temp,eta1_temp) + dz_wx)) {
+						UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = 0.0;
+					}
+					else if (zpt > 0.) {
+						UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Ux0 + PHI0_dxdz * zpt;
+						VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uy0 + PHI0_dydz * zpt;
+						WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uz0 + PHI0_dzdz * zpt;
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Ux1 + PHI1_dxdz * zpt;
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uy1 + PHI1_dydz * zpt;
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uz1 + PHI1_dzdz * zpt;
+					}
+					else {
+						UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t0, xpt, ypt, zpt) + irregular->u2(t0, xpt, ypt, zpt);
+						VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t0, xpt, ypt, zpt) + irregular->v2(t0, xpt, ypt, zpt);
+						WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t0, xpt, ypt, zpt) + irregular->w2(t0, xpt, ypt, zpt);
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t1, xpt, ypt, zpt) + irregular->u2(t1, xpt, ypt, zpt);
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t1, xpt, ypt, zpt) + irregular->v2(t1, xpt, ypt, zpt);
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t1, xpt, ypt, zpt) + irregular->w2(t1, xpt, ypt, zpt);
+					}
+				}
+			}
+		}
+	} // End parallel initialization
+	dd = omp_get_wtime() - dd;
+	std::cout << "Initialized wallX boundaries in " << dd << " seconds." << std::endl;
+}
+
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
-	t0 = tpt;
-	t1 = tpt;
 	// Allocating memory for storage of surface elevation and velocities
 	UX = new double[NX * NY * NZ];
 	UY = new double[NX * NY * NZ];
@@ -260,6 +421,14 @@ double Grid::eta(double xpt, double ypt) {
 }
 
 
+void Grid::check_time(double tpt) {
+	/* Checks to see if the time tpt exceeds t1. If so the boundary kinematics arrays are updated*/
+	if (tpt > t1){
+		// update boundaries
+		double* ape;
+		ape = UX1;
+	}
+}
 
 
 // -------------------------------------------------------------------------------------------------

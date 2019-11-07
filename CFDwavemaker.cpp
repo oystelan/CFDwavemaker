@@ -60,21 +60,6 @@ Ramp ramp;
 
 //fftw_plan p;
 
-// Declaration of pointers where data will be stored
-
-/*
-double* w;
-double* Ampspec;
-double* k;
-double* thetaA;
-double* D;
-double* phas;
-double* dsum2;
-*/
-
-//double* domainsize;
-//double* index;
-
 int wavetype;
 
 //#define GetCurrentDir _getcwd
@@ -384,12 +369,11 @@ int read_inputdata_v2() {
 						std::cout << lineA << std::endl;
 						buf.str(lineA);
 						buf >> irregular.omega[i];
-						buf >> irregular.Ampspec[i];
+						buf >> irregular.A[i];
 						buf >> irregular.k[i];
 						buf >> irregular.phase[i];
-						buf >> irregular.thetaA[i];
+						buf >> irregular.theta[i];
 						buf.clear();
-						irregular.D[i] = 1.0;
 					}
 				}
 				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
@@ -423,13 +407,13 @@ int read_inputdata_v2() {
 
 					// Read directional data
 					double* theta_temp = new double[irregular.ndir];
-					double* D_temp = new double[irregular.ndir];
+					double* D_ampl_temp = new double[irregular.ndir];
 					std::cout << "# Theta [rad] D(theta)" << std::endl;
 					for (int i = 0; i < irregular.ndir; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
 						buf >> theta_temp[i];
-						buf >> D_temp[i];
+						buf >> D_ampl_temp[i];
 						buf.clear();
 					}
 
@@ -439,14 +423,13 @@ int read_inputdata_v2() {
 						for (int j = 0; j < irregular.ndir; j++) {
 							irregular.omega[i * irregular.ndir + j] = omega_temp[i];
 							irregular.k[i * irregular.ndir + j] = k_temp[i];
-							irregular.Ampspec[i * irregular.ndir + j] = Ampspec_temp[i];
-							irregular.D[i * irregular.ndir + j] =  D_temp[j];
+							irregular.A[i * irregular.ndir + j] = Ampspec_temp[i] * D_ampl_temp[j];
 							irregular.phase[i * irregular.ndir + j] = phas_temp[i];
-							irregular.thetaA[i * irregular.ndir + j] = theta_temp[j];
+							irregular.theta[i * irregular.ndir + j] = theta_temp[j];
 
 						}
 					}
-					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_temp;
+					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_ampl_temp;
 				}
 
 				
