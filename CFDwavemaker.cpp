@@ -1261,9 +1261,19 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * grid.u(xpt, ypt, zpt);
 	case 3:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+	// irregular waves generated from boundary, propagate into still water
 	case 4:
-		return 0.0;
-	
+		// check timestep and see if updating is required
+
+		// check if coordinate is within boundary wallbox
+		if (grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
+			return ramp.ramp(tpt, xpt, ypt) * grid.u_wall(xpt, ypt, zpt, tpt);
+		}
+		else {
+			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+		}
+		
+	// stokes 5th
 	case 5:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
 		
@@ -1273,6 +1283,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 
 
 }
+
 
 double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {

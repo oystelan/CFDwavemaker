@@ -46,6 +46,7 @@ public:
 	void update_boundary_wallx(Irregular* irregular);
 
 	void init_boundary_wallx(Irregular* irregular, double tpt);
+	void redefine_boundary_wallx(Irregular* irregular, double tpt, double xpt, double ypt, double zpt);
 
 	void initialize_kinematics(Irregular* irregular, double tpt);
 	void initialize_surface_elevation(Irregular* irregular, double tpt);
@@ -55,12 +56,19 @@ public:
 	//double trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt);
 	double bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double* domain);
 
-	// routines for extracting kinematics
+	// routines for extracting kinematics from initial grid
 	double u(double xpt, double ypt, double zpt);
 	double v(double xpt, double ypt, double zpt);
 	double w(double xpt, double ypt, double zpt);
 	double eta(double xpt, double ypt);
-	void check_time(double tpt);
+
+	// routines for extracting kinematics at walls
+	bool CheckTime(double tpt);
+	bool CheckBounds(double* bounds, double x, double y, double z);
+	double u_wall(double xpt, double ypt, double zpt, double tpt);
+	double v_wall(double xpt, double ypt, double zpt, double tpt);
+	double w_wall(double xpt, double ypt, double zpt, double tpt);
+	double eta_wall(double xpt, double ypt, double tpt);
 };
 // Ramp class contains various ramp functions
 class Ramp {

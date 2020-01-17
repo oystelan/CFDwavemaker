@@ -11,7 +11,22 @@ void Grid::update_boundary_arrays(Irregular* irregular, double tpt) {
 
 }
 
+// If point which is outside the domain of the bounding box is asked for, the bounding box is redifined and reinitialized
+void Grid::redefine_boundary_wallx(Irregular* irregular, double tpt, double xpt, double ypt, double zpt)
+{
+	// adjust wallx array size to include the new point
+	wallxsize[0] = std::min(wallxsize[0], xpt);
+	wallxsize[1] = std::max(wallxsize[1], xpt);
+	wallxsize[2] = std::min(wallxsize[2], ypt);
+	wallxsize[3] = std::max(wallxsize[3], ypt);
+	wallxsize[4] = std::min(wallxsize[4], zpt);
+	wallxsize[5] = std::max(wallxsize[5], zpt);
+
+	init_boundary_wallx(irregular, tpt);
+}
+
 void Grid::update_boundary_wallx(Irregular* irregular) {
+	// updating timesteps
 	t0 = t1;
 	t1 += dt;
 
@@ -167,6 +182,8 @@ void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialized wallX boundaries in " << dd << " seconds." << std::endl;
 }
+
+
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
@@ -390,6 +407,7 @@ double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx
 
 
 double Grid::u(double xpt, double ypt, double zpt) {
+
 	if (zpt < domain_start[2]) {
 		return trilinear_interpolation(UXL, xpt, ypt, zpt, NXL, NYL, NZL, dxl, dyl, dzl, domain_start_L);
 	}
@@ -420,16 +438,30 @@ double Grid::eta(double xpt, double ypt) {
 	return bilinear_interpolation(ETA, xpt, ypt, NX, NY, dx, dy, domain_start);
 }
 
+double Grid::eta_wall(double xpt, double ypt, double tpt) {
+	return bilinear_interpolation(ETAX0, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, domain_start);
+}
 
-void Grid::check_time(double tpt) {
+
+bool Grid::CheckTime(double tpt) {
 	/* Checks to see if the time tpt exceeds t1. If so the boundary kinematics arrays are updated*/
-	if (tpt > t1){
-		// update boundaries
-		double* ape;
-		ape = UX1;
+	if (tpt > t1) {
+		return true;
+	}
+	else{
+		return false;
 	}
 }
 
+// function to find if given point 
+// lies inside a given rectangle or not. 
+bool Grid::CheckBounds(double* bounds, double x, double y, double z)
+{
+	if (x >= bounds[0] && x <= bounds[1] && y >= bounds[2] && y <= bounds[3] && z >= bounds[4] && z <= bounds[5])
+		return true;
+
+	return false;
+}
 
 // -------------------------------------------------------------------------------------------------
 // ramp class function
