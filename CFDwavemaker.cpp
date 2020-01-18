@@ -218,7 +218,11 @@ int read_inputdata_v2() {
 		getline(f, lineA);
 		trim(lineA);
 		std::cout << lineA << std::endl;
-
+		// Convension for numbering:
+		// irregular wave theory variants: 1-10
+		// wavemaker theory variants: 11-20
+		// Regular wave theories: 21-30
+		// HOSM and other: 31-40
 		if (!lineA.compare("[wave type]")) {
 			getline(f, lineA);
 			trim(lineA);
@@ -228,20 +232,16 @@ int read_inputdata_v2() {
 				wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
-			else if (!lineA.compare("irregular_gridded")) {
-				wavetype = 1;
-				std::cout << "Irregular perturbation wave theory specified, precalculated to a 3D grid for fast interpolation onto a fine mesh." << std::endl;
-			}
 			else if (!lineA.compare("pistonwavemaker")) {
-				wavetype = 3;
+				wavetype = 11;
 				std::cout << "Piston wave maker theory specified" << std::endl;
 			}
 			else if (!lineA.compare("spectral wave")) {
-				wavetype = 4;
+				wavetype = 31;
 				std::cout << "spectral wave (HOSM) specified" << std::endl;
 			}
 			else if (!lineA.compare("stokes5")) {
-				wavetype = 5;
+				wavetype = 21;
 				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
 			}
 			else {
@@ -434,7 +434,7 @@ int read_inputdata_v2() {
 
 				
 			}
-			else if (wavetype == 3) {
+			else if (wavetype == 11) {
 				// Wavemaker theory (piston)
 				// read alpha values
 				getline(f, lineA);
@@ -465,7 +465,7 @@ int read_inputdata_v2() {
 					buf.clear();
 				}
 			}
-			else if (wavetype == 5) {
+			else if (wavetype == 21) {
 				// read Line 2
 				getline(f, lineA);
 				buf.str(lineA);
@@ -480,12 +480,17 @@ int read_inputdata_v2() {
 		}
 
 		if (!lineA.compare("[current speed]")) { //optional
-			getline(f, lineA);
-			std::cout << lineA << std::endl;
-			std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
-			buf.str(lineA);
-			buf >> stokes5.current;
-			buf.clear();
+			if (wavetype == 21){ // Stokes 5th
+				getline(f, lineA);
+				std::cout << lineA << std::endl;
+				std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
+				buf.str(lineA);
+				buf >> stokes5.current;
+				buf.clear();
+			}
+			else {
+				std::cout << "Current not supported for selected wave type. Parameter ignored." << std::endl;
+			}
 		}
 		if (!lineA.compare("[still water level]")) { //optional
 			getline(f, lineA);
@@ -507,7 +512,7 @@ int read_inputdata_v2() {
 				getline(f, lineA);
 				trim(lineA);
 				std::cout << "Grid interpolation type: " << lineA << std::endl;
-				if (!lineA.compare("manualbox2")) {
+				if (!lineA.compare("init domain interp")) {
 					getline(f, lineA);
 					buf.str(lineA);
 					buf >> grid.domain_start[0];
@@ -536,9 +541,10 @@ int read_inputdata_v2() {
 					buf >> grid.NYL;
 					buf >> grid.NZL;
 					buf.clear();
-					wavetype = 2;
+					if (wavetype == 1)
+						wavetype = 2;
 				}
-				if (!lineA.compare("manualwallx")) {
+				if (!lineA.compare("wallx")) {
 					getline(f, lineA);
 					buf.str(lineA);
 					buf >> grid.wallxsize[0];
@@ -558,14 +564,18 @@ int read_inputdata_v2() {
 					buf.str(lineA);
 					buf >> grid.dt;
 					buf.clear();
-					wavetype = 2;
+					grid.wallx_start[0] = grid.wallxsize[0];
+					grid.wallx_start[1] = grid.wallxsize[2];
+					grid.wallx_start[2] = grid.wallxsize[4];
+					if (wavetype == 1) // if irregular wave
+						wavetype = 3; // change to special case irregular with gridded wallx condition
 				}
 			}
 		}
 	}
 	std::cout << "Input file read successfully." << std::endl;
 
-	if (wavetype == 1 || wavetype == 2) {
+	if (wavetype == 1 || wavetype == 2 || wavetype == 3) {
 		irregular.depth = depth;
 		irregular.mtheta = mtheta;
 		irregular.tofmax = tofmax;
@@ -575,7 +585,7 @@ int read_inputdata_v2() {
 		irregular.normalize_data();
 
 	}
-	else if (wavetype == 5) {
+	else if (wavetype == 21) {
 		stokes5.depth = depth;
 		stokes5.theta = mtheta;
 		stokes5.x0 = x_pos;
@@ -1259,24 +1269,24 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			grid.initialize_kinematics(&irregular, 0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.u(xpt, ypt, zpt);
-	case 3:
-		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 	// irregular waves generated from boundary, propagate into still water
-	case 4:
+	case 3:
 		// check timestep and see if updating is required
-
-		// check if coordinate is within boundary wallbox
-		if (grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
-			return ramp.ramp(tpt, xpt, ypt) * grid.u_wall(xpt, ypt, zpt, tpt);
+		if (!grid.CheckTime(tpt)) {
+			grid.update_boundary_wallx(&irregular);
 		}
-		else {
+		// check if coordinate is within boundary wallbox
+		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
 			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
 		}
-		
+		return ramp.ramp(tpt, xpt, ypt) * grid.u_wall(xpt, ypt, zpt, tpt);
+
 	// stokes 5th
-	case 5:
+	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-		
+	
+	case 11:
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 	default:
 		return 0.0;
 	}
@@ -1302,11 +1312,16 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.v(xpt, ypt, zpt);
 	case 3:
-		return 0.0;
-	case 4:
-		return 0.0;
-
-	case 5:
+		// check timestep and see if updating is required
+		if (!grid.CheckTime(tpt)) {
+			grid.update_boundary_wallx(&irregular);
+		}
+		// check if coordinate is within boundary wallbox
+		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
+			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.v_wall(xpt, ypt, zpt, tpt);
+	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 
 	default:
@@ -1332,11 +1347,16 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.w(xpt, ypt, zpt);
 	case 3:
-		return 0.0;
-	case 4:
-		return 0.0;
-
-	case 5:
+		// check timestep and see if updating is required
+		if (!grid.CheckTime(tpt)) {
+			grid.update_boundary_wallx(&irregular);
+		}
+		// check if coordinate is within boundary wallbox
+		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
+			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.w_wall(xpt, ypt, zpt, tpt);
+	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 
 	default:
@@ -1344,7 +1364,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	}
 }
 
-//
+// todo: not fully functional, but not really used either.... should be updated at some point
 double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
@@ -1359,11 +1379,6 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 		return 0.;
 	case 3:
 		return 0.;
-	case 4:
-		return 0.;
-
-	case 5:
-		return 0.0;
 
 	default:
 		return 0.0;
@@ -1386,12 +1401,19 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.eta(xpt, ypt);
 	case 3:
+		// check timestep and see if updating is required
+		if (!grid.CheckTime(tpt)) {
+			grid.update_boundary_wallx(&irregular);
+		}
+		// check if coordinate is within boundary wallbox
+		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, swl)) {
+			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, swl);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * grid.eta_wall(xpt, ypt, tpt);
+	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
-	case 4:
-		return 0.0;
-	case 5:
+	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
-	case 8:
 		
 	default:
 		return 0.0;

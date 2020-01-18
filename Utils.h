@@ -28,7 +28,9 @@ public:
 	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (2x1D)
 
 	double wallxsize[6];
+	double wallx_start[3];
 	double wallysize[6];
+	double wally_start[3];
 	int wallx_nx=2, wallx_ny, wallx_nz;
 	int wally_nx, wally_ny=2, wally_nz;
 	double t0, t1, dt;

@@ -439,7 +439,31 @@ double Grid::eta(double xpt, double ypt) {
 }
 
 double Grid::eta_wall(double xpt, double ypt, double tpt) {
-	return bilinear_interpolation(ETAX0, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, domain_start);
+	double eta0 = bilinear_interpolation(ETAX0, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, wallx_start);
+	double eta1 = bilinear_interpolation(ETAX1, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, wallx_start);
+	double yd = (tpt - t0) / (t1 - t0);
+	return  eta0 * (1. - yd) + eta1 * yd;
+}
+
+double Grid::u_wall(double xpt, double ypt, double zpt, double tpt) {
+	double u0 = trilinear_interpolation(UX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double u1 = trilinear_interpolation(UX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double yd = (tpt - t0) / (t1 - t0);
+	return  u0 * (1. - yd) + u1 * yd;
+}
+
+double Grid::v_wall(double xpt, double ypt, double zpt, double tpt) {
+	double v0 = trilinear_interpolation(VX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double v1 = trilinear_interpolation(VX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double yd = (tpt - t0) / (t1 - t0);
+	return  v0 * (1. - yd) + v1 * yd;
+}
+
+double Grid::w_wall(double xpt, double ypt, double zpt, double tpt) {
+	double w0 = trilinear_interpolation(WX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double w1 = trilinear_interpolation(WX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
+	double yd = (tpt - t0) / (t1 - t0);
+	return  w0 * (1. - yd) + w1 * yd;
 }
 
 

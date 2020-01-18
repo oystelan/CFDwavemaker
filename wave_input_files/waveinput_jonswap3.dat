@@ -35,8 +35,10 @@ seed
 
 [grid interpolation]
 # grid used for kinematics interpolation
-# alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
-manualbox
+#number of grids
+1
+# alternatives: none, init domain interp, wallx, wally (not implemented yet)
+init domain interp
 # XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
 -882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
 #NX NY NZ

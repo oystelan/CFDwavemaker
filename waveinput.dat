@@ -4,8 +4,8 @@
 # WAVETYPE 
 # 1. irregular
 # 2. pistonwavemaker
-# 4. spectralwave
-# 5. stokes5
+# 3. spectralwave
+# 4. stokes5
 irregular
 
 [general input data]
@@ -251,12 +251,15 @@ userdefined1
 #number of grids to read in
 1
 # grid used for kinematics interpolation
-# alternatives: none, manualbox, manualbox2, manualwall(not implemented yet)
-manualbox2
+# alternatives: init domain interp, wallx(not implemented yet)
+init domain interp
+# Definition of dualgridbox and
 # XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
 -882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
+# Resolution of upper gridbox (arround the surface)
 #NX NY NZ
 15 15 12
+# Resolution of lower grid box (in the deep, less resolution is required)
 #NXL NYL NZL
 15 15 6
 
