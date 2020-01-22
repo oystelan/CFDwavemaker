@@ -5,14 +5,14 @@
 #include <iostream>
 #include <cmath>
 
-void Grid::update_boundary_arrays(Irregular* irregular, double tpt) {
+void Grid::update_boundary_arrays(Irregular &irregular, double tpt) {
 	t0 = t1;
 	t1 += dt;
 
 }
 
 // If point which is outside the domain of the bounding box is asked for, the bounding box is redifined and reinitialized
-void Grid::redefine_boundary_wallx(Irregular* irregular, double tpt, double xpt, double ypt, double zpt)
+void Grid::redefine_boundary_wallx(Irregular &irregular, double tpt, double xpt, double ypt, double zpt)
 {
 	// adjust wallx array size to include the new point
 	wallxsize[0] = std::min(wallxsize[0], xpt);
@@ -22,13 +22,14 @@ void Grid::redefine_boundary_wallx(Irregular* irregular, double tpt, double xpt,
 	wallxsize[4] = std::min(wallxsize[4], zpt);
 	wallxsize[5] = std::max(wallxsize[5], zpt);
 
+	
 	init_boundary_wallx(irregular, tpt);
 }
 
-void Grid::update_boundary_wallx(Irregular* irregular) {
+void Grid::update_boundary_wallx(Irregular &irregular, double tpt) {
 	// updating timesteps
 	t0 = t1;
-	t1 += dt;
+	t1 = t1 + dt;
 
 	double dd = omp_get_wtime();
 
@@ -38,7 +39,7 @@ void Grid::update_boundary_wallx(Irregular* irregular) {
 #pragma omp parallel // start parallel initialization
 	{
 #pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+		//std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		double xpt, ypt, zpt;
 		double eta0_temp, eta1_temp;
@@ -50,17 +51,19 @@ void Grid::update_boundary_wallx(Irregular* irregular) {
 			for (int j = 0; j < wallx_ny; j++) {
 				ypt = wallxsize[2] + dy_wx * j;
 
-				eta1_temp = irregular->eta(t1, xpt, ypt);
+				eta1_temp = irregular.eta(t1, xpt, ypt);
 
-				double Ux1 = irregular->u1(t1, xpt, ypt, 0.0) + irregular->u2(t1, xpt, ypt, 0.0);
-				double Uy1 = irregular->v1(t1, xpt, ypt, 0.0) + irregular->v2(t1, xpt, ypt, 0.0);
-				double Uz1 = irregular->w1(t1, xpt, ypt, 0.0) + irregular->w2(t1, xpt, ypt, 0.0);
+				double Ux1 = irregular.u1(t1, xpt, ypt, 0.0) + irregular.u2(t1, xpt, ypt, 0.0);
+				double Uy1 = irregular.v1(t1, xpt, ypt, 0.0) + irregular.v2(t1, xpt, ypt, 0.0);
+				double Uz1 = irregular.w1(t1, xpt, ypt, 0.0) + irregular.w2(t1, xpt, ypt, 0.0);
 
-				double PHI1_dxdz = irregular->phi1_dxdz(t1, xpt, ypt);
-				double PHI1_dydz = irregular->phi1_dydz(t1, xpt, ypt);
-				double PHI1_dzdz = irregular->phi1_dzdz(t1, xpt, ypt);
+				double PHI1_dxdz = irregular.phi1_dxdz(t1, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t1, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t1, xpt, ypt);
 
 				ETAX0[i * wallx_ny + j] = ETAX1[i * wallx_ny + j];
+
+				ETAX1[i * wallx_ny + j] = eta1_temp;
 
 				for (int m = 0; m < NZ; m++) {
 					UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m];
@@ -79,9 +82,9 @@ void Grid::update_boundary_wallx(Irregular* irregular) {
 						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uz1 + PHI1_dzdz * zpt;
 					}
 					else {
-						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t1, xpt, ypt, zpt) + irregular->u2(t1, xpt, ypt, zpt);
-						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t1, xpt, ypt, zpt) + irregular->v2(t1, xpt, ypt, zpt);
-						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t1, xpt, ypt, zpt) + irregular->w2(t1, xpt, ypt, zpt);
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.u1(t1, xpt, ypt, zpt) + irregular.u2(t1, xpt, ypt, zpt);
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.v1(t1, xpt, ypt, zpt) + irregular.v2(t1, xpt, ypt, zpt);
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.w1(t1, xpt, ypt, zpt) + irregular.w2(t1, xpt, ypt, zpt);
 					}
 				}
 			}
@@ -91,20 +94,28 @@ void Grid::update_boundary_wallx(Irregular* irregular) {
 	std::cout << "updated wallX boundaries in " << dd << " seconds." << std::endl;
 }
 
-void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
-	t0 = tpt;
-	t1 = tpt + dt;
 
+void Grid::allocate_wallx_memory() {
 	// arrays for time t= t0
 	UX0 = new double[wallx_nx * wallx_ny * wallx_nz];
 	VX0 = new double[wallx_nx * wallx_ny * wallx_nz];
 	WX0 = new double[wallx_nx * wallx_ny * wallx_nz];
-	ETAX0 = new double[wallx_nx * wallx_ny];
+	ETAX0 = new double [wallx_nx * wallx_ny];
+	for (int i = 0; i < (wallx_nx * wallx_ny); i++) {
+		ETAX0[i] = double(i);
+	}
 	// arrays for time t= t1
 	UX1 = new double[wallx_nx * wallx_ny * wallx_nz];
 	VX1 = new double[wallx_nx * wallx_ny * wallx_nz];
 	WX1 = new double[wallx_nx * wallx_ny * wallx_nz];
 	ETAX1 = new double[wallx_nx * wallx_ny];
+
+	std::cout << "WallX memory allocated" << std::endl;
+}
+
+void Grid::init_boundary_wallx(Irregular &irregular, double tpt) {
+	t0 = tpt;
+	t1 = tpt + dt;
 
 	dx_wx = (wallxsize[1] - wallxsize[0]) / double(wallx_nx - 1);
 	dy_wx = (wallxsize[3] - wallxsize[2]) / double(wallx_ny - 1);
@@ -129,26 +140,29 @@ void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
 			xpt = wallxsize[0] + dx_wx * i;
 			for (int j = 0; j < wallx_ny; j++) {
 				ypt = wallxsize[2] + dy_wx * j;
-				eta0_temp = irregular->eta(t0, xpt, ypt);
-				eta1_temp = irregular->eta(t1, xpt, ypt);
+				eta0_temp = irregular.eta(t0, xpt, ypt);
+				eta1_temp = irregular.eta(t1, xpt, ypt);			
+				
+				double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
+				double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
+				double Uz0 = irregular.w1(t0, xpt, ypt, 0.0) + irregular.w2(t0, xpt, ypt, 0.0);
+				double Ux1 = irregular.u1(t1, xpt, ypt, 0.0) + irregular.u2(t1, xpt, ypt, 0.0);
+				double Uy1 = irregular.v1(t1, xpt, ypt, 0.0) + irregular.v2(t1, xpt, ypt, 0.0);
+				double Uz1 = irregular.w1(t1, xpt, ypt, 0.0) + irregular.w2(t1, xpt, ypt, 0.0);
 
-				double Ux0 = irregular->u1(t0, xpt, ypt, 0.0) + irregular->u2(t0, xpt, ypt, 0.0);
-				double Uy0 = irregular->v1(t0, xpt, ypt, 0.0) + irregular->v2(t0, xpt, ypt, 0.0);
-				double Uz0 = irregular->w1(t0, xpt, ypt, 0.0) + irregular->w2(t0, xpt, ypt, 0.0);
-				double Ux1 = irregular->u1(t1, xpt, ypt, 0.0) + irregular->u2(t1, xpt, ypt, 0.0);
-				double Uy1 = irregular->v1(t1, xpt, ypt, 0.0) + irregular->v2(t1, xpt, ypt, 0.0);
-				double Uz1 = irregular->w1(t1, xpt, ypt, 0.0) + irregular->w2(t1, xpt, ypt, 0.0);
-
-				double PHI0_dxdz = irregular->phi1_dxdz(t0, xpt, ypt);
-				double PHI0_dydz = irregular->phi1_dydz(t0, xpt, ypt);
-				double PHI0_dzdz = irregular->phi1_dzdz(t0, xpt, ypt);
-				double PHI1_dxdz = irregular->phi1_dxdz(t1, xpt, ypt);
-				double PHI1_dydz = irregular->phi1_dydz(t1, xpt, ypt);
-				double PHI1_dzdz = irregular->phi1_dzdz(t1, xpt, ypt);
-
+				double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+				double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+				double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+				double PHI1_dxdz = irregular.phi1_dxdz(t1, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t1, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t1, xpt, ypt);
+				
+				//std::cout << ETAX0[i * wallx_ny + j] << std::endl;
 				ETAX0[i * wallx_ny + j] = eta0_temp;
 				ETAX1[i * wallx_ny + j] = eta1_temp;
 
+				
+				
 				for (int m = 0; m < NZ; m++) {
 					zpt = wallxsize[4] + dz_wx * m;
 					if (zpt > (std::max(eta0_temp,eta1_temp) + dz_wx)) {
@@ -168,12 +182,12 @@ void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
 						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = Uz1 + PHI1_dzdz * zpt;
 					}
 					else {
-						UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t0, xpt, ypt, zpt) + irregular->u2(t0, xpt, ypt, zpt);
-						VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t0, xpt, ypt, zpt) + irregular->v2(t0, xpt, ypt, zpt);
-						WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t0, xpt, ypt, zpt) + irregular->w2(t0, xpt, ypt, zpt);
-						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->u1(t1, xpt, ypt, zpt) + irregular->u2(t1, xpt, ypt, zpt);
-						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->v1(t1, xpt, ypt, zpt) + irregular->v2(t1, xpt, ypt, zpt);
-						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular->w1(t1, xpt, ypt, zpt) + irregular->w2(t1, xpt, ypt, zpt);
+						UX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.u1(t0, xpt, ypt, zpt) + irregular.u2(t0, xpt, ypt, zpt);
+						VX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.v1(t0, xpt, ypt, zpt) + irregular.v2(t0, xpt, ypt, zpt);
+						WX0[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.w1(t0, xpt, ypt, zpt) + irregular.w2(t0, xpt, ypt, zpt);
+						UX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.u1(t1, xpt, ypt, zpt) + irregular.u2(t1, xpt, ypt, zpt);
+						VX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.v1(t1, xpt, ypt, zpt) + irregular.v2(t1, xpt, ypt, zpt);
+						WX1[i * wallx_ny * wallx_nz + j * wallx_nz + m] = irregular.w1(t1, xpt, ypt, zpt) + irregular.w2(t1, xpt, ypt, zpt);
 					}
 				}
 			}
@@ -186,7 +200,7 @@ void Grid::init_boundary_wallx(Irregular* irregular, double tpt) {
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
+void Grid::initialize_kinematics(Irregular &irregular, double tpt) {
 	// Allocating memory for storage of surface elevation and velocities
 	UX = new double[NX * NY * NZ];
 	UY = new double[NX * NY * NZ];
@@ -221,15 +235,15 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 			xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				ypt = domain_start[1] + dy * j;
-				eta_temp = irregular->eta(tpt, xpt, ypt);
+				eta_temp = irregular.eta(tpt, xpt, ypt);
 
-				double Ux0 = irregular->u1(tpt, xpt, ypt, 0.0) + irregular->u2(tpt, xpt, ypt, 0.0);
-				double Uy0 = irregular->v1(tpt, xpt, ypt, 0.0) + irregular->v2(tpt, xpt, ypt, 0.0);
-				double Uz0 = irregular->w1(tpt, xpt, ypt, 0.0) + irregular->w2(tpt, xpt, ypt, 0.0);
+				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
+				double Uy0 = irregular.v1(tpt, xpt, ypt, 0.0) + irregular.v2(tpt, xpt, ypt, 0.0);
+				double Uz0 = irregular.w1(tpt, xpt, ypt, 0.0) + irregular.w2(tpt, xpt, ypt, 0.0);
 
-				double PHI_dxdz = irregular->phi1_dxdz(tpt, xpt, ypt);
-				double PHI_dydz = irregular->phi1_dydz(tpt, xpt, ypt);
-				double PHI_dzdz = irregular->phi1_dzdz(tpt, xpt, ypt);
+				double PHI_dxdz = irregular.phi1_dxdz(tpt, xpt, ypt);
+				double PHI_dydz = irregular.phi1_dydz(tpt, xpt, ypt);
+				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
 
 				for (int m = 0; m < NZ; m++) {
 					zpt = domain_start[2] + dz * m;
@@ -244,9 +258,9 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 						UZ[i * NY * NZ + j * NZ + m] = Uz0 + PHI_dzdz * zpt;
 					}
 					else {
-						UX[i * NY * NZ + j * NZ + m] = irregular->u1(tpt, xpt, ypt, zpt) + irregular->u2(tpt, xpt, ypt, zpt);
-						UY[i * NY * NZ + j * NZ + m] = irregular->v1(tpt, xpt, ypt, zpt) + irregular->v2(tpt, xpt, ypt, zpt);
-						UZ[i * NY * NZ + j * NZ + m] = irregular->w1(tpt, xpt, ypt, zpt) + irregular->w2(tpt, xpt, ypt, zpt);
+						UX[i * NY * NZ + j * NZ + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
+						UY[i * NY * NZ + j * NZ + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
+						UZ[i * NY * NZ + j * NZ + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
 					}
 					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
 					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
@@ -275,9 +289,9 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 				ypt = domain_start_L[1] + dyl * j;
 				for (int m = 0; m < NZL; m++) {
 					zpt = domain_start_L[2] + dzl * m;
-					UXL[i * NYL * NZL + j * NZL + m] = irregular->u1(tpt, xpt, ypt, zpt) + irregular->u2(tpt, xpt, ypt, zpt);
-					UYL[i * NYL * NZL + j * NZL + m] = irregular->v1(tpt, xpt, ypt, zpt) + irregular->v2(tpt, xpt, ypt, zpt);
-					UZL[i * NYL * NZL + j * NZL + m] = irregular->w1(tpt, xpt, ypt, zpt) + irregular->w2(tpt, xpt, ypt, zpt);
+					UXL[i * NYL * NZL + j * NZL + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
+					UYL[i * NYL * NZL + j * NZL + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
+					UZL[i * NYL * NZL + j * NZL + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
 				}
 			}
 		}
@@ -291,7 +305,7 @@ void Grid::initialize_kinematics(Irregular *irregular, double tpt) {
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void Grid::initialize_surface_elevation(Irregular* irregular, double tpt) {
+void Grid::initialize_surface_elevation(Irregular &irregular, double tpt) {
 
 	// Allocating memory for storage of surface elevation and velocities
 	ETA = new double[NX * NY];
@@ -314,7 +328,7 @@ void Grid::initialize_surface_elevation(Irregular* irregular, double tpt) {
 			xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				ypt = domain_start[1] + dy * j;
-				ETA[i * NY + j] = irregular->eta1(tpt, xpt, ypt) + irregular->eta2(tpt, xpt, ypt);
+				ETA[i * NY + j] = irregular.eta1(tpt, xpt, ypt) + irregular.eta2(tpt, xpt, ypt);
 			}
 		}
 	}
@@ -438,28 +452,30 @@ double Grid::eta(double xpt, double ypt) {
 	return bilinear_interpolation(ETA, xpt, ypt, NX, NY, dx, dy, domain_start);
 }
 
-double Grid::eta_wall(double xpt, double ypt, double tpt) {
+double Grid::eta_wall(double tpt, double xpt, double ypt) {
 	double eta0 = bilinear_interpolation(ETAX0, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, wallx_start);
 	double eta1 = bilinear_interpolation(ETAX1, xpt, ypt, wallx_nx, wallx_ny, dx_wx, dy_wx, wallx_start);
+
 	double yd = (tpt - t0) / (t1 - t0);
+	//std::cout << eta0 << " " << eta1 << " " << yd << std::endl;
 	return  eta0 * (1. - yd) + eta1 * yd;
 }
 
-double Grid::u_wall(double xpt, double ypt, double zpt, double tpt) {
+double Grid::u_wall(double tpt, double xpt, double ypt, double zpt) {
 	double u0 = trilinear_interpolation(UX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double u1 = trilinear_interpolation(UX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double yd = (tpt - t0) / (t1 - t0);
 	return  u0 * (1. - yd) + u1 * yd;
 }
 
-double Grid::v_wall(double xpt, double ypt, double zpt, double tpt) {
+double Grid::v_wall(double tpt, double xpt, double ypt, double zpt) {
 	double v0 = trilinear_interpolation(VX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double v1 = trilinear_interpolation(VX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double yd = (tpt - t0) / (t1 - t0);
 	return  v0 * (1. - yd) + v1 * yd;
 }
 
-double Grid::w_wall(double xpt, double ypt, double zpt, double tpt) {
+double Grid::w_wall(double tpt, double xpt, double ypt, double zpt) {
 	double w0 = trilinear_interpolation(WX0, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double w1 = trilinear_interpolation(WX1, xpt, ypt, zpt, wallx_nx, wallx_ny, wallx_nz, dx_wx, dy_wx, dz_wx, wallx_start);
 	double yd = (tpt - t0) / (t1 - t0);
@@ -468,12 +484,13 @@ double Grid::w_wall(double xpt, double ypt, double zpt, double tpt) {
 
 
 bool Grid::CheckTime(double tpt) {
-	/* Checks to see if the time tpt exceeds t1. If so the boundary kinematics arrays are updated*/
+	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t1) {
-		return true;
+		return false;
+		std::cout << "T0: " << t0 << ", t1: " << t1 << ", tpt: " << tpt << std::endl;
 	}
 	else{
-		return false;
+		return true;
 	}
 }
 
@@ -483,8 +500,10 @@ bool Grid::CheckBounds(double* bounds, double x, double y, double z)
 {
 	if (x >= bounds[0] && x <= bounds[1] && y >= bounds[2] && y <= bounds[3] && z >= bounds[4] && z <= bounds[5])
 		return true;
-
-	return false;
+	else {
+		std::cout << "position x,y,z=" << x << "," << y << "," << z << " out of bounds. updating wallx borders" << std::endl;
+		return false;
+	}
 }
 
 // -------------------------------------------------------------------------------------------------

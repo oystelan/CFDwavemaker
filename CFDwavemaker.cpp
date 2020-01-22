@@ -361,18 +361,22 @@ int read_inputdata_v2() {
 					buf.clear();
 					irregular.ndir = 1;
 
-					irregular.allocate_arrays(irregular.nfreq);
-
 					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
+					double temp;
 					for (int i = 0; i < irregular.nfreq; i++) {
 						getline(f, lineA);
 						std::cout << lineA << std::endl;
 						buf.str(lineA);
-						buf >> irregular.omega[i];
-						buf >> irregular.A[i];
-						buf >> irregular.k[i];
-						buf >> irregular.phase[i];
-						buf >> irregular.theta[i];
+						buf >> temp;
+						irregular.omega.push_back(temp);
+						buf >> temp;
+						irregular.A.push_back(temp);
+						buf >> temp;
+						irregular.k.push_back(temp);
+						buf >> temp;
+						irregular.phase.push_back(temp);
+						buf >> temp;
+						irregular.theta.push_back(temp);
 						buf.clear();
 					}
 				}
@@ -417,15 +421,14 @@ int read_inputdata_v2() {
 						buf.clear();
 					}
 
-					irregular.allocate_arrays(irregular.nfreq* irregular.ndir);
 
 					for (int i = 0; i < irregular.nfreq; i++) {
 						for (int j = 0; j < irregular.ndir; j++) {
-							irregular.omega[i * irregular.ndir + j] = omega_temp[i];
-							irregular.k[i * irregular.ndir + j] = k_temp[i];
-							irregular.A[i * irregular.ndir + j] = Ampspec_temp[i] * D_ampl_temp[j];
-							irregular.phase[i * irregular.ndir + j] = phas_temp[i];
-							irregular.theta[i * irregular.ndir + j] = theta_temp[j];
+							irregular.omega.push_back(omega_temp[i]);
+							irregular.k.push_back(k_temp[i]);
+							irregular.A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+							irregular.phase.push_back(phas_temp[i]);
+							irregular.theta.push_back(theta_temp[j]);
 
 						}
 					}
@@ -1266,20 +1269,20 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	case 2:
 		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			grid.initialize_kinematics(&irregular, 0.0);
+			grid.initialize_kinematics(irregular, 0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.u(xpt, ypt, zpt);
 	// irregular waves generated from boundary, propagate into still water
 	case 3:
 		// check timestep and see if updating is required
 		if (!grid.CheckTime(tpt)) {
-			grid.update_boundary_wallx(&irregular);
+			grid.update_boundary_wallx(irregular, tpt);
 		}
 		// check if coordinate is within boundary wallbox
 		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
-			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+			grid.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * grid.u_wall(xpt, ypt, zpt, tpt);
+		return ramp.ramp(tpt, xpt, ypt) * grid.u_wall(tpt, xpt, ypt, zpt);
 
 	// stokes 5th
 	case 21:
@@ -1308,19 +1311,19 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	case 2:
 		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			grid.initialize_kinematics(&irregular,0.0);
+			grid.initialize_kinematics(irregular,0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.v(xpt, ypt, zpt);
 	case 3:
 		// check timestep and see if updating is required
 		if (!grid.CheckTime(tpt)) {
-			grid.update_boundary_wallx(&irregular);
+			grid.update_boundary_wallx(irregular,tpt);
 		}
 		// check if coordinate is within boundary wallbox
 		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
-			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+			grid.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * grid.v_wall(xpt, ypt, zpt, tpt);
+		return ramp.ramp(tpt, xpt, ypt) * grid.v_wall(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 
@@ -1343,19 +1346,19 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	case 2:
 		if (grid.initkin == 0) {
 			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			grid.initialize_kinematics(&irregular, 0.0);
+			grid.initialize_kinematics(irregular, 0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.w(xpt, ypt, zpt);
 	case 3:
 		// check timestep and see if updating is required
 		if (!grid.CheckTime(tpt)) {
-			grid.update_boundary_wallx(&irregular);
+			grid.update_boundary_wallx(irregular, tpt);
 		}
 		// check if coordinate is within boundary wallbox
 		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, zpt)) {
-			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, zpt);
+			grid.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * grid.w_wall(xpt, ypt, zpt, tpt);
+		return ramp.ramp(tpt, xpt, ypt) * grid.w_wall(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 
@@ -1393,23 +1396,30 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
 		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
+		//return irregular.eta(tpt, xpt, ypt);
 		// Linear wave theory, constant profile used above free surface
 	case 2:
 		if (grid.initsurf == 0) {
 			std::cout << "Initializing surface elevation storage:" << std::endl;
-			grid.initialize_surface_elevation(&irregular, 0.0);
+			grid.initialize_surface_elevation(irregular, 0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * grid.eta(xpt, ypt);
 	case 3:
+		if (!grid.initialized) {
+			grid.allocate_wallx_memory();
+			grid.init_boundary_wallx(irregular, tpt);
+			grid.initialized = true;
+		}
 		// check timestep and see if updating is required
 		if (!grid.CheckTime(tpt)) {
-			grid.update_boundary_wallx(&irregular);
+			grid.update_boundary_wallx(irregular, tpt);
+			std::cout << "updating wall X kinematics tables for time interval t0=" << grid.t0 + grid.dt << "sec, t1=" << grid.t1 + grid.dt << "sec." << std::endl;
 		}
 		// check if coordinate is within boundary wallbox
 		if (!grid.CheckBounds(grid.wallxsize, xpt, ypt, swl)) {
-			grid.redefine_boundary_wallx(&irregular, tpt, xpt, ypt, swl);
+			grid.redefine_boundary_wallx(irregular, tpt, xpt, ypt, swl);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * grid.eta_wall(xpt, ypt, tpt);
+		return ramp.ramp(tpt, xpt, ypt) * grid.eta_wall(tpt, xpt, ypt);
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 21:
@@ -1530,10 +1540,14 @@ int Cleanup() {
 int main() {
 	//cout << GetCurrentWorkingDir() << endl;
 	read_inputdata_v2();
-	std::cout << "wave elevation: " << wave_SurfElev(0.0, 0.0, 10.5) << std::endl;
-	std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
-	std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
-	std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//for (int i = 0; i < 1; i++) {
+	//	std::cout << double(i) << "wave elevation: " << wave_SurfElev(0.0, double(i), 0.0) << std::endl;
+	//}
+	std::cout << "wave elevation: " << wave_SurfElev(0.0, 0.0, 0.0) << std::endl;
+	std::cout << "wave elevation true: " << irregular.eta(0.0, 0.0, 0.0) << std::endl;
+	//std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
 }

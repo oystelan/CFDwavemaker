@@ -1,6 +1,7 @@
 #include "Irregular.h"
 #include <math.h>
 #include <algorithm>
+#include <numeric>
 
 #define PI 3.1415926535897
 #define G 9.81
@@ -13,6 +14,7 @@ double Irregular::eta(double t, double x, double y) {
 			return (swl + eta1(t, x, y) + eta2(t, x, y));
 	
 		default:
+			std::cout << eta1(t, x, y) << std::endl;
 			return (swl + eta1(t, x, y));
 			
 	}
@@ -74,12 +76,16 @@ double Irregular::eta1(double t, double xx, double yy) {
 
 	double welev = 0.0;
 	double phi;
-
+	//std::cout << "ndir" << ndir << std::endl;
+	//std::cout << "nfreq" << nfreq << std::endl;
+	//std::cout << "mtheta" << mtheta << std::endl;
+	
 	for (int i = 0; i < ndir * nfreq; i++) {
 
 		phi = omega[i] * tofmax + phase[i];
 		welev += A[i] * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
 			+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
+		//std::cout << i << ": A" << A[i] << std::endl;
 	}
 
 
@@ -513,19 +519,17 @@ double Irregular::sum(double ll[], int nsum) {
 
 void Irregular::normalize_data() {
 	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
-	double* Sw = new double[nfreq];
-	Sw = A;
+	double sumA = std::accumulate(A.begin(), A.end(), 0);
 	if (normalize) {
 		for (int i = 0; i < nfreq; i++) {
-			A[i] = ampl * Sw[i] / sum(Sw, nfreq);
+			A[i] = ampl * A[i] / sumA;
 		}
 	}
 	else {
 		for (int i = 0; i < nfreq; i++) {
-			A[i] = ampl * Sw[i];
+			A[i] = ampl * A[i];
 		}
 	}
-	delete[] Sw;
 };
 
 

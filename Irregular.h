@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "Wavespectra.h"
-
+#include <vector> 
 
 class Irregular {
 private:
@@ -25,11 +25,11 @@ public:
 		tofmax = 0.;
 		fpoint[0] = 0.;
 		fpoint[1] = 0.;
+		swl = 0.;
 	};
 
 	~Irregular() {
 		std::cout << "Irregular class destroyed." << std::endl;
-		delete[] omega, A, k, theta, phase;
 	};
 
 	// Variables
@@ -38,12 +38,12 @@ public:
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl; // still water level
 
-	// Declaration of pointers where data will be stored
-	double* omega;
-	double* A;
-	double* k;
-	double* theta;
-	double* phase;
+	// Declaration of vectors to store spectral data components
+	std::vector<double> omega;
+	std::vector<double> A;
+	std::vector<double> k;
+	std::vector<double> theta;
+	std::vector<double> phase;
 
 	// First order
 	double eta1(double t, double xx, double yy); // wave elevation
@@ -72,15 +72,6 @@ public:
 	double dp(double t, double x, double y, double z);
 
 	void normalize_data();
-
-	void allocate_arrays(int array_length) {
-		// allocate memory for storage of spectral component data
-		omega = new double[array_length];
-		k = new double[array_length];
-		phase = new double[array_length];
-		A = new double[array_length];
-		theta = new double[array_length];
-	}	
 };
 
 #endif

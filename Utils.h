@@ -25,8 +25,9 @@ public:
 	// Wall grids, used for faster running of calculation demanding kinematics codes
 	double* UX0, * VX0, * WX0, * UX1, * VX1, * WX1; // X wall grid (2x2D)
 	double* UY0, * VY0, * WY0, * UY1, * VY1, * WY1; // Y wall grid (2x2D)
-	double* ETAX0, * ETAX1, * ETAY0, * ETAY1; // surface grids at wall (2x1D)
-
+	double* ETAX1, * ETAY0, * ETAY1; // surface grids at wall (2x1D)
+	double* ETAX0;
+	
 	double wallxsize[6];
 	double wallx_start[3];
 	double wallysize[6];
@@ -37,21 +38,23 @@ public:
 	double dx_wx, dy_wx, dz_wx;
 	double dx_wy, dy_wy, dz_wy;
 
-	int initialized;
+	bool initialized;
 	int initsurf = 0;
 	int initkin = 0;
 	double dx, dy, dz, dxl, dyl, dzl;
 	int numgrids;
 
-	void update_boundary_arrays(Irregular* irregular, double tpt);
+	void update_boundary_arrays(Irregular &irregular, double tpt);
 
-	void update_boundary_wallx(Irregular* irregular);
+	void update_boundary_wallx(Irregular &irregular, double tpt);
 
-	void init_boundary_wallx(Irregular* irregular, double tpt);
-	void redefine_boundary_wallx(Irregular* irregular, double tpt, double xpt, double ypt, double zpt);
+	void allocate_wallx_memory();
 
-	void initialize_kinematics(Irregular* irregular, double tpt);
-	void initialize_surface_elevation(Irregular* irregular, double tpt);
+	void init_boundary_wallx(Irregular &irregular, double tpt);
+	void redefine_boundary_wallx(Irregular &irregular, double tpt, double xpt, double ypt, double zpt);
+
+	void initialize_kinematics(Irregular &irregular, double tpt);
+	void initialize_surface_elevation(Irregular  &irregular, double tpt);
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _nz, double _dx, double _dy, double _dz, double* domain);
@@ -67,10 +70,10 @@ public:
 	// routines for extracting kinematics at walls
 	bool CheckTime(double tpt);
 	bool CheckBounds(double* bounds, double x, double y, double z);
-	double u_wall(double xpt, double ypt, double zpt, double tpt);
-	double v_wall(double xpt, double ypt, double zpt, double tpt);
-	double w_wall(double xpt, double ypt, double zpt, double tpt);
-	double eta_wall(double xpt, double ypt, double tpt);
+	double u_wall(double tpt, double xpt, double ypt, double zpt);
+	double v_wall(double tpt, double xpt, double ypt, double zpt);
+	double w_wall(double tpt, double xpt, double ypt, double zpt);
+	double eta_wall(double tpt, double xpt, double ypt);
 };
 // Ramp class contains various ramp functions
 class Ramp {
