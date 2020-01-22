@@ -12,14 +12,20 @@ outputs:
 - surface elevation at any position (x,y)
 - velocity components
 
+Special:
+- Grid interpolation of wave kinematics for faster initialization when using second order kinematics
+
 Version2 will replace the old version as soon as tests have been carried out, but is not ready for use, yet....
 New to Version 2:
 - The entire code have been restructured to make use of classes
 - previous stokes c code is now converted to a c++ class.
 
-To come:
+ongoing work:
+- wall_grid interpolation, for use when propagating waves from the bondaries
+- varying finite depth along the boundary
 - a new wave spectrum class for generating waves directly from various wave spectra will soon be included.
 - a spreading function class
+
+to come:
 - deans stream function wave
 - hinghed wave maker theory
-
