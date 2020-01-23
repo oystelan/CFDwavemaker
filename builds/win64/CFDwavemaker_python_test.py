@@ -83,8 +83,8 @@ ax = plt.axes(xlim=(-200, 200), ylim=(-6, 6))
 line, = ax.plot([], [], lw=3)
 
 print(init_dll(mydll))
-time = np.arange(0,100,0.5)
-ypos = np.arange(-200,200, 10)
+time = np.arange(0, 100, 0.5)
+ypos = np.arange(-200, 200, 10)
 
 tic()
 
