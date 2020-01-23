@@ -1537,7 +1537,7 @@ int Cleanup() {
 }
 
 
-int main() {
+/*int main() {
 	//cout << GetCurrentWorkingDir() << endl;
 	read_inputdata_v2();
 	//for (int i = 0; i < 1; i++) {
@@ -1550,4 +1550,4 @@ int main() {
 	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
-}
+}*/
