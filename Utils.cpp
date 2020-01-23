@@ -36,16 +36,16 @@ void Grid::update_boundary_wallx(Irregular &irregular, double tpt) {
 	//omp_set_num_threads(1);
 	omp_set_num_threads(omp_get_max_threads());
 
-#pragma omp parallel // start parallel initialization
+	#pragma omp parallel // start parallel initialization
 	{
-#pragma omp master
+		//#pragma omp master
 		//std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		double xpt, ypt, zpt;
 		double eta0_temp, eta1_temp;
 
 		// Main grid
-#pragma omp for
+		#pragma omp for
 		for (int i = 0; i < wallx_nx; i++) {
 			xpt = wallxsize[0] + dx_wx * i;
 			for (int j = 0; j < wallx_ny; j++) {
@@ -126,16 +126,16 @@ void Grid::init_boundary_wallx(Irregular &irregular, double tpt) {
 	//omp_set_num_threads(1);
 	omp_set_num_threads(omp_get_max_threads());
 
-#pragma omp parallel // start parallel initialization
+	#pragma omp parallel // start parallel initialization
 	{
-#pragma omp master
+		#pragma omp master
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		double xpt, ypt, zpt;
 		double eta0_temp, eta1_temp;
 
 		// Main grid
-#pragma omp for
+		#pragma omp for
 		for (int i = 0; i < wallx_nx; i++) {
 			xpt = wallxsize[0] + dx_wx * i;
 			for (int j = 0; j < wallx_ny; j++) {
@@ -221,16 +221,16 @@ void Grid::initialize_kinematics(Irregular &irregular, double tpt) {
 	//omp_set_num_threads(1);
 	omp_set_num_threads(omp_get_max_threads());
 
-#pragma omp parallel // start parallel initialization
+	#pragma omp parallel // start parallel initialization
 	{
-#pragma omp master
+		#pragma omp master
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		double xpt, ypt, zpt;
 		double eta_temp;
 
 		// Main grid
-#pragma omp for
+		#pragma omp for
 		for (int i = 0; i < NX; i++) {
 			xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
