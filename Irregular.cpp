@@ -14,7 +14,7 @@ double Irregular::eta(double t, double x, double y) {
 			return (swl + eta1(t, x, y) + eta2(t, x, y));
 	
 		default:
-			std::cout << eta1(t, x, y) << std::endl;
+			//std::cout << eta1(t, x, y) << std::endl;
 			return (swl + eta1(t, x, y));
 			
 	}
