@@ -519,7 +519,7 @@ double Irregular::sum(double ll[], int nsum) {
 
 void Irregular::normalize_data() {
 	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
-	double sumA = std::accumulate(A.begin(), A.end(), 0);
+	double sumA = std::accumulate(A.begin(), A.end(), 0.);
 	if (normalize) {
 		for (int i = 0; i < nfreq; i++) {
 			A[i] = ampl * A[i] / sumA;
