@@ -1537,17 +1537,17 @@ int Cleanup() {
 }
 
 
-/*int main() {
+int main() {
 	//cout << GetCurrentWorkingDir() << endl;
 	read_inputdata_v2();
 	//for (int i = 0; i < 1; i++) {
 	//	std::cout << double(i) << "wave elevation: " << wave_SurfElev(0.0, double(i), 0.0) << std::endl;
 	//}
 	std::cout << "wave elevation: " << wave_SurfElev(0.0, 0.0, 0.0) << std::endl;
-	std::cout << "wave elevation true: " << irregular.eta(0.0, 0.0, 0.0) << std::endl;
+	std::cout << "wave elevation true: " << irregular.eta(12.0, 0.0, 0.0) << std::endl;
 	//std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
-}*/
+}
