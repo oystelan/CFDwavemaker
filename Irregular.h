@@ -35,6 +35,7 @@ public:
 	// Variables
 	int nfreq, ndir, extmet, bandwidth, normalize;
 	int pertmet = 0;
+	int sloping_bottom = 0;
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl; // still water level
 
@@ -69,6 +70,8 @@ public:
 	double u(double t, double x, double y, double z); 
 	double v(double t, double x, double y, double z);
 	double w(double t, double x, double y, double z);
+	double profileX(int ind, double x, double y, double z);
+	double profileZ(int ind, double x, double y, double z);
 	double dp(double t, double x, double y, double z);
 
 	void normalize_data();

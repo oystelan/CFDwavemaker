@@ -1545,7 +1545,7 @@ int main() {
 	//}
 	std::cout << "wave elevation: " << wave_SurfElev(0.0, 0.0, 0.0) << std::endl;
 	std::cout << "wave elevation true: " << irregular.eta(12.0, 0.0, 0.0) << std::endl;
-	//std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
+	std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << irregular.Ampspec[0] << std::endl;

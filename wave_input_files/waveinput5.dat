@@ -18,6 +18,20 @@ stokes5
 # WAVE_LENGTH  WAVE_HEIGHT   
    300.           20.0          
 
+#[ramps]
+#time_rampup rampup_start rampup_end
+1          0.0000       0.5
+#time_rampdown rampdown_start rampdown_end
+0              0.0000         1.0
+#x_rampup rampup_start rampup_end
+0         -11.0000     -10.0
+#x_rampdown rampdown_start rampdown_end
+0           11.0000        12.0
+#y_rampup rampup_start rampup_end
+0         -11.0000     -10.0
+#y_rampdown rampdown_start rampdown_end
+0           11.0000        12.0
+
 [current speed]
 # optional
 0.0
