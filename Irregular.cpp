@@ -66,6 +66,25 @@ double Irregular::w(double t, double x, double y, double z) {
 	}
 };
 
+/* velocity profile for horizontal component. For implmentation of sloping bottom*/
+double Irregular::profileX(int ind, double x, double y, double z) {
+	switch (sloping_bottom) {
+	case 0:
+		return (cosh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
+	case 1:
+		return 0.0;
+	}
+}
+
+double Irregular::profileZ(int ind, double x, double y, double z) {
+	switch (sloping_bottom) {
+	case 0:
+		return (sinh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
+	case 1:
+		return 0.0;
+	}
+}
+
 double Irregular::dp(double t, double x, double y, double z) {
 	//todo: implement second order pressure component
 	return dp1(t, x, y, z - swl);
@@ -146,11 +165,11 @@ double Irregular::u1(double t, double xx, double yy, double zz) {
 
 	double usum = 0.0;
 	double phi;
-
+	//(cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		usum += cos(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * (cosh(k[i]
-			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) 
+		usum +=  A[i] * G * k[i] / omega[i] * profileX(i, xx, yy, zz)
+			* cos(theta[i] + (mtheta * PI / 180.)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.))
 				* (xx - fpoint[0]) + sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
@@ -167,8 +186,8 @@ double Irregular::v1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		vsum += sin(theta[i] + (mtheta * PI / 180.)) * A[i] * omega[i] * (cosh(k[i] 
-			* (zz + depth)) / sinh(k[i] * depth)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) 
+		vsum += A[i] * G * k[i] / omega[i] * profileX(i, xx, yy, zz)
+			* sin(theta[i] + (mtheta * PI / 180.)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0])
 				+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
 
@@ -185,7 +204,7 @@ double Irregular::w1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		wsum += A[i] * omega[i] * (sinh(k[i] * (zz + depth)) / sinh(k[i] * depth)) 
+		wsum += A[i] * G * k[i] / omega[i] * profileZ(i, xx, yy, zz)
 			* sin(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] + (mtheta 
 				* PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
@@ -521,12 +540,12 @@ void Irregular::normalize_data() {
 	// Normalize and/or amplify the amplitude spectrum if Normalize is switched on
 	double sumA = std::accumulate(A.begin(), A.end(), 0.);
 	if (normalize) {
-		for (int i = 0; i < nfreq; i++) {
+		for (int i = 0; i < nfreq*ndir; i++) {
 			A[i] = ampl * A[i] / sumA;
 		}
 	}
 	else {
-		for (int i = 0; i < nfreq; i++) {
+		for (int i = 0; i < nfreq*ndir; i++) {
 			A[i] = ampl * A[i];
 		}
 	}

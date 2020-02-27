@@ -39,6 +39,9 @@ irregular
 #y_rampdown rampdown_start rampdown_end
 0           11.0000        12.0
 
+[sloping bottom]
+# if set to 1, a special definition of the potential is used to generate kinematics
+1
 
 [wave properties]
 # for irregular waves
