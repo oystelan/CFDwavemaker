@@ -550,8 +550,7 @@ double Ramp::ramp(double t, double x, double y) {
 		if (ramp_init_y_down) {
 			ramps[5] = ramp1d(y, y_rampdown_start, y_rampdown_end, true);
 		}
-		int min = *std::min_element(std::begin(ramps), std::end(ramps));
-		return ramps[min];
+		return *std::min_element(std::begin(ramps), std::end(ramps));
 	}
 	else {
 		return 1.0;

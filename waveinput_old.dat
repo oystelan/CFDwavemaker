@@ -2,6 +2,10 @@
 
 [wave type]
 # WAVETYPE 
+# 1. irregular
+# 2. pistonwavemaker
+# 3. spectralwave
+# 4. stokes5
 irregular
 
 [general input data]
@@ -14,33 +18,36 @@ irregular
 
 [perturbation method]
 # EXTMETH PERTMET BANDWIDTH
-    0       0       1000
+    2       2       1000
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
 # Time(s)  x(m)  y(m)
-0.00      0.00  11.00
+12.00      0.00  0.00
 
-[ramps]
+#[ramps]
 #time_rampup rampup_start rampup_end
-0          0.0000       0.5
+1            0.0000       0.5
 #time_rampdown rampdown_start rampdown_end
 0              0.0000         1.0
 #x_rampup rampup_start rampup_end
 0         -11.0000     -10.0
 #x_rampdown rampdown_start rampdown_end
-0           10.0000        12.0
+0           11.0000        12.0
 #y_rampup rampup_start rampup_end
 0         -11.0000     -10.0
 #y_rampdown rampdown_start rampdown_end
-1           10.0000        12.0
+0           11.0000        12.0
 
+[sloping bottom]
+# if set to 1, a special definition of the potential is used to generate kinematics
+1
 
 [wave properties]
 # for irregular waves
 userdefined
 # NFREQ NDIR
-28 19
+28 1
 # OMEGA [rad/s] S(omega) K   Phase
     5.2033     0.0369     2.7670     0.0000
     5.3014     0.0356     2.8708     0.0000
@@ -71,24 +78,36 @@ userdefined
     7.7558     0.0166     6.1318     0.0000
     7.8540     0.0162     6.2880     0.0000
 # DIRS
-      -0.7854     0.042843
-     -0.69813     0.045853
-     -0.61087     0.048652
-      -0.5236     0.051192
-     -0.43633     0.053426
-     -0.34907     0.055313
-      -0.2618     0.056819
-     -0.17453     0.057916
-    -0.087266     0.058583
-            0     0.058806
-     0.087266     0.058583
-      0.17453     0.057916
-       0.2618     0.056819
-      0.34907     0.055313
-      0.43633     0.053426
-       0.5236     0.051192
-      0.61087     0.048652
-      0.69813     0.045853
-       0.7854     0.042843
+0. 1.0
 
+#[grid interpolation]
+#number of grids to read in
+1
+# grid used for kinematics interpolation
+# alternatives: init domain interp, wallx(not implemented yet)
+init domain interp
+# Definition of dualgridbox and
+# XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
+-882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
+# Resolution of upper gridbox (arround the surface)
+#NX NY NZ
+2 100 12
+# Resolution of lower grid box (in the deep, less resolution is required)
+#NXL NYL NZL
+2 100 3
+
+#[grid interpolation]
+#number of grids to read in
+1
+# grid used for kinematics interpolation
+# alternatives: init domain interp, wallx(not implemented yet)
+wallx
+# Definition of dualgridbox and
+# XMIN XMAX YMIN YMAX ZMIN ZMAX
+0. 1. -200.0 200.0  -77.3559 30.
+# Resolution of upper gridbox (arround the surface)
+#NX NY NZ
+2 100 12
+# dt
+0.5
 
