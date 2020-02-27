@@ -1536,7 +1536,7 @@ int Cleanup() {
 	return wave_Cleanup();
 }
 
-
+/*
 int main() {
 	//cout << GetCurrentWorkingDir() << endl;
 	read_inputdata_v2();
@@ -1551,3 +1551,4 @@ int main() {
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
 }
+*/
