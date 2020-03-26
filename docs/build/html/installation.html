@@ -86,9 +86,10 @@
 <li class="toctree-l1"><a class="reference internal" href="about.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="build_instructions.html">Build Instructions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#installation-with-comflow">Installation with ComFLOW</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation-with-basilisk">Installation with Basilisk</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation-with-openfoam">Installation with OpenFOAM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-comflow">Linking up with ComFLOW</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-basilisk-or-c">Linking up with Basilisk (or C)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-openfoam">Linking up  with OpenFOAM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-python">Linking up with Python</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">Input File Format</a></li>
@@ -162,14 +163,101 @@
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <p>This pages describes how to install and get up and running with the CFDwavemaker C++ library, with different CFD solvers.</p>
-<div class="section" id="installation-with-comflow">
-<h2>Installation with ComFLOW<a class="headerlink" href="#installation-with-comflow" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linking-up-with-comflow">
+<h2>Linking up with ComFLOW<a class="headerlink" href="#linking-up-with-comflow" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-C++ notranslate"><div class="highlight"><pre><span></span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="s">&quot;A literal block directive explicitly marked as python code</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</pre></div>
 </div>
-<div class="section" id="installation-with-basilisk">
-<h2>Installation with Basilisk<a class="headerlink" href="#installation-with-basilisk" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="installation-with-openfoam">
-<h2>Installation with OpenFOAM<a class="headerlink" href="#installation-with-openfoam" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linking-up-with-basilisk-or-c">
+<h2>Linking up with Basilisk (or C)<a class="headerlink" href="#linking-up-with-basilisk-or-c" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="linking-up-with-openfoam">
+<h2>Linking up  with OpenFOAM<a class="headerlink" href="#linking-up-with-openfoam" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="linking-up-with-python">
+<h2>Linking up with Python<a class="headerlink" href="#linking-up-with-python" title="Permalink to this headline">¶</a></h2>
+<p>Occationally it may be useful generate kinematics data for other reasons than pushing it into a CFD solver. In this case python</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span><span class="o">*</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># give location of dll (this is used in windows)</span>
+<span class="c1"># mydll = cdll.CFDwavemaker</span>
+
+<span class="c1"># And this is for Linux/unix</span>
+<span class="n">mydll</span> <span class="o">=</span> <span class="n">cdll</span><span class="o">.</span><span class="n">LoadLibrary</span><span class="p">(</span><span class="s2">&quot;./CFDwavemaker.so&quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">velocityx</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">VelocityX</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">velocityy</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">VelocityY</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_int</span><span class="p">,</span> <span class="n">c_int</span><span class="p">,</span> <span class="n">c_int</span><span class="p">,</span> <span class="n">c_double</span><span class="p">,</span> <span class="n">c_double</span><span class="p">,</span> <span class="n">c_double</span><span class="p">,</span> <span class="n">c_double</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">velocityz</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">VelocityZ</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">waveelev</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">SurfaceElevation</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_int</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">volfrac</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">delta</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">VolumeFraction</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">delta</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">init_dll</span><span class="p">(</span><span class="n">mydll</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">Init</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_int</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c_double</span><span class="p">),</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c_double</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+
+<span class="k">def</span> <span class="nf">clean_up</span><span class="p">(</span><span class="n">mydll</span><span class="p">):</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">Cleanup</span>
+    <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_int</span>
+    <span class="k">return</span> <span class="n">aa</span><span class="p">();</span>
+
+
+<span class="c1"># We start of by calling the init function. This will read the waveinput.dat file and perform necessary initialization</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">init_dll</span><span class="p">(</span><span class="n">mydll</span><span class="p">))</span>
+
+<span class="c1"># We create a time vector from 0 to 100 sec, with 0.5sec spacing</span>
+<span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># lets extract the surface elevation at x=y=0</span>
+<span class="n">wave_elev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">time</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">wave</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">wave_elev</span><span class="p">,</span><span class="n">time</span><span class="p">):</span>
+    <span class="n">wave</span> <span class="o">=</span> <span class="n">waveelev</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span> <span class="c1"># x and y position set to 0.</span>
+
+<span class="c1"># or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.</span>
+
+<span class="n">ux</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">time</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">u</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ux</span><span class="p">,</span><span class="n">time</span><span class="p">):</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">velocityx</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="o">-</span><span class="mf">11.0</span><span class="p">)</span> <span class="c1"># x and y position set to 0.</span>
+
+<span class="c1"># You get the idea.</span>
+
+<span class="c1"># Plotting some kinematics data</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="n">wave</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="n">ux</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c1"># now that we are done, we close down the link to the library before exiting</span>
+<span class="n">clean_up</span><span class="p">(</span><span class="n">mydll</span><span class="p">)</span>
+</pre></div>
+</div>
 </div>
 </div>
 
