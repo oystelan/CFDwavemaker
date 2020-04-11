@@ -14,7 +14,7 @@ public:
 	// Volume grid, used for fast initialization
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
 	double* ETA0, * ETA0;// Surface grid (2D)
-	int NX, NY, NZ;
+	int NX, NY, NL;
 	double domain_start[3], domain_end[3];
 
 	double water_depth;
@@ -22,7 +22,7 @@ public:
 	int initsurf = 0;
 	int initkin = 0;
 	int nl = 10; // number of layers in z direction
-	double dx, dy, dz;
+	double dx, dy, dz, ds;
 	double t0, t1, dt;
 	int numgrids;
 

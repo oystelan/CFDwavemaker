@@ -30,6 +30,7 @@ double sGrid::clayer(int layerno) {
 }
 
 // Transforms normal z axis to streched sigma coordinates 
+// s defined between -1 (seabed) and 0 (free surface)
 double sGrid::z2s(double z, double wave_elev, double depth) {
 	return (z - wave_elev) / (depth + wave_elev);
 }
@@ -42,35 +43,37 @@ double sGrid::s2z(double s, double wave_elev, double depth) {
 
 
 double sGrid::s2tan(double s) {
-	// s defined between 0 and 1, where 0 is seabed, 1 is sea surface
-	// returns tangens strethced coordintates tan, which is also defined between 0 and 1
-	double a_end = 70;
-	double a_potens = 1.5;
-
-	return 1. - (std::pow(std::tan(s * a_end * PI / 180.), a_potens) / std::pow(std::tan(a_end * PI / 180.), a_potens));
+	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
+	// returns tangens strethced coordintates tan, which is also defined between -1 and 0
+	double a = 7. * PI / 18.; // todo: move these parameter to class header file
+	double b = 1.5;
+	
+	return -std::pow(std::tan(-s * a) , b) / std::pow(std::tan(a), b);
+	
 
 }
 
 double sGrid::tan2s(double t) {
 	// The inverse of the above function s2tan. from tan stretched to normal constant spacing
-	double a_end = 70;
-	double a_potens = 1.5;
-	return std::atan(std::pow((1. - t) * std::pow(std::tan(a_end * PI / 180.), a_potens), (1 / a_potens))) / (a_end *PI / 180.);
+	double a = 7. * PI / 18.;// todo: move these parameter to class header file
+	double b = 1.5;
+	return -std::atan(std::pow(-t * std::pow(std::tan(a) , b) , 1. / b)) / a;
 
 }
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 	// Allocating memory for storage of surface elevation and velocities
-	UX0 = new double[NX * NY * NZ];
-	UY0 = new double[NX * NY * NZ];
-	UZ0 = new double[NX * NY * NZ];
+	UX0 = new double[NX * NY * NL];
+	UY0 = new double[NX * NY * NL];
+	UZ0 = new double[NX * NY * NL];
 
 	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
 	dx = (domain_end[0] - domain_start[0]) / double(NX - 1);
 	dy = (domain_end[1] - domain_start[1]) / double(NY - 1);
-	dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
+	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
+	ds = 1. / double(NL - 1);
 
 	double dd = omp_get_wtime();
 
@@ -82,7 +85,7 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 #pragma omp master
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
-		double xpt, ypt, zpt;
+		double xpt, ypt, zpt, spt;
 		double eta_temp;
 
 		// Main grid
@@ -101,26 +104,19 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 				double PHI_dydz = irregular.phi1_dydz(tpt, xpt, ypt);
 				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
 
-				for (int m = 0; m < NZ; m++) {
-					zpt = domain_start[2] + dz * m;
-					if (zpt > (eta_temp + dz)) {
-						UX0[i * NY * NZ + j * NZ + m] = 0.0;
-						UY0[i * NY * NZ + j * NZ + m] = 0.0;
-						UZ0[i * NY * NZ + j * NZ + m] = 0.0;
-					}
-					else if (zpt > 0.) {
-						UX0[i * NY * NZ + j * NZ + m] = Ux0 + PHI_dxdz * zpt;
-						UY0[i * NY * NZ + j * NZ + m] = Uy0 + PHI_dydz * zpt;
-						UZ0[i * NY * NZ + j * NZ + m] = Uz0 + PHI_dzdz * zpt;
+				for (int m = 0; m < NL; m++) {
+					spt = s2tan(-1. + ds * m);
+					zpt = s2z(spt, eta_temp, water_depth);					
+					if (zpt > 0.) {
+						UX0[i * NY * NL + j * NL + m] = Ux0 + PHI_dxdz * zpt;
+						UY0[i * NY * NL + j * NL + m] = Uy0 + PHI_dydz * zpt;
+						UZ0[i * NY * NL + j * NL + m] = Uz0 + PHI_dzdz * zpt;
 					}
 					else {
-						UX0[i * NY * NZ + j * NZ + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
-						UY0[i * NY * NZ + j * NZ + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
-						UZ0[i * NY * NZ + j * NZ + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
-					}
-					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
-					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
-					UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);*/
+						UX0[i * NY * NL + j * NL + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
+						UY0[i * NY * NL + j * NL + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
+						UZ0[i * NY * NL + j * NL + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
+					}			
 				}
 			}
 		}
@@ -220,15 +216,15 @@ double sGrid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _n
 
 
 double sGrid::u(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UX0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NZ, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UX0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
 }
 
 double sGrid::v(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UY0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NZ, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UY0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
 }
 
 double sGrid::w(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UZ0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NZ, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UZ0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
 }
 
 double sGrid::eta(double xpt, double ypt) {
