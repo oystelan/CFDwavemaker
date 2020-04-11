@@ -85,16 +85,13 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 #pragma omp master
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
-		double xpt, ypt, zpt, spt;
-		double eta_temp;
-
 		// Main grid
 #pragma omp for
 		for (int i = 0; i < NX; i++) {
-			xpt = domain_start[0] + dx * i;
+			double xpt = domain_start[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
-				ypt = domain_start[1] + dy * j;
-				eta_temp = irregular.eta(tpt, xpt, ypt);
+				double ypt = domain_start[1] + dy * j;
+				double eta_temp = irregular.eta(tpt, xpt, ypt);
 
 				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
 				double Uy0 = irregular.v1(tpt, xpt, ypt, 0.0) + irregular.v2(tpt, xpt, ypt, 0.0);
@@ -105,8 +102,8 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
 
 				for (int m = 0; m < NL; m++) {
-					spt = s2tan(-1. + ds * m);
-					zpt = s2z(spt, eta_temp, water_depth);					
+					double spt = s2tan(-1. + ds * m);
+					double zpt = s2z(spt, eta_temp, water_depth);					
 					if (zpt > 0.) {
 						UX0[i * NY * NL + j * NL + m] = Ux0 + PHI_dxdz * zpt;
 						UY0[i * NY * NL + j * NL + m] = Uy0 + PHI_dydz * zpt;
