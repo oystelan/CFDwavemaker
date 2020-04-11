@@ -70,8 +70,8 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 
 	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
-	dx = (domain_end[0] - domain_start[0]) / double(NX - 1);
-	dy = (domain_end[1] - domain_start[1]) / double(NY - 1);
+	dx = (domain[1] - domain[0]) / double(NX - 1);
+	dy = (domain[3] - domain[2]) / double(NY - 1);
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / double(NL - 1);
 
@@ -88,9 +88,9 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 		// Main grid
 #pragma omp for
 		for (int i = 0; i < NX; i++) {
-			double xpt = domain_start[0] + dx * i;
+			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
-				double ypt = domain_start[1] + dy * j;
+				double ypt = domain[2] + dy * j;
 				double eta_temp = irregular.eta(tpt, xpt, ypt);
 
 				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
@@ -135,8 +135,8 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double tpt) {
 
 	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
 
-	dx = (domain_end[0] - domain_start[0]) / double(NX - 1);
-	dy = (domain_end[1] - domain_start[1]) / double(NY - 1);
+	dx = (domain[1] - domain[0]) / double(NX - 1);
+	dy = (domain[3] - domain[2]) / double(NY - 1);
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
@@ -147,9 +147,9 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double tpt) {
 		// Main grid
 #pragma omp for
 		for (int i = 0; i < NX; i++) {
-			double xpt = domain_start[0] + dx * i;
+			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
-				double ypt = domain_start[1] + dy * j;
+				double ypt = domain[2] + dy * j;
 				ETA0[i * NY + j] = irregular.eta1(tpt, xpt, ypt) + irregular.eta2(tpt, xpt, ypt);
 			}
 		}
@@ -162,7 +162,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double tpt) {
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _ns, double _dx, double _dy, double _ds, double* domain) {
+double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt) {
 	
 	
 	double wave_elev = eta(xpt, ypt);
@@ -170,18 +170,18 @@ double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, doubl
 		return 0.;
 	}
 	double spt = tan2s(z2s(zpt, wave_elev, water_depth));
-	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
-	double nyp = std::min(double(_ny), std::max(0., (ypt - domain[1]) / _dy));
-	double nsp =  (spt + 1.) / _ds;
+	double nxp = std::min(double(NX), std::max(0., (xpt - domain[0]) / dx));
+	double nyp = std::min(double(NY), std::max(0., (ypt - domain[1]) / dy));
+	double nsp =  (spt + 1.) / ds;
 
-	double C000 = VAR[int(floor(nxp) * _ny * _ns + floor(nyp) * _ns + floor(nsp))];
-	double C001 = VAR[int(floor(nxp) * _ny * _ns + floor(nyp) * _ns + ceil(nsp))];
-	double C010 = VAR[int(floor(nxp) * _ny * _ns + ceil(nyp) * _ns + floor(nsp))];
-	double C011 = VAR[int(floor(nxp) * _ny * _ns + ceil(nyp) * _ns + ceil(nsp))];
-	double C100 = VAR[int(ceil(nxp) * _ny * _ns + floor(nyp) * _ns + floor(nsp))];
-	double C101 = VAR[int(ceil(nxp) * _ny * _ns + floor(nyp) * _ns + ceil(nsp))];
-	double C110 = VAR[int(ceil(nxp) * _ny * _ns + ceil(nyp) * _ns + floor(nsp))];
-	double C111 = VAR[int(ceil(nxp) * _ny * _ns + ceil(nyp) * _ns + ceil(nsp))];
+	double C000 = VAR[int(floor(nxp) * NY * NL + floor(nyp) * NL + floor(nsp))];
+	double C001 = VAR[int(floor(nxp) * NY * NL + floor(nyp) * NL + ceil(nsp))];
+	double C010 = VAR[int(floor(nxp) * NY * NL + ceil(nyp) * NL + floor(nsp))];
+	double C011 = VAR[int(floor(nxp) * NY * NL + ceil(nyp) * NL + ceil(nsp))];
+	double C100 = VAR[int(ceil(nxp) * NY * NL + floor(nyp) * NL + floor(nsp))];
+	double C101 = VAR[int(ceil(nxp) * NY * NL + floor(nyp) * NL + ceil(nsp))];
+	double C110 = VAR[int(ceil(nxp) * NY * NL + ceil(nyp) * NL + floor(nsp))];
+	double C111 = VAR[int(ceil(nxp) * NY * NL + ceil(nyp) * NL + ceil(nsp))];
 	double xd = nxp - floor(nxp);
 	double yd = nyp - floor(nyp);
 	double sd = nsp - floor(nsp);
@@ -198,15 +198,15 @@ double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, doubl
 }
 
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double sGrid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double* domain) {
+double sGrid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
 
-	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
-	double nyp = std::min(double(_ny), std::max(0., (ypt - domain[1]) / _dy));
+	double nxp = std::min(double(NX), std::max(0., (xpt - domain[0]) / dx));
+	double nyp = std::min(double(NY), std::max(0., (ypt - domain[1]) / dy));
 
-	double C00 = VAR[int(floor(nxp) * _ny + floor(nyp))];
-	double C01 = VAR[int(floor(nxp) * _ny + ceil(nyp))];
-	double C10 = VAR[int(ceil(nxp) * _ny + floor(nyp))];
-	double C11 = VAR[int(ceil(nxp) * _ny + ceil(nyp))];
+	double C00 = VAR[int(floor(nxp) * NY + floor(nyp))];
+	double C01 = VAR[int(floor(nxp) * NY + ceil(nyp))];
+	double C10 = VAR[int(ceil(nxp) * NY + floor(nyp))];
+	double C11 = VAR[int(ceil(nxp) * NY + ceil(nyp))];
 
 	double xd = nxp - floor(nxp);
 	double yd = nyp - floor(nyp);
@@ -219,19 +219,19 @@ double sGrid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _n
 
 
 double sGrid::u(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UX0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UX0, xpt, ypt, zpt);
 }
 
 double sGrid::v(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UY0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UY0, xpt, ypt, zpt);
 }
 
 double sGrid::w(double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UZ0, xpt, ypt, z2s(zpt, eta(xpt, ypt), water_depth), NX, NY, NL, dx, dy, dz, domain_start);
+	return trilinear_interpolation(UZ0, xpt, ypt, zpt);
 }
 
 double sGrid::eta(double xpt, double ypt) {
-	return bilinear_interpolation(ETA0, xpt, ypt, NX, NY, dx, dy, domain_start);
+	return bilinear_interpolation(ETA0, xpt, ypt);
 }
 
 

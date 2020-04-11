@@ -13,9 +13,10 @@ public:
 	};
 	// Volume grid, used for fast initialization
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
-	double* ETA0, * ETA0;// Surface grid (2D)
+	double* ETA0, * ETA1;// Surface grid (2D)
 	int NX, NY, NL;
-	double domain_start[3], domain_end[3];
+	double domain[6];
+	double domain_ignore[6];
 
 	double water_depth;
 	bool initialized;
@@ -42,8 +43,8 @@ public:
 	void initialize_surface_elevation(Irregular& irregular, double tpt);
 
 	// Grid interpolation functions
-	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _nz, double _dx, double _dy, double _dz, double* domain);
-	double bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double* domain);
+	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt);
+	double bilinear_interpolation(double* VAR, double xpt, double ypt);
 
 	// routines for extracting kinematics from initial grid
 	double u(double xpt, double ypt, double zpt);
