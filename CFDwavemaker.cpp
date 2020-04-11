@@ -29,6 +29,7 @@
 #include "Irregular.h"
 #include "Utils.h"
 #include "Wavemaker.h"
+#include "sgrid.h"
 
 //#include <fftw3.h>
 
@@ -54,6 +55,9 @@ Wavemaker wavemaker;
 
 // Grid class
 Grid gridclass;
+
+// Grid class
+sGrid sgrid;
 
 // Ramp class
 Ramp ramp;
@@ -274,8 +278,8 @@ int read_inputdata_v2() {
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> irregular.extmet;
-			buf >> irregular.pertmet;
+			buf >> irregular.extrapolation_met;
+			buf >> irregular.order;
 			buf >> irregular.bandwidth;
 			buf.clear();
 		}
@@ -1553,3 +1557,4 @@ int main() {
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
 }
+*/

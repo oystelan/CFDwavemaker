@@ -33,6 +33,9 @@
     <ClCompile Include="Wavespectra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sgrid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h">
@@ -51,6 +54,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Wavespectra.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sgrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

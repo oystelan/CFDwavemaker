@@ -9,7 +9,7 @@
 
 
 double Irregular::eta(double t, double x, double y) {
-	switch(pertmet){
+	switch(order){
 		case 2:
 			return (swl + eta1(t, x, y) + eta2(t, x, y));
 	
@@ -22,7 +22,7 @@ double Irregular::eta(double t, double x, double y) {
 
 double Irregular::u(double t, double x, double y, double z) {
 
-	switch (pertmet) {
+	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
 			return (u1(t, x, y, z0) + u2(t, x, y, z0) + phi1_dxdz(t, x, y) * std::max(0., z - swl));}
@@ -36,7 +36,7 @@ double Irregular::u(double t, double x, double y, double z) {
 	}
 };
 double Irregular::v(double t, double x, double y, double z) {
-	switch (pertmet) {
+	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
 			return (v1(t, x, y, z0) + v2(t, x, y, z0) + phi1_dydz(t, x, y) * std::max(0., z - swl)); }
@@ -51,7 +51,7 @@ double Irregular::v(double t, double x, double y, double z) {
 	}
 };
 double Irregular::w(double t, double x, double y, double z) {
-	switch (pertmet) {
+	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
 			return (w1(t, x, y, z0) + w2(t, x, y, z0) + phi1_dzdz(t, x, y) * std::max(0., z - swl)); }
@@ -159,7 +159,6 @@ double Irregular::eta2(double t, double xx, double yy) {
 	return eta2_t;
 
 }
-
 
 double Irregular::u1(double t, double xx, double yy, double zz) {
 

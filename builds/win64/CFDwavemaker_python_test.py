@@ -8,7 +8,6 @@ Created on Mon Nov 21 14:58:16 2016
 from ctypes import*
 import matplotlib.pylab as plt
 import numpy as np
-from matplotlib.animation import FuncAnimation
 
 # give location of dll
 mydll = cdll.CFDwavemaker
@@ -28,9 +27,7 @@ def toc():
 def velocityx(mydll,t,x,y,z):
     aa = mydll.VelocityX
     aa.restype = c_double
-    #aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
     aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
     return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))    
 
 
@@ -38,30 +35,25 @@ def velocityx(mydll,t,x,y,z):
 def velocityy(mydll,t,x,y,z):
     aa = mydll.VelocityY
     aa.restype = c_double
-    #aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
     aa.argtypes = [c_int, c_int, c_int, c_double, c_double, c_double, c_double]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))
     return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
 
 def velocityz(mydll,t,x,y,z):
     aa = mydll.VelocityZ
     aa.restype = c_double
     aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
     return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
 
 def waveelev(mydll,t,x,y):
     aa = mydll.SurfaceElevation
     aa.restype = c_double
     aa.argtypes = [c_int,c_int,c_double,c_double,c_double]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
     return aa(c_int(0),c_int(0),c_double(x),c_double(y),c_double(t))
 
 def volfrac(mydll,x,y,z,t,delta):
     aa = mydll.VolumeFraction
     aa.restype = c_double
     aa.argtypes = [c_double,c_double,c_double,c_double,c_double]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
     return aa(c_double(x),c_double(y),c_double(z),c_double(t),c_double(delta))
 
 def init_dll(mydll):
@@ -75,51 +67,30 @@ def clean_up(mydll):
     aa.restype = c_int
     return aa();
 
-plt.style.use('seaborn-pastel')
 
-
-fig = plt.figure()
-ax = plt.axes(xlim=(-200, 200), ylim=(-6, 6))
-line, = ax.plot([], [], lw=3)
-
+# We start of by calling the init function. This will read the waveinput.dat file and perform necessary initialization
 print(init_dll(mydll))
+
+# We create a time vector from 0 to 100 sec, with 0.5sec spacing
 time = np.arange(0, 100, 0.5)
-ypos = np.arange(-200, 200, 10)
 
-tic()
+# lets extract the surface elevation at x=y=0
+wave_elev = np.zeros(len(time))
+for wave,t in zip(wave_elev,time):
+    wave = waveelev(mydll,t,0.0,0.0) # x and y position set to 0.
 
-ww = np.zeros(len(ypos))
+# or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.
 
-def init():
-    line.set_data([], [])
-    return line,
+ux = np.zeros(len(time))
+for u,t in zip(ux,time):
+    u = waveelev(mydll,t,0.0,0.0,-11.0) # x and y position set to 0.
 
+# You get the idea.
 
-def animate(i):
-    for i_y, y in enumerate(ypos):
-        ww[i_y] = waveelev(mydll, time[i], 0, y)
+# Plotting some kinematics data
+plt.plot(time,wave)
+plt.plot(time,ux)
+plt.show()
 
-    line.set_data(ypos, ww)
-    return line,
-
-
-toc()
-
-
-
-anim = FuncAnimation(fig, animate, init_func=init,
-                               frames=200, interval=20, blit=True)
-
-anim.save('test.mp4', writer='ffmpeg')
-
-##result1= mydll.add(10,1)
-##result2= mydll.sub(10,1)
-##print "Addition value:-"+result1
-##print "Substraction:-"+result2
-
-#print z
-
-
+# now that we are done, we close down the link to the library before exiting
 clean_up(mydll)
-
-#exit()

@@ -19,8 +19,8 @@ public:
 		ampl = 1.;
 		normalize = 0;
 		mtheta = 0.;
-		extmet = 0;
-		pertmet = 0;
+		extrapolation_met = 0;
+		order = 2;
 		bandwidth = 1000;
 		tofmax = 0.;
 		fpoint[0] = 0.;
@@ -33,8 +33,8 @@ public:
 	};
 
 	// Variables
-	int nfreq, ndir, extmet, bandwidth, normalize;
-	int pertmet = 0;
+	int nfreq, ndir, extrapolation_met, bandwidth, normalize;
+	int order = 2; // 1 = linear airy wave theory; 2= second order wave theory
 	int sloping_bottom = 0;
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl; // still water level

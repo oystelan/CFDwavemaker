@@ -112,6 +112,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
+    <ClCompile Include="sgrid.cpp" />
     <ClCompile Include="Irregular.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
@@ -120,6 +121,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
+    <ClInclude Include="sgrid.h" />
     <ClInclude Include="Irregular.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
