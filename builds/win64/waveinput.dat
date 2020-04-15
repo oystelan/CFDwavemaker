@@ -247,19 +247,22 @@ userdefined1
     0.91814400     0.13433347     0.08593188    96.71537171     0.38831872
     0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
-[grid interpolation]
-#number of grids to read in
-1
-# grid used for kinematics interpolation
-# alternatives: init domain interp, wallx(not implemented yet)
-wallx
-# Definition of dualgridbox and
-# XMIN XMAX YMIN YMAX ZMIN ZMAX
--1.0 1.0 -200. 200. -77.3559 30.
-# Resolution of upper gridbox (arround the surface)
-#NX NY NZ
-2 50 2
+[lsgrid]
+# layers stretch_a* stretch_b*
+10     1.2217   1.5
+# XMIN XMAX YMIN YMAX
+-1.0 1.0 -200. 200.
+#NX NY
+2 50
 # dt
 0.5
 
+# vtk output only supported by lsgrid at the moment
+[vtk]
+# storage directory
+./vtk/
+# filename (without extension and numbering)
+kin
+# dt
+0.5
 

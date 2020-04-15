@@ -4,18 +4,18 @@
 #include <iostream>
 #include <cmath>
 
-#define PI 3.1415926535897
+
 
 
 // A streching function for setting variable layer thickness
 double sGrid::slayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
 	double sfac = 3.0; // fixme: this should be made dimensionless and a function of specified wave
-	double* dd = new double[nl];
+	double* dd = new double[NL];
 	double ddsum = 0.;
-	for (int ii = 0; ii < nl; ii++) {
+	for (int ii = 0; ii < NL; ii++) {
 		//fprintf(stdout,"%d",ii);
-		dd[ii] = (1. + (nl - ii) * sfac);
+		dd[ii] = (1. + (NL - ii) * sfac);
 		ddsum += dd[ii];
 	}
 	double layer_percentage = dd[layerno] / ddsum;
@@ -26,7 +26,7 @@ double sGrid::slayer(int layerno) {
 // A function for constant layer thickness (equal spacing as a function of z)
 double sGrid::clayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
-	return 1./double(nl);
+	return 1./double(NL);
 }
 
 // Transforms normal z axis to streched sigma coordinates 
@@ -44,25 +44,17 @@ double sGrid::s2z(double s, double wave_elev, double depth) {
 
 double sGrid::s2tan(double s) {
 	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
-	// returns tangens strethced coordintates tan, which is also defined between -1 and 0
-	double a = 7. * PI / 18.; // todo: move these parameter to class header file
-	double b = 1.5;
-	
-	return -std::pow(std::tan(-s * a) , b) / std::pow(std::tan(a), b);
-	
-
+	// returns tangens strethced coordintates tan, which is also defined between -1 and 0	
+	return -std::pow(std::tan(-s * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 }
 
 double sGrid::tan2s(double t) {
-	// The inverse of the above function s2tan. from tan stretched to normal constant spacing
-	double a = 7. * PI / 18.;// todo: move these parameter to class header file
-	double b = 1.5;
-	return -std::atan(std::pow(-t * std::pow(std::tan(a) , b) , 1. / b)) / a;
-
+	// The inverse of the above function s2tan. from tan stretched to normal constant spacing	
+	return -std::atan(std::pow(-t * std::pow(std::tan(tan_a) , tan_b) , 1. / tan_b)) / tan_a;
 }
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
+void sGrid::initialize_kinematics(Irregular& irregular) {
 	// Allocating memory for storage of surface elevation and velocities
 	UX0 = new double[NX * NY * NL];
 	UY0 = new double[NX * NY * NL];
@@ -91,15 +83,15 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				double ypt = domain[2] + dy * j;
-				double eta_temp = irregular.eta(tpt, xpt, ypt);
+				double eta_temp = irregular.eta(t0, xpt, ypt);
 
-				double Ux0 = irregular.u1(tpt, xpt, ypt, 0.0) + irregular.u2(tpt, xpt, ypt, 0.0);
-				double Uy0 = irregular.v1(tpt, xpt, ypt, 0.0) + irregular.v2(tpt, xpt, ypt, 0.0);
-				double Uz0 = irregular.w1(tpt, xpt, ypt, 0.0) + irregular.w2(tpt, xpt, ypt, 0.0);
+				double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
+				double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
+				double Uz0 = irregular.w1(t0, xpt, ypt, 0.0) + irregular.w2(t0, xpt, ypt, 0.0);
 
-				double PHI_dxdz = irregular.phi1_dxdz(tpt, xpt, ypt);
-				double PHI_dydz = irregular.phi1_dydz(tpt, xpt, ypt);
-				double PHI_dzdz = irregular.phi1_dzdz(tpt, xpt, ypt);
+				double PHI_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+				double PHI_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+				double PHI_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
 
 				for (int m = 0; m < NL; m++) {
 					double spt = s2tan(-1. + ds * m);
@@ -110,9 +102,9 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 						UZ0[i * NY * NL + j * NL + m] = Uz0 + PHI_dzdz * zpt;
 					}
 					else {
-						UX0[i * NY * NL + j * NL + m] = irregular.u1(tpt, xpt, ypt, zpt) + irregular.u2(tpt, xpt, ypt, zpt);
-						UY0[i * NY * NL + j * NL + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
-						UZ0[i * NY * NL + j * NL + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
+						UX0[i * NY * NL + j * NL + m] = irregular.u1(t0, xpt, ypt, zpt) + irregular.u2(t0, xpt, ypt, zpt);
+						UY0[i * NY * NL + j * NL + m] = irregular.v1(t0, xpt, ypt, zpt) + irregular.v2(t0, xpt, ypt, zpt);
+						UZ0[i * NY * NL + j * NL + m] = irregular.w1(t0, xpt, ypt, zpt) + irregular.w2(t0, xpt, ypt, zpt);
 					}			
 				}
 			}
@@ -128,7 +120,7 @@ void sGrid::initialize_kinematics(Irregular& irregular, double tpt) {
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_surface_elevation(Irregular& irregular, double tpt) {
+void sGrid::initialize_surface_elevation(Irregular& irregular) {
 
 	// Allocating memory for storage of surface elevation and velocities
 	ETA0 = new double[NX * NY];
@@ -150,7 +142,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double tpt) {
 			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				double ypt = domain[2] + dy * j;
-				ETA0[i * NY + j] = irregular.eta1(tpt, xpt, ypt) + irregular.eta2(tpt, xpt, ypt);
+				ETA0[i * NY + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
 			}
 		}
 	}
@@ -171,7 +163,7 @@ double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, doubl
 	}
 	double spt = tan2s(z2s(zpt, wave_elev, water_depth));
 	double nxp = std::min(double(NX), std::max(0., (xpt - domain[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0., (ypt - domain[1]) / dy));
+	double nyp = std::min(double(NY), std::max(0., (ypt - domain[2]) / dy));
 	double nsp =  (spt + 1.) / ds;
 
 	double C000 = VAR[int(floor(nxp) * NY * NL + floor(nyp) * NL + floor(nsp))];
@@ -201,7 +193,7 @@ double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, doubl
 double sGrid::bilinear_interpolation(double* VAR, double xpt, double ypt) {
 
 	double nxp = std::min(double(NX), std::max(0., (xpt - domain[0]) / dx));
-	double nyp = std::min(double(NY), std::max(0., (ypt - domain[1]) / dy));
+	double nyp = std::min(double(NY), std::max(0., (ypt - domain[2]) / dy));
 
 	double C00 = VAR[int(floor(nxp) * NY + floor(nyp))];
 	double C01 = VAR[int(floor(nxp) * NY + ceil(nyp))];

@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <numeric>
 
-#define PI 3.1415926535897
-#define G 9.81
-#define RHO 1025.0
+
 
 
 double Irregular::eta(double t, double x, double y) {
@@ -74,6 +72,7 @@ double Irregular::profileX(int ind, double x, double y, double z) {
 	case 1:
 		return 0.0;
 	}
+	return 0.0;
 }
 
 double Irregular::profileZ(int ind, double x, double y, double z) {
@@ -83,6 +82,7 @@ double Irregular::profileZ(int ind, double x, double y, double z) {
 	case 1:
 		return 0.0;
 	}
+	return 0.0;
 }
 
 double Irregular::dp(double t, double x, double y, double z) {
@@ -126,6 +126,8 @@ double Irregular::eta2(double t, double xx, double yy) {
 				+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 			double Rn = k[ci] * tanh(k[ci] * depth);
 			
+			eta2_t += 0.5 * A[ci] * A[ci] * k[ci] * cos(phi_i);
+
 			for (int m = i + 1; m < std::min(nfreq, i + bandwidth); m++) {
 				int cm = m * ndir + j;
 				double gamma_nm = cos(theta[ci] - theta[cm]);

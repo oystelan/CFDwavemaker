@@ -45,12 +45,30 @@ struct IrregularTest : testing::Test {
 	}
 
 };
-TEST_F(IrregularTest, Test1) {
+TEST_F(IrregularTest, test1) {
 
 	double t = 0.;
 	double x = 0.;
 	double y = 0.;
 	//std::cout << "Wave elevation: " << irregular->eta(0.0, 0.0, 0.0) << std::endl;
 	EXPECT_DOUBLE_EQ(6., irregular->eta(0.0, 0.0, 0.0));
+	EXPECT_TRUE(true);
+}
+
+TEST_F(IrregularTest, test2) {
+	// Check that normalize works
+
+	irregular->normalize = 1;
+	irregular->normalize_data();
+	double t = 0.;
+	double x = 0.;
+	double y = 0.;
+	//std::cout << "Wave elevation: " << irregular->eta(0.0, 0.0, 0.0) << std::endl;
+	EXPECT_DOUBLE_EQ(1., irregular->eta(0.0, 0.0, 0.0));
+
+	irregular->ampl = 3.;
+	irregular->normalize_data();
+	EXPECT_DOUBLE_EQ(3., irregular->eta(0.0, 0.0, 0.0));
+
 	EXPECT_TRUE(true);
 }
