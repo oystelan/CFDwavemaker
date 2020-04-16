@@ -17,17 +17,17 @@ public:
 		NL = 10;
 	};
 	~sGrid() {
-		delete[] UX0, UY0, UZ0, ETA0;
+		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
 	};
 	// Volume grid, used for fast initialization
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
 	double* ETA0, * ETA1;// Surface grid (2D)
+	int* IGNORE; // matrix with cells to ignore when updating surface elevation
 	int NX, NY, NL;
 	double domain[4] = {};
 	double domain_ignore[4] = {};
 
 	double water_depth;
-	int ignore = 0;
 	double dx, dy, ds;
 	double t0, dt;
 	int numgrids;
@@ -46,7 +46,10 @@ public:
 	void initialize_kinematics(Irregular& irregular);
 	void initialize_surface_elevation(Irregular& irregular);
 
+	// Update kinematics data matrices
 	void update(Irregular& irregular);
+
+	void set_ignore(double* bounds);
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt);

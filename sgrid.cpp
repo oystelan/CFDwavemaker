@@ -64,6 +64,8 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 	UY1 = new double[NX * NY * NL];
 	UZ1 = new double[NX * NY * NL];
 
+	
+
 	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
 	dx = (domain[1] - domain[0]) / double(NX - 1);
@@ -130,6 +132,7 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 						UY1[i * NY * NL + j * NL + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
 						UZ1[i * NY * NL + j * NL + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
 					}
+					
 				}
 			}
 		}
@@ -148,7 +151,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 	// Allocating memory for storage of surface elevation and velocities
 	ETA0 = new double[NX * NY];
 	ETA1 = new double[NX * NY];
-
+	IGNORE = new int[NX * NY];
 	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
 
 	dx = (domain[1] - domain[0]) / double(NX - 1);
@@ -168,7 +171,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 				double ypt = domain[2] + dy * j;
 				ETA0[i * NY + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
 				ETA1[i * NY + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
-
+				IGNORE[i * NY + j] = 0;
 			}
 		}
 	}
@@ -195,34 +198,36 @@ void sGrid::update(Irregular& irregular)
 			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				double ypt = domain[2] + dy * j;
-				ETA0[i * NY + j] = ETA1[i * NY + j];
-				ETA1[i * NY + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt);
+				if (!IGNORE[i * NY + j]) {
+					ETA0[i * NY + j] = ETA1[i * NY + j];
+					ETA1[i * NY + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt);
 
-				double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
-				double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
-				double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
+					double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
+					double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
+					double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
 
-				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+					double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+					double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+					double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
 
-				for (int m = 0; m < NL; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt1 = s2z(spt, ETA1[i * NY + j], water_depth);
+					for (int m = 0; m < NL; m++) {
+						double spt = s2tan(-1. + ds * m);
+						double zpt1 = s2z(spt, ETA1[i * NY + j], water_depth);
 
-					UX0[i * NY * NL + j * NL + m] = UX1[i * NY * NL + j * NL + m];
-					UY0[i * NY * NL + j * NL + m] = UY1[i * NY * NL + j * NL + m];
-					UZ0[i * NY * NL + j * NL + m] = UZ1[i * NY * NL + j * NL + m];
+						UX0[i * NY * NL + j * NL + m] = UX1[i * NY * NL + j * NL + m];
+						UY0[i * NY * NL + j * NL + m] = UY1[i * NY * NL + j * NL + m];
+						UZ0[i * NY * NL + j * NL + m] = UZ1[i * NY * NL + j * NL + m];
 
-					if (zpt1 > 0.) {
-						UX1[i * NY * NL + j * NL + m] = Ux1 + PHI1_dxdz * zpt1;
-						UY1[i * NY * NL + j * NL + m] = Uy1 + PHI1_dydz * zpt1;
-						UZ1[i * NY * NL + j * NL + m] = Uz1 + PHI1_dzdz * zpt1;
-					}
-					else {
-						UX1[i * NY * NL + j * NL + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1);
-						UY1[i * NY * NL + j * NL + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
-						UZ1[i * NY * NL + j * NL + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
+						if (zpt1 > 0.) {
+							UX1[i * NY * NL + j * NL + m] = Ux1 + PHI1_dxdz * zpt1;
+							UY1[i * NY * NL + j * NL + m] = Uy1 + PHI1_dydz * zpt1;
+							UZ1[i * NY * NL + j * NL + m] = Uz1 + PHI1_dzdz * zpt1;
+						}
+						else {
+							UX1[i * NY * NL + j * NL + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1);
+							UY1[i * NY * NL + j * NL + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
+							UZ1[i * NY * NL + j * NL + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
+						}
 					}
 				}
 			}
@@ -231,6 +236,8 @@ void sGrid::update(Irregular& irregular)
 	dd = omp_get_wtime() - dd;
 	std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0+dt) << std::endl;
 }
+
+
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
 double sGrid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt) {
@@ -327,4 +334,18 @@ bool sGrid::CheckBounds(double* bounds, double x, double y, double z)
 		std::cout << "position x,y,z=" << x << "," << y << "," << z << " out of bounds. updating wallx borders" << std::endl;
 		return false;
 	}
+}
+
+/* Set area of domain to ignore when update kinematics data. this is useful when prescribing kinematics at the boundaries*/
+void sGrid::set_ignore(double* bounds)
+{
+	for (int i = 0; i < NX; i++) {
+		double xpt = domain[0] + dx * i;
+		for (int j = 0; j < NY; j++) {
+			double ypt = domain[2] + dy * j;
+			if (xpt >= bounds[0] && xpt <= bounds[1] && ypt >= bounds[2] && ypt <= bounds[3]) {
+				IGNORE[i * NY + j] = 1;
+			}
+		}
+	}				
 }
