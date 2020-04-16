@@ -60,6 +60,10 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 	UY0 = new double[NX * NY * NL];
 	UZ0 = new double[NX * NY * NL];
 
+	UX1 = new double[NX * NY * NL];
+	UY1 = new double[NX * NY * NL];
+	UZ1 = new double[NX * NY * NL];
+
 	std::cout << "Memory allocation successful for storage of kinematics." << std::endl;
 
 	dx = (domain[1] - domain[0]) / double(NX - 1);
@@ -83,29 +87,49 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < NY; j++) {
 				double ypt = domain[2] + dy * j;
-				double eta_temp = irregular.eta(t0, xpt, ypt);
+				double eta0_temp = ETA0[i * NY + j];
+				double eta1_temp = ETA1[i * NY + j];
 
 				double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
 				double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
 				double Uz0 = irregular.w1(t0, xpt, ypt, 0.0) + irregular.w2(t0, xpt, ypt, 0.0);
+				double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
+				double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
+				double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
 
-				double PHI_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-				double PHI_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-				double PHI_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+				double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+				double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+				double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+
+				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
 
 				for (int m = 0; m < NL; m++) {
 					double spt = s2tan(-1. + ds * m);
-					double zpt = s2z(spt, eta_temp, water_depth);					
-					if (zpt > 0.) {
-						UX0[i * NY * NL + j * NL + m] = Ux0 + PHI_dxdz * zpt;
-						UY0[i * NY * NL + j * NL + m] = Uy0 + PHI_dydz * zpt;
-						UZ0[i * NY * NL + j * NL + m] = Uz0 + PHI_dzdz * zpt;
+					double zpt0 = s2z(spt, eta0_temp, water_depth);
+					double zpt1 = s2z(spt, eta1_temp, water_depth);
+
+					if (zpt0 > 0.) {
+						UX0[i * NY * NL + j * NL + m] = Ux0 + PHI0_dxdz * zpt0;
+						UY0[i * NY * NL + j * NL + m] = Uy0 + PHI0_dydz * zpt0;
+						UZ0[i * NY * NL + j * NL + m] = Uz0 + PHI0_dzdz * zpt0;
 					}
 					else {
-						UX0[i * NY * NL + j * NL + m] = irregular.u1(t0, xpt, ypt, zpt) + irregular.u2(t0, xpt, ypt, zpt);
-						UY0[i * NY * NL + j * NL + m] = irregular.v1(t0, xpt, ypt, zpt) + irregular.v2(t0, xpt, ypt, zpt);
-						UZ0[i * NY * NL + j * NL + m] = irregular.w1(t0, xpt, ypt, zpt) + irregular.w2(t0, xpt, ypt, zpt);
-					}			
+						UX0[i * NY * NL + j * NL + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0);
+						UY0[i * NY * NL + j * NL + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0);
+						UZ0[i * NY * NL + j * NL + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0);
+					}
+					if (zpt1 > 0.) {
+						UX1[i * NY * NL + j * NL + m] = Ux1 + PHI1_dxdz * zpt1;
+						UY1[i * NY * NL + j * NL + m] = Uy1 + PHI1_dydz * zpt1;
+						UZ1[i * NY * NL + j * NL + m] = Uz1 + PHI1_dzdz * zpt1;
+					}
+					else {
+						UX1[i * NY * NL + j * NL + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1);
+						UY1[i * NY * NL + j * NL + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
+						UZ1[i * NY * NL + j * NL + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
+					}
 				}
 			}
 		}
@@ -124,6 +148,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 
 	// Allocating memory for storage of surface elevation and velocities
 	ETA0 = new double[NX * NY];
+	ETA1 = new double[NX * NY];
 
 	std::cout << "Memory allocation successful for Surface elevation storage." << std::endl;
 
@@ -143,6 +168,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 			for (int j = 0; j < NY; j++) {
 				double ypt = domain[2] + dy * j;
 				ETA0[i * NY + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
+				ETA1[i * NY + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
 			}
 		}
 	}
@@ -151,6 +177,10 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 	std::cout << "Surface Elevation generated successfully. ";
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	initsurf = 1;
+}
+
+void sGrid::update(Irregular& irregular)
+{
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/

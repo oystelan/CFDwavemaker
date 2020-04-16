@@ -51,6 +51,8 @@ public:
 	void initialize_kinematics(Irregular& irregular);
 	void initialize_surface_elevation(Irregular& irregular);
 
+	void update(Irregular& irregular);
+
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt);
 	double bilinear_interpolation(double* VAR, double xpt, double ypt);

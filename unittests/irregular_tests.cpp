@@ -46,7 +46,7 @@ struct IrregularTest : testing::Test {
 
 };
 TEST_F(IrregularTest, test1) {
-
+	// check that linear wave elevtion sums up correctly
 	double t = 0.;
 	double x = 0.;
 	double y = 0.;
@@ -54,6 +54,7 @@ TEST_F(IrregularTest, test1) {
 	EXPECT_DOUBLE_EQ(6., irregular->eta(0.0, 0.0, 0.0));
 	EXPECT_TRUE(true);
 }
+
 
 TEST_F(IrregularTest, test2) {
 	// Check that normalize works
@@ -72,3 +73,5 @@ TEST_F(IrregularTest, test2) {
 
 	EXPECT_TRUE(true);
 }
+
+

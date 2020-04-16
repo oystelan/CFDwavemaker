@@ -32,6 +32,11 @@ extern "C" {
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
 
+	// special functions for sloping bottom definition
+	double wave_VeloX_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sx}
+	double wave_VeloY_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sy}
+	double wave_VeloZ_slope(double, double, double, double, double ); // input variables are {xpoint,ypoint,zpoint,time, s}
+
 	// external functions used by COMFLOW
 	EXPORT double VelocityX(int, int, int, double, double, double, double);
 	EXPORT double VelocityY(int, int, int, double, double, double, double); 
