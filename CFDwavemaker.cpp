@@ -1323,6 +1323,9 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		
 		// irregular LSgrid waves
 	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular);
+		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(xpt, ypt, zpt);
 	// stokes 5th
 	case 21:
@@ -1357,6 +1360,9 @@ double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double s
 
 		// irregular LSgrid waves
 	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular);
+		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(xpt, ypt, zpt);
 		// stokes 5th
 	case 21:
@@ -1400,6 +1406,9 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.v_wall(tpt, xpt, ypt, zpt);
 		// irregular LSgrid waves
 	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular);
+		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
@@ -1438,6 +1447,9 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.w_wall(tpt, xpt, ypt, zpt);
 		// irregular LSgrid waves
 	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular);
+		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
@@ -1501,6 +1513,9 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
 	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular);
+		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(xpt, ypt);
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);

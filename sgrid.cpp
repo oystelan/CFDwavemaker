@@ -316,12 +316,11 @@ double sGrid::eta(double xpt, double ypt) {
 bool sGrid::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t0+dt) {
-		return false;
 		std::cout << "T0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
+		return false;
+		
 	}
-	else {
-		return true;
-	}
+	return true;
 }
 
 // function to find if given point 
