@@ -139,7 +139,6 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	std::cout << "Interpolation can commence..." << std::endl;
-	initkin = 1;
 }
 
 
@@ -169,6 +168,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 				double ypt = domain[2] + dy * j;
 				ETA0[i * NY + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
 				ETA1[i * NY + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
+
 			}
 		}
 	}
@@ -176,11 +176,60 @@ void sGrid::initialize_surface_elevation(Irregular& irregular) {
 
 	std::cout << "Surface Elevation generated successfully. ";
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	initsurf = 1;
 }
 
+// When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void sGrid::update(Irregular& irregular)
 {
+	// new time step
+	t0 = t0 + dt;
+	// Updating surface elevations
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+#pragma omp parallel
+	{
+		// Main grid
+#pragma omp for
+		for (int i = 0; i < NX; i++) {
+			double xpt = domain[0] + dx * i;
+			for (int j = 0; j < NY; j++) {
+				double ypt = domain[2] + dy * j;
+				ETA0[i * NY + j] = ETA1[i * NY + j];
+				ETA1[i * NY + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt);
+
+				double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
+				double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
+				double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
+
+				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+
+				for (int m = 0; m < NL; m++) {
+					double spt = s2tan(-1. + ds * m);
+					double zpt1 = s2z(spt, ETA1[i * NY + j], water_depth);
+
+					UX0[i * NY * NL + j * NL + m] = UX1[i * NY * NL + j * NL + m];
+					UY0[i * NY * NL + j * NL + m] = UY1[i * NY * NL + j * NL + m];
+					UZ0[i * NY * NL + j * NL + m] = UZ1[i * NY * NL + j * NL + m];
+
+					if (zpt1 > 0.) {
+						UX1[i * NY * NL + j * NL + m] = Ux1 + PHI1_dxdz * zpt1;
+						UY1[i * NY * NL + j * NL + m] = Uy1 + PHI1_dydz * zpt1;
+						UZ1[i * NY * NL + j * NL + m] = Uz1 + PHI1_dzdz * zpt1;
+					}
+					else {
+						UX1[i * NY * NL + j * NL + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1);
+						UY1[i * NY * NL + j * NL + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
+						UZ1[i * NY * NL + j * NL + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
+					}
+				}
+			}
+		}
+	}
+	dd = omp_get_wtime() - dd;
+	std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0+dt) << std::endl;
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
@@ -259,9 +308,9 @@ double sGrid::eta(double xpt, double ypt) {
 
 bool sGrid::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
-	if (tpt > t1) {
+	if (tpt > t0+dt) {
 		return false;
-		std::cout << "T0: " << t0 << ", t1: " << t1 << ", tpt: " << tpt << std::endl;
+		std::cout << "T0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
 	}
 	else {
 		return true;

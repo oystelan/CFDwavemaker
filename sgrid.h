@@ -15,8 +15,6 @@ public:
 		tan_a = 7. * PI / 18.;
 		tan_b = 1.5;
 		NL = 10;
-		initsurf = 0;
-		initkin = 0;
 	};
 	~sGrid() {
 		delete[] UX0, UY0, UZ0, ETA0;
@@ -29,12 +27,9 @@ public:
 	double domain_ignore[4] = {};
 
 	double water_depth;
-	bool initialized;
-	int initsurf;
-	int initkin;
 	int ignore = 0;
 	double dx, dy, ds;
-	double t0, t1, dt;
+	double t0, dt;
 	int numgrids;
 	double tan_a;
 	double tan_b;
