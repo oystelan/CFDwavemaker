@@ -247,16 +247,16 @@ userdefined1
     0.91814400     0.13433347     0.08593188    96.71537171     0.38831872
     0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
-#[lsgrid]
+[lsgrid]
 # XMIN XMAX YMIN YMAX
--1.0 1.0 -200. 200.
+-1.0 1.0 -1. 1.
 #NX NY
-2 50
+3 3
 # t0 dt
-0.0 0.5
+1.0 0.5
 stretch_params
-stretch_a* stretch_b*
-0.01   1.0
+# stretch_a* stretch_b*
+0.7   1.0
 #ignore subdomain
 -1. 0. -100. 0.
 

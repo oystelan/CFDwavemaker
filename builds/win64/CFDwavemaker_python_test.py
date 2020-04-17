@@ -8,6 +8,7 @@ Created on Mon Nov 21 14:58:16 2016
 from ctypes import*
 import matplotlib.pylab as plt
 import numpy as np
+import shutil
 
 # give location of dll
 mydll = cdll.CFDwavemaker
@@ -24,7 +25,7 @@ def toc():
     else:
         print("Toc: start time not set")
 
-def velocityx(mydll,t,x,y,z):
+def velocityX(mydll,t,x,y,z):
     aa = mydll.VelocityX
     aa.restype = c_double
     aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
@@ -32,13 +33,13 @@ def velocityx(mydll,t,x,y,z):
 
 
     
-def velocityy(mydll,t,x,y,z):
+def velocityY(mydll,t,x,y,z):
     aa = mydll.VelocityY
     aa.restype = c_double
     aa.argtypes = [c_int, c_int, c_int, c_double, c_double, c_double, c_double]
     return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
 
-def velocityz(mydll,t,x,y,z):
+def velocityZ(mydll,t,x,y,z):
     aa = mydll.VelocityZ
     aa.restype = c_double
     aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
@@ -69,28 +70,44 @@ def clean_up(mydll):
 
 
 # We start of by calling the init function. This will read the waveinput.dat file and perform necessary initialization
-print(init_dll(mydll))
+
 
 # We create a time vector from 0 to 100 sec, with 0.5sec spacing
-time = np.arange(0, 100, 0.5)
+# time = np.arange(0, 100, 0.5)
 
-# lets extract the surface elevation at x=y=0
-wave_elev = np.zeros(len(time))
-for wave,t in zip(wave_elev,time):
-    wave = waveelev(mydll,t,0.0,0.0) # x and y position set to 0.
+# # lets extract the surface elevation at x=y=0
+# wave_elev = np.zeros(len(time))
+# for wave,t in zip(wave_elev,time):
+#     wave = waveelev(mydll,t,0.0,0.0) # x and y position set to 0.
 
 # or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.
 
-ux = np.zeros(len(time))
-for u,t in zip(ux,time):
-    u = waveelev(mydll,t,0.0,0.0,-11.0) # x and y position set to 0.
+t = 1.0
+shutil.copy2('./waveinput1.dat','./waveinput.dat')
+print(init_dll(mydll))
+wave = waveelev(mydll,t,0.0,0.0)
+print(wave)
+z = np.arange(-76.4,wave,2.)
+ux = np.zeros(len(z))
+ux = []
+for zz in z:
+    ux.append(velocityX(mydll,t,0.0,0.0,zz)) # x and y position set to 0.
 
-# You get the idea.
+plt.plot(ux, z)
 
-# Plotting some kinematics data
-plt.plot(time,wave)
-plt.plot(time,ux)
+clean_up(mydll)
+
+shutil.copy2('./waveinput2.dat','./waveinput.dat')
+print(init_dll(mydll))
+wave = waveelev(mydll,t,0.0,0.0)
+print(wave)
+z = np.arange(-76.4,wave,2.)
+ux = np.zeros(len(z))
+ux = []
+for zz in z:
+    ux.append(velocityX(mydll,t,0.0,0.0,zz)) # x and y position set to 0.
+
+plt.plot(ux, z,'r')
 plt.show()
 
-# now that we are done, we close down the link to the library before exiting
 clean_up(mydll)

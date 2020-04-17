@@ -71,9 +71,9 @@ TEST_F(LSgridTest, test1) {
 	sgrid->domain[1] = 30.;
 	sgrid->domain[2] = 0.;
 	sgrid->domain[3] = 20.;
-	sgrid->NX = 61;
-	sgrid->NY = 41;
-	sgrid->NL = 10;
+	sgrid->nx = 61;
+	sgrid->ny = 41;
+	sgrid->nl = 10;
 	sgrid->tan_b = 1.5;
 
 	// update grids

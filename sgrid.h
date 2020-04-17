@@ -14,7 +14,7 @@ public:
 		// Set default values
 		tan_a = 7. * PI / 18.;
 		tan_b = 1.5;
-		NL = 10;
+		nl = 10;
 	};
 	~sGrid() {
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
@@ -23,14 +23,13 @@ public:
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
 	double* ETA0, * ETA1;// Surface grid (2D)
 	int* IGNORE; // matrix with cells to ignore when updating surface elevation
-	int NX, NY, NL;
+	int nx, ny, nl;
 	double domain[4] = {};
 	double domain_ignore[4] = {};
 
 	double water_depth;
 	double dx, dy, ds;
 	double t0, dt;
-	int numgrids;
 	double tan_a;
 	double tan_b;
 
@@ -52,14 +51,14 @@ public:
 	void set_ignore(double* bounds);
 
 	// Grid interpolation functions
-	double trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt);
-	double bilinear_interpolation(double* VAR, double xpt, double ypt);
+	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
+	double bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt);
 
 	// routines for extracting kinematics from initial grid
-	double u(double xpt, double ypt, double zpt);
-	double v(double xpt, double ypt, double zpt);
-	double w(double xpt, double ypt, double zpt);
-	double eta(double xpt, double ypt);
+	double u(double tpt, double xpt, double ypt, double zpt);
+	double v(double tpt, double xpt, double ypt, double zpt);
+	double w(double tpt, double xpt, double ypt, double zpt);
+	double eta(double tpt, double xpt, double ypt);
 
 	// routines for extracting kinematics at walls
 	bool CheckTime(double tpt);

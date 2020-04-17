@@ -105,7 +105,17 @@ static inline void trim(std::string& s) {
 	rtrim(s);
 }
 
+int numparams(std::string str)
+{
+	// breaking input into word using string stream 
+	std::stringstream s(str); // Used for breaking words 
+	std::string word; // to store individual words 
 
+	int count = 0;
+	while (s >> word)
+		count++;
+	return count;
+}
 
 int check_license()
 {
@@ -584,25 +594,57 @@ int read_inputdata_v2() {
 			// Lagrangian streched grid
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> sgrid.NL;
-			buf >> sgrid.tan_a;
-			buf >> sgrid.tan_b;
-			buf.clear();
-			
-			getline(f, lineA);
-			buf.str(lineA);
 			buf >> sgrid.domain[0];
 			buf >> sgrid.domain[1];
 			buf >> sgrid.domain[2];
 			buf >> sgrid.domain[3];
+			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
 
 			buf.clear();
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> sgrid.NX;
-			buf >> sgrid.NY;
+			buf >> sgrid.nx;
+			buf >> sgrid.ny;
+			if (numparams(lineA) == 3) {
+				buf >> sgrid.nl;
+			}
+			std::cout << "Grid resolution: " << std::endl;
+			std::cout << "nx: " << sgrid.nx << std::endl;
+			std::cout << "ny: " << sgrid.ny << std::endl;
+			std::cout << "nl: " << sgrid.nl << std::endl;
+
+			buf.clear();
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> sgrid.t0;
+			buf >> sgrid.dt;
+			std::cout << "time init: " << sgrid.t0 << std::endl;
+			std::cout << "dt: " << sgrid.dt << std::endl;		
+
+			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("stretch_params")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> sgrid.tan_a;
+				buf >> sgrid.tan_b;
+			}
 				
 			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("ignore subdomain")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> sgrid.domain_ignore[0];
+				buf >> sgrid.domain_ignore[1];
+				buf >> sgrid.domain_ignore[2];
+				buf >> sgrid.domain_ignore[3];
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+			}
+			buf.clear();
+
 			if (wavetype == 1)
 				wavetype = 4;
 
@@ -632,6 +674,7 @@ int read_inputdata_v2() {
 	}
 
 	if (wavetype == 4) {
+		sgrid.water_depth = depth;
 		sgrid.initialize_surface_elevation(irregular);
 		sgrid.initialize_kinematics(irregular);
 	}
@@ -1326,7 +1369,10 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		if (!sgrid.CheckTime(tpt)) {
 			sgrid.update(irregular);
 		}
+		std::cout << zpt << " u: " << sgrid.u(xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(xpt, ypt, zpt);
+
+		
 	// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
