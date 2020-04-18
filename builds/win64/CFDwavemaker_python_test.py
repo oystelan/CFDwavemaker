@@ -82,30 +82,35 @@ def clean_up(mydll):
 
 # or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.
 
-t = 1.0
+t = 5.55
+x = 0.
 shutil.copy2('./waveinput1.dat','./waveinput.dat')
 print(init_dll(mydll))
-wave = waveelev(mydll,t,0.0,0.0)
+wave = waveelev(mydll,t,x,0.0)
 print(wave)
 z = np.arange(-76.4,wave,2.)
+# wave = velocityX(mydll,t,x,0.0,-76.3)
+# print(wave)
+# exit()
 ux = np.zeros(len(z))
 ux = []
 for zz in z:
-    ux.append(velocityX(mydll,t,0.0,0.0,zz)) # x and y position set to 0.
-
+    dd = velocityZ(mydll,t,x,0.0,zz)
+    print(zz, dd)
+    ux.append(dd) # x and y position set to 0.
 plt.plot(ux, z)
-
 clean_up(mydll)
+
 
 shutil.copy2('./waveinput2.dat','./waveinput.dat')
 print(init_dll(mydll))
-wave = waveelev(mydll,t,0.0,0.0)
+wave = waveelev(mydll,t,x,0.0)
 print(wave)
 z = np.arange(-76.4,wave,2.)
 ux = np.zeros(len(z))
 ux = []
 for zz in z:
-    ux.append(velocityX(mydll,t,0.0,0.0,zz)) # x and y position set to 0.
+    ux.append(velocityZ(mydll,t,x,0.0,zz)) # x and y position set to 0.
 
 plt.plot(ux, z,'r')
 plt.show()

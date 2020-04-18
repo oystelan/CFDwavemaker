@@ -39,7 +39,7 @@ struct LSgridTest : testing::Test {
 		irregular->A.push_back(2.1);
 		irregular->A.push_back(1.1);
 		irregular->phase.push_back(0.);
-		irregular->phase.push_back(PI);
+		irregular->phase.push_back(0.);
 		irregular->phase.push_back(0.);
 		irregular->theta.push_back(PI / 8.);
 		irregular->theta.push_back(0.);
@@ -47,6 +47,7 @@ struct LSgridTest : testing::Test {
 
 		
 		sgrid->water_depth = irregular->depth;
+		
 	}
 	~LSgridTest() {
 		delete irregular;
@@ -60,9 +61,9 @@ struct LSgridTest : testing::Test {
 TEST_F(LSgridTest, test1) {
 
 	// Set time and location.
-	double x = 15.;
-	double y = 15.;
-	double z = 0.;
+	double x = 0.;
+	double y = 0.;
+	double z = -10.;
 	double t = 4.;
 	sgrid->t0 = t;
 
@@ -72,45 +73,47 @@ TEST_F(LSgridTest, test1) {
 	sgrid->domain[2] = 0.;
 	sgrid->domain[3] = 20.;
 	sgrid->nx = 61;
-	sgrid->ny = 41;
-	sgrid->nl = 10;
-	sgrid->tan_b = 1.5;
+	sgrid->ny = 11;
+	sgrid->nl = 20;
+	//sgrid->tan_a = 0.01;
+	sgrid->tan_b = 2.0;
+	sgrid->allocate();
 
 	// update grids
-	sgrid->initialize_surface_elevation(*irregular);
+	sgrid->initialize_surface_elevation(*irregular, sgrid->t0);
 	sgrid->initialize_kinematics(*irregular);
 
 
 	// Surface elevation at point
 	//std::cout << "Wave elevation: " << irregular->eta(t, x, y) << ", sgrid: " << sgrid->eta(x, y) << std::endl;
-	EXPECT_DOUBLE_EQ(irregular->eta(t, x, y), sgrid->eta(x, y));
+	EXPECT_DOUBLE_EQ(irregular->eta(t, x, y), sgrid->eta(t, x, y));
 
 	// Kinematics at the surface comparison
 	//std::cout << "Kinematics at the free surface for position x=" << x << ", y=" << y << std::endl;
-	//std::cout << "ux: " << irregular->u(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->u(x, y, sgrid->eta(x, y)) << std::endl;
-	//std::cout << "vx: " << irregular->v(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->v(x, y, sgrid->eta(x, y)) << std::endl;
-	//std::cout << "wx: " << irregular->w(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->w(x, y, sgrid->eta(x, y)) << std::endl;
-	EXPECT_NEAR(irregular->u(t, x, y, irregular->eta(t, x, y)), sgrid->u(x, y, sgrid->eta(x, y)), 1E-5);
-	EXPECT_NEAR(irregular->v(t, x, y, irregular->eta(t, x, y)), sgrid->v(x, y, sgrid->eta(x, y)), 1E-5);
-	EXPECT_NEAR(irregular->w(t, x, y, irregular->eta(t, x, y)), sgrid->w(x, y, sgrid->eta(x, y)), 1E-5);
+	//std::cout << "ux: " << irregular->u(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->u(t, x, y, sgrid->eta(t, x, y)) << std::endl;
+	//std::cout << "vx: " << irregular->v(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->v(t, x, y, sgrid->eta(t, x, y)) << std::endl;
+	//std::cout << "wx: " << irregular->w(t, x, y, irregular->eta(t, x, y)) << ", sgrid: " << sgrid->w(t, x, y, sgrid->eta(t, x, y)) << std::endl;
+	EXPECT_NEAR(irregular->u(t, x, y, irregular->eta(t, x, y)), sgrid->u(t, x, y, sgrid->eta(t, x, y)), 1E-5);
+	EXPECT_NEAR(irregular->v(t, x, y, irregular->eta(t, x, y)), sgrid->v(t, x, y, sgrid->eta(t, x, y)), 1E-5);
+	EXPECT_NEAR(irregular->w(t, x, y, irregular->eta(t, x, y)), sgrid->w(t, x, y, sgrid->eta(t, x, y)), 1E-5);
 
 	// Kinematics at seabed:
 	//std::cout << "Kinematics at the seabed h=" << sgrid->water_depth << ", for position x=" << x << ", y=" << y << std::endl;
-	//std::cout << "ux: " << irregular->u(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->u(x, y, -sgrid->water_depth) << std::endl;
-	//std::cout << "vx: " << irregular->v(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->v(x, y, -sgrid->water_depth) << std::endl;
-	//std::cout << "wx: " << irregular->w(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->w(x, y, -sgrid->water_depth) << std::endl;
-	EXPECT_NEAR(irregular->u(t, x, y, -irregular->depth), sgrid->u(x, y, sgrid->water_depth), 1E-5);
-	EXPECT_NEAR(irregular->v(t, x, y, -irregular->depth), sgrid->v(x, y, sgrid->water_depth), 1E-5);
-	EXPECT_NEAR(irregular->w(t, x, y, -irregular->depth), sgrid->w(x, y, sgrid->water_depth), 1E-5);
+	//std::cout << "ux: " << irregular->u(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->u(t, x, y, -sgrid->water_depth) << std::endl;
+	//std::cout << "vx: " << irregular->v(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->v(t, x, y, -sgrid->water_depth) << std::endl;
+	//std::cout << "wx: " << irregular->w(t, x, y, -irregular->depth) << ", sgrid: " << sgrid->w(t, x, y, -sgrid->water_depth) << std::endl;
+	EXPECT_NEAR(irregular->u(t, x, y, -irregular->depth), sgrid->u(t, x, y, -sgrid->water_depth), 1E-5);
+	EXPECT_NEAR(irregular->v(t, x, y, -irregular->depth), sgrid->v(t, x, y, -sgrid->water_depth), 1E-5);
+	EXPECT_NEAR(irregular->w(t, x, y, -irregular->depth), sgrid->w(t, x, y, -sgrid->water_depth), 1E-5);
 
 	// Kinematics at position = z:
 	//std::cout << "Kinematics at the position z=" << z << ", for position x=" << x << ", y=" << y << std::endl;
-	//std::cout << "ux: " << irregular->u(t, x, y, z) << ", sgrid: " << sgrid->u(x, y, z) << std::endl;
-	//std::cout << "vx: " << irregular->v(t, x, y, z) << ", sgrid: " << sgrid->v(x, y, z) << std::endl;
-	//std::cout << "wx: " << irregular->w(t, x, y, z) << ", sgrid: " << sgrid->w(x, y, z) << std::endl;
-	EXPECT_NEAR(irregular->u(t, x, y, z), sgrid->u(x, y, z), 1E-1);
-	EXPECT_NEAR(irregular->v(t, x, y, z), sgrid->v(x, y, z), 1E-1);
-	EXPECT_NEAR(irregular->w(t, x, y, z), sgrid->w(x, y, z), 1E-1);
+	std::cout << "ux: " << irregular->u(t, x, y, z) << ", sgrid: " << sgrid->u(t, x, y, z) << std::endl;
+	std::cout << "vx: " << irregular->v(t, x, y, z) << ", sgrid: " << sgrid->v(t, x, y, z) << std::endl;
+	std::cout << "wx: " << irregular->w(t, x, y, z) << ", sgrid: " << sgrid->w(t, x, y, z) << std::endl;
+	EXPECT_NEAR(irregular->u(t, x, y, z), sgrid->u(t, x, y, z), 1E-1);
+	EXPECT_NEAR(irregular->v(t, x, y, z), sgrid->v(t, x, y, z), 1E-1);
+	EXPECT_NEAR(irregular->w(t, x, y, z), sgrid->w(t, x, y, z), 1E-1);
 
 	EXPECT_TRUE(true);
 }

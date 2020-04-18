@@ -43,12 +43,13 @@ public:
 	double tan2s(double t);
 
 	void initialize_kinematics(Irregular& irregular);
-	void initialize_surface_elevation(Irregular& irregular);
+	void allocate();
+	void initialize_surface_elevation(Irregular& irregular, double t_target);
 
 	// Update kinematics data matrices
-	void update(Irregular& irregular);
+	void update(Irregular& irregular, double t_target);
 
-	void set_ignore(double* bounds);
+	void set_ignore();
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);

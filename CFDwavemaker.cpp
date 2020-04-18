@@ -613,6 +613,9 @@ int read_inputdata_v2() {
 			std::cout << "ny: " << sgrid.ny << std::endl;
 			std::cout << "nl: " << sgrid.nl << std::endl;
 
+			// allocate memory
+			sgrid.allocate();
+
 			buf.clear();
 			getline(f, lineA);
 			buf.str(lineA);
@@ -629,12 +632,13 @@ int read_inputdata_v2() {
 				buf.str(lineA);
 				buf >> sgrid.tan_a;
 				buf >> sgrid.tan_b;
+				std::cout << "Stretching parameters set to a=" << sgrid.tan_a << ", b=" << sgrid.tan_b << std::endl;
 			}
 				
 			buf.clear();
 			getline(f, lineA);
 			trim(lineA);
-			if (!lineA.compare("ignore subdomain")) {
+			if (!lineA.compare("ignore_subdomain")) {
 				getline(f, lineA);
 				buf.str(lineA);
 				buf >> sgrid.domain_ignore[0];
@@ -642,11 +646,16 @@ int read_inputdata_v2() {
 				buf >> sgrid.domain_ignore[2];
 				buf >> sgrid.domain_ignore[3];
 				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+				sgrid.set_ignore();
 			}
 			buf.clear();
 
 			if (wavetype == 1)
 				wavetype = 4;
+			else {
+				std::cerr << "LS grid may only be used with irregular waves" << std::endl;
+				exit(-1);
+			}
 
 		}
 	}
@@ -675,7 +684,7 @@ int read_inputdata_v2() {
 
 	if (wavetype == 4) {
 		sgrid.water_depth = depth;
-		sgrid.initialize_surface_elevation(irregular);
+		sgrid.initialize_surface_elevation(irregular,sgrid.t0);
 		sgrid.initialize_kinematics(irregular);
 	}
 
@@ -1367,10 +1376,10 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular);
+			sgrid.update(irregular, tpt);
 		}
-		std::cout << zpt << " u: " << sgrid.u(xpt, ypt, zpt) << std::endl;
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(xpt, ypt, zpt);
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
 		
 	// stokes 5th
@@ -1407,9 +1416,9 @@ double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double s
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular);
+			sgrid.update(irregular, tpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 		// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
@@ -1453,9 +1462,9 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular);
+			sgrid.update(irregular, tpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 
@@ -1494,9 +1503,9 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular);
+			sgrid.update(irregular, tpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 
@@ -1560,9 +1569,9 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular);
+			sgrid.update(irregular, tpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(xpt, ypt);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 21:
