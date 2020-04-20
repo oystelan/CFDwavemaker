@@ -15,13 +15,9 @@ OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o $(MAINS)
 DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.o
 #OBJ_OMP := $(OBJ)
 
-.PHONY: all clean static shared clean_o
+.PHONY: all clean openmp
 
 all: $(TARGETS_SHARED) $(TARGETS_STATIC)
-
-static: $(TARGETS_STATIC) 
-
-shared: $(TARGETS_SHARED)
 
 clean:
 	rm -f $(OBJ)

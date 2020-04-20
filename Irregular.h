@@ -3,7 +3,12 @@
 
 #include <iostream>
 #include "Wavespectra.h"
-#include <vector> 
+#include <vector>
+#ifndef PI
+#define PI 3.1415926535897
+#endif
+#define G 9.81
+#define RHO 1025.0
 
 class Irregular {
 private:
@@ -19,13 +24,16 @@ public:
 		ampl = 1.;
 		normalize = 0;
 		mtheta = 0.;
-		extmet = 0;
-		pertmet = 0;
+		extrapolation_met = 0;
+		order = 2;
 		bandwidth = 1000;
 		tofmax = 0.;
 		fpoint[0] = 0.;
 		fpoint[1] = 0.;
 		swl = 0.;
+		depth = 300.;
+		ndir = 1;
+
 	};
 
 	~Irregular() {
@@ -33,11 +41,11 @@ public:
 	};
 
 	// Variables
-	int nfreq, ndir, extmet, bandwidth, normalize;
-	int pertmet = 0;
+	int nfreq, ndir, extrapolation_met, bandwidth, normalize;
+	int order = 2; // 1 = linear airy wave theory; 2= second order wave theory
 	int sloping_bottom = 0;
 	double ampl, depth, mtheta, tofmax, fpoint[2];
-	double swl; // still water level
+	double swl = 0.; // still water level
 
 	// Declaration of vectors to store spectral data components
 	std::vector<double> omega;

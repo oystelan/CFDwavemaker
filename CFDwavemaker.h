@@ -16,6 +16,8 @@
 #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
+
+
 // Functions available in CFDwavemaker.cpp
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +31,11 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
+
+	// special functions for sloping bottom definition
+	double wave_VeloX_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sx}
+	double wave_VeloY_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sy}
+	double wave_VeloZ_slope(double, double, double, double, double ); // input variables are {xpoint,ypoint,zpoint,time, s}
 
 	// external functions used by COMFLOW
 	EXPORT double VelocityX(int, int, int, double, double, double, double);

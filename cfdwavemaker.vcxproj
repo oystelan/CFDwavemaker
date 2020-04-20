@@ -69,12 +69,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)builds\win64</OutDir>
+    <OutDir>$(SolutionDir)builds\win64\</OutDir>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.dll</TargetExt>
-    <OutDir>$(SolutionDir)builds\win64</OutDir>
+    <OutDir>$(SolutionDir)builds\win64\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -96,6 +96,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -109,9 +110,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>
+    <ClCompile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
+    <ClCompile Include="sgrid.cpp" />
     <ClCompile Include="Irregular.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
@@ -120,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
+    <ClInclude Include="sgrid.h" />
     <ClInclude Include="Irregular.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />

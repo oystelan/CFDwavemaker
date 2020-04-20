@@ -2,6 +2,9 @@
 wave kinematics package for CFD initialization of CFD domains or boundaries.
 The code supports OpenMP and has some special features for fast initialization of large domains built in.
 
+User manual for CFDwavemaker available at
+http://www.hydrodynamics.no/CFDwavemaker
+
 Supported wave theories: 
 - linear wave theory (irregular & short crested waves)
 - second order wave theory (Sharma & Dean, with taylor expansion above z=0) support for irregular & short crested waves 

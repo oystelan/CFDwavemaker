@@ -247,6 +247,18 @@ userdefined1
     0.91814400     0.13433347     0.08593188    96.71537171     0.38831872
     0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
+[lsgrid]
+# XMIN XMAX YMIN YMAX
+-1.0 20.0 -1. 1.
+#NX NY
+22 3
+# t0 dt
+5.5 0.1
+stretch_params
+# stretch_a* stretch_b*
+0.7   1.2
+ignore_subdomain
+0.5 200. -10. 10.
 
 
 # vtk output only supported by lsgrid at the moment

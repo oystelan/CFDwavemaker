@@ -29,6 +29,7 @@
 #include "Irregular.h"
 #include "Utils.h"
 #include "Wavemaker.h"
+#include "sgrid.h"
 
 //#include <fftw3.h>
 
@@ -54,6 +55,9 @@ Wavemaker wavemaker;
 
 // Grid class
 Grid gridclass;
+
+// Grid class
+sGrid sgrid;
 
 // Ramp class
 Ramp ramp;
@@ -101,7 +105,17 @@ static inline void trim(std::string& s) {
 	rtrim(s);
 }
 
+int numparams(std::string str)
+{
+	// breaking input into word using string stream 
+	std::stringstream s(str); // Used for breaking words 
+	std::string word; // to store individual words 
 
+	int count = 0;
+	while (s >> word)
+		count++;
+	return count;
+}
 
 int check_license()
 {
@@ -274,8 +288,8 @@ int read_inputdata_v2() {
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> irregular.extmet;
-			buf >> irregular.pertmet;
+			buf >> irregular.extrapolation_met;
+			buf >> irregular.order;
 			buf >> irregular.bandwidth;
 			buf.clear();
 		}
@@ -575,10 +589,79 @@ int read_inputdata_v2() {
 				}
 			}
 		}
+
+		if (!lineA.compare("[lsgrid]")) {
+			// Lagrangian streched grid
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> sgrid.domain[0];
+			buf >> sgrid.domain[1];
+			buf >> sgrid.domain[2];
+			buf >> sgrid.domain[3];
+			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
+
+			buf.clear();
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> sgrid.nx;
+			buf >> sgrid.ny;
+			if (numparams(lineA) == 3) {
+				buf >> sgrid.nl;
+			}
+			std::cout << "Grid resolution: " << std::endl;
+			std::cout << "nx: " << sgrid.nx << std::endl;
+			std::cout << "ny: " << sgrid.ny << std::endl;
+			std::cout << "nl: " << sgrid.nl << std::endl;
+
+			// allocate memory
+			sgrid.allocate();
+
+			buf.clear();
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> sgrid.t0;
+			buf >> sgrid.dt;
+			std::cout << "time init: " << sgrid.t0 << std::endl;
+			std::cout << "dt: " << sgrid.dt << std::endl;		
+
+			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("stretch_params")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> sgrid.tan_a;
+				buf >> sgrid.tan_b;
+				std::cout << "Stretching parameters set to a=" << sgrid.tan_a << ", b=" << sgrid.tan_b << std::endl;
+			}
+				
+			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("ignore_subdomain")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> sgrid.domain_ignore[0];
+				buf >> sgrid.domain_ignore[1];
+				buf >> sgrid.domain_ignore[2];
+				buf >> sgrid.domain_ignore[3];
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+				sgrid.set_ignore();
+			}
+			buf.clear();
+
+			if (wavetype == 1)
+				wavetype = 4;
+			else {
+				std::cerr << "LS grid may only be used with irregular waves" << std::endl;
+				exit(-1);
+			}
+
+		}
 	}
 	std::cout << "Input file read successfully." << std::endl;
 
-	if (wavetype == 1 || wavetype == 2 || wavetype == 3) {
+	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
 		irregular.depth = depth;
 		irregular.mtheta = mtheta;
 		irregular.tofmax = tofmax;
@@ -598,7 +681,12 @@ int read_inputdata_v2() {
 		// set the properties of the wave
 		stokes5.set_stokes5_properties(wave_length, wave_height);
 	}
-	
+
+	if (wavetype == 4) {
+		sgrid.water_depth = depth;
+		sgrid.initialize_surface_elevation(irregular,sgrid.t0);
+		sgrid.initialize_kinematics(irregular);
+	}
 
 	return 0;
 
@@ -1272,7 +1360,8 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			gridclass.initialize_kinematics(irregular, 0.0);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.u(xpt, ypt, zpt);
-	// irregular waves generated from boundary, propagate into still water
+	
+		// irregular waves generated from boundary, propagate into still water
 	case 3:
 		// check timestep and see if updating is required
 		if (!gridclass.CheckTime(tpt)) {
@@ -1283,11 +1372,57 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.u_wall(tpt, xpt, ypt, zpt);
+		
+		// irregular LSgrid waves
+	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular, tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
+		
 	// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
 	
+	case 11:
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+	default:
+		return 0.0;
+	}
+
+
+}
+
+double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double sx)
+{
+
+	// Quickfix 07022018 To avoid issues with values below mudline
+	zpt = std::max(-depth, zpt);
+
+	switch (wavetype) {
+		// irregular waves
+	case 1:
+		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
+		// irregular gridded waves
+	case 2:
+		if (gridclass.initkin == 0) {
+			std::cout << "Generating kinematics for interpolation:" << std::endl;
+			gridclass.initialize_kinematics(irregular, 0.0);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * gridclass.u(xpt, ypt, zpt);
+
+		// irregular LSgrid waves
+	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+		// stokes 5th
+	case 21:
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
+
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 	default:
@@ -1324,6 +1459,12 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.v_wall(tpt, xpt, ypt, zpt);
+		// irregular LSgrid waves
+	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 
@@ -1359,6 +1500,12 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, zpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.w_wall(tpt, xpt, ypt, zpt);
+		// irregular LSgrid waves
+	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 
@@ -1420,6 +1567,11 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, swl);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
+	case 4:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(irregular, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 21:
@@ -1460,7 +1612,7 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 int wave_Initialize()
 {
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v.2.0.1" << std::endl;
+	std::cout << "CFD WAVEMAKER v.2.1.1" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	// Check if license has expired
@@ -1552,4 +1704,5 @@ int main() {
 	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
 	//std::cout << irregular.Ampspec[0] << std::endl;
 
-}*/
+}
+*/
