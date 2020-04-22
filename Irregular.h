@@ -26,7 +26,6 @@ public:
 		mtheta = 0.;
 		extrapolation_met = 0;
 		order = 2;
-		bandwidth = 1000;
 		tofmax = 0.;
 		fpoint[0] = 0.;
 		fpoint[1] = 0.;
