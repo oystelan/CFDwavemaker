@@ -41,11 +41,12 @@ public:
 	};
 
 	// Variables
-	int nfreq, ndir, extrapolation_met, bandwidth, normalize;
+	int nfreq, ndir, extrapolation_met, normalize;
 	int order = 2; // 1 = linear airy wave theory; 2= second order wave theory
 	int sloping_bottom = 0;
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl = 0.; // still water level
+	double dw_bandwidth = 100.; // default, frequencies will interact
 
 	// Declaration of vectors to store spectral data components
 	std::vector<double> omega;
@@ -83,6 +84,7 @@ public:
 	double dp(double t, double x, double y, double z);
 
 	void normalize_data();
+	void calculate_bandwidth(double dk);
 };
 
 #endif
