@@ -290,7 +290,7 @@ int read_inputdata_v2() {
 			buf.str(lineA);
 			buf >> irregular.extrapolation_met;
 			buf >> irregular.order;
-			buf >> irregular.bandwidth;
+			buf >> irregular.dw_bandwidth;
 			buf.clear();
 		}
 		if (!lineA.compare("[wave reference point]")) { //optional
