@@ -17,7 +17,6 @@ struct LSgridTest : testing::Test {
 		irregular->nfreq = 3;
 		irregular->ndir = 1;
 		irregular->extrapolation_met = 0;
-		irregular->bandwidth = 1000;
 		irregular->normalize = 0;
 		irregular->order = 2;
 
