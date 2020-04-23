@@ -1688,6 +1688,10 @@ int Cleanup() {
 	return wave_Cleanup();
 }
 
+double wave_phase_velocity(int opt) {
+	return irregular.phase_velocity(opt);
+}
+
 /*
 int main() {
 	//cout << GetCurrentWorkingDir() << endl;

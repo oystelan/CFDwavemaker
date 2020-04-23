@@ -31,6 +31,7 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
+	double wave_phase_velocity(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
 
 	// special functions for sloping bottom definition
 	double wave_VeloX_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sx}
