@@ -74,3 +74,32 @@ TEST_F(IrregularTest, test2) {
 }
 
 
+TEST_F(IrregularTest, interpolatetest) {
+	// Original data
+	std::vector<double> xData = { 1, 5, 10, 15, 20 };
+	std::vector<double> yData = { 0.3, 0.5, 0.8, 0.1, 0.14 };
+
+	// Set up some points for interpolation in xVals
+	const int NPTS = 20;
+	std::vector<double> xVals, yVals;
+	for (int i = 1; i <= NPTS; i++) xVals.push_back((double)i);
+
+	// Interpolate
+	for (double x : xVals)
+	{
+		double y = irregular->interpolate(xData, yData, x, true);
+		yVals.push_back(y);
+	}
+
+	// Output
+	#define SP << std::fixed << std::setw( 15 ) << std::setprecision( 6 ) <<
+	#define NL << '\n'
+	std::cout << "Original data:\n";
+	for (int i = 0; i < xData.size(); i++) std::cout SP xData[i] SP yData[i] NL;
+	std::cout << "\nInterpolated data:\n";
+	for (int i = 0; i < xVals.size(); i++) std::cout SP xVals[i] SP yVals[i] NL;
+
+	EXPECT_TRUE(true);
+}
+
+
