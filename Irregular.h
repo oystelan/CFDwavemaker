@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Wavespectra.h"
 #include <vector>
+#include <iomanip>
 #ifndef PI
 #define PI 3.1415926535897
 #endif
@@ -83,7 +84,9 @@ public:
 	double dp(double t, double x, double y, double z);
 
 	void normalize_data();
-	void calculate_bandwidth(double dk);
+	double trapz(double x[], double y[], int n);
+	double interpolate(std::vector<double>& xData, std::vector<double>& yData, double x, bool extrapolate);
+	double phase_velocity(int opt);
 };
 
 #endif

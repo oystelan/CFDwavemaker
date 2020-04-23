@@ -551,10 +551,86 @@ void Irregular::normalize_data() {
 	}
 }
 
-/*Function for calculating b*/
-void Irregular::calculate_bandwidth(double dk)
-{
+
+// trapezoidal integration function
+double Irregular::trapz(double x[], double y[], int n) {
+	
+	double ss = 0.;
+
+	for (int i = 0; i < (n-1); i++) {
+		ss += (x[i+1]-x[i])*((y[i+1]+y[i])*0.5);
+	}
+
+	return ss;
 }
-;
+
+double Irregular::interpolate(std::vector<double>& xData, std::vector<double>& yData, double x, bool extrapolate)
+{
+	int size = xData.size();
+
+	int i = 0;                                                                  // find left end of interval for interpolation
+	if (x >= xData[size - 2])                                                 // special case: beyond right end
+	{
+		i = size - 2;
+	}
+	else
+	{
+		while (x > xData[i + 1]) i++;
+	}
+	double xL = xData[i], yL = yData[i], xR = xData[i + 1], yR = yData[i + 1];      // points on either side (unless beyond ends)
+	if (!extrapolate)                                                         // if beyond ends of array and not extrapolating
+	{
+		if (x < xL) yR = yL;
+		if (x > xR) yL = yR;
+	}
+
+	double dydx = (yR - yL) / (xR - xL);                                    // gradient
+
+	return yL + dydx * (x - xL);                                              // linear interpolation
+}
+
+/* Function for calculating phase velocity based integration of the wave spectrum*/
+double Irregular::phase_velocity(int opt)
+{
+	// check 
+	if (ndir > 1) {
+		std::cerr << "Phase velocity only supported for 2D wave spectra at the moment. Sorry for the inconvenience" << std::endl;
+		exit(-1);
+	}
+	
+	double w_t, dw, S;
+	double m0 = 0.;
+	double m1 = 0.;
+	double m2 = 0.;
+	
+	for (int i = 0; i < (nfreq-1); i++) {
+		w_t = (omega[i + 1] + omega[i]) / 2.;
+		dw = omega[i + 1] - omega[i];
+		S = pow((A[i+1]+A[i])*0.5,2.) / (2. * dw);
+		m0 += w_t * S;
+		m1 += w_t * S * w_t;
+		m2 += w_t * S * w_t * w_t;
+	}
+	
+	double t1 = 2. * PI * (m0 / m1);
+	double t2 = 2. * PI * sqrt(m0 / m2);
+
+	double w1 = 2 * PI / t1;
+	double w2 = 2 * PI / t2;
+
+	// interpolate wave number
+	double k1 = interpolate(omega, k, w1, true);
+	double k2 = interpolate(omega, k, w2, true);
+
+	if (opt == 1) {
+		return w1 / k1;
+	}
+	else if(opt == 2) {
+		return w2 / k2;
+	}
+	return 0.;
+}
+
+
 
 
