@@ -116,3 +116,33 @@ TEST_F(LSgridTest, test1) {
 
 	EXPECT_TRUE(true);
 }
+
+
+TEST_F(LSgridTest, vtueksporter) {
+	double t = 4.;
+	sgrid->t0 = t;
+
+	// Set grid refinement parameters
+	sgrid->domain[0] = 0.;
+	sgrid->domain[1] = 300.;
+	sgrid->domain[2] = 0.;
+	sgrid->domain[3] = 100.;
+	sgrid->nx = 61;
+	sgrid->ny = 31;
+	sgrid->nl = 10;
+	//sgrid->tan_a = 0.01;
+	sgrid->tan_b = 1.5;
+	sgrid->allocate();
+
+	// update grids
+	sgrid->initialize_surface_elevation(*irregular, sgrid->t0);
+	sgrid->initialize_kinematics(*irregular);
+
+	// Write vtu file
+	//char name[100];
+	//sprintf(name, "./unittest.vtu");
+	FILE* fp = fopen("./unittest.vtu", "w");
+	sgrid->export_vtu(fp);
+	fclose(fp);
+	EXPECT_TRUE(true);
+}

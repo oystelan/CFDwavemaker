@@ -64,6 +64,10 @@ public:
 	// routines for extracting kinematics at walls
 	bool CheckTime(double tpt);
 	bool CheckBounds(double* bounds, double x, double y, double z);
+	
+	// export_functions to validate kinematics
+	void export_vtu(FILE* fp);
+
 };
 
 #endif

@@ -40,8 +40,6 @@ double sGrid::s2z(double s, double wave_elev, double depth) {
 	return wave_elev + s * (depth + wave_elev);
 }
 
-
-
 double sGrid::s2tan(double s) {
 	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
 	// returns tangens strethced coordintates tan, which is also defined between -1 and 0	
@@ -392,6 +390,85 @@ bool sGrid::CheckBounds(double* bounds, double x, double y, double z)
 		std::cout << "position x,y,z=" << x << "," << y << "," << z << " out of bounds. updating wallx borders" << std::endl;
 		return false;
 	}
+}
+
+/* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
+void sGrid::export_vtu(FILE* fp)
+{
+	// write header
+	fputs("<?xml version=\"1.0\"?>\n"
+		"<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n", fp);
+	fputs("\t <UnstructuredGrid>\n", fp);
+	fprintf(fp, "\t\t <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", nx*ny*nl, (nx-1)*(ny-1)*(nl-1));
+	
+	// Loop over velocity data and store kinematics in cell vector stucture
+	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
+
+	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
+	for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+			for (int m = 0; m < nl; m++) {
+				fprintf(fp, "%g %g %g\n", UX0[i * ny * nl + j * nl + m], UY0[i * ny * nl + j * nl + m], UZ0[i * ny * nl + j * nl + m]);
+			}
+		}
+	}
+	fputs("\t\t\t\t </DataArray>\n", fp);
+
+	fputs("\t\t\t </PointData>\n", fp);
+
+	fputs("\t\t\t <Points>\n", fp);
+	fputs("\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n", fp);
+	for (int i = 0; i < nx; i++) {
+		double xpt = domain[0] + dx * i;
+		for (int j = 0; j < ny; j++) {
+			double ypt = domain[2] + dy * j;
+			double eta0_temp = ETA0[i * ny + j];
+			for (int m = 0; m < nl; m++) {
+				double spt = s2tan(-1. + ds * m);
+				double zpt0 = s2z(spt, eta0_temp, water_depth);
+				fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
+			}
+		}
+	}
+	fputs("\t\t\t\t </DataArray>\n", fp);
+	fputs("\t\t\t </Points>\n", fp);
+
+	fputs("\t\t\t <Cells>\n", fp);
+	fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">\n", fp);
+
+	for (int i = 0; i < (nx-1); i++) {
+		for (int j = 0; j < (ny-1); j++) {
+			for (int m = 0; m < (nl-1); m++) {
+				int ape1 = nl * ny * i + nl * j + m;
+				int ape2 = nl * ny * (i + 1) + nl * j + m;
+				int ape3 = nl * ny * (i + 1) + nl * (j + 1) + m;
+				int ape4 = nl * ny * i + nl * (j + 1) + m;
+				int ape5 = nl * ny * i + nl * j + (m + 1);
+				int ape6 = nl * ny * (i + 1) + nl * j + (m + 1);
+				int ape7 = nl * ny * (i + 1) + nl * (j + 1) + (m + 1);
+				int ape8 = nl * ny * i + nl * (j + 1) + (m + 1);
+				fprintf(fp, "%u %u %u %u %u %u %u %u\n", ape1, ape2, ape3, ape4, ape5, ape6, ape7, ape8);
+			}
+		}
+	}
+
+	fputs("\t\t\t\t </DataArray>\n", fp);
+	fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+
+	for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
+		fprintf(fp, "%d \n", i * 8);
+	}
+	fputs("\t\t\t\t </DataArray>\n", fp);
+	fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
+	for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
+		fputs("12 \n", fp);
+	}
+	fputs("\t\t\t\t </DataArray>\n", fp);
+	fputs("\t\t\t </Cells>\n", fp);
+	fputs("\t\t </Piece>\n", fp);
+	fputs("\t </UnstructuredGrid>\n", fp);
+	fputs("</VTKFile>\n", fp);
+	fflush(fp);
 }
 
 /* Set area of domain to ignore when update kinematics data. this is useful when prescribing kinematics at the boundaries*/
