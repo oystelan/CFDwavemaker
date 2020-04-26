@@ -393,7 +393,7 @@ bool sGrid::CheckBounds(double* bounds, double x, double y, double z)
 }
 
 /* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
-void sGrid::export_vtu(FILE* fp)
+void sGrid::export_vtu(FILE* fp, bool last)
 {
 	// write header
 	fputs("<?xml version=\"1.0\"?>\n"
@@ -405,10 +405,21 @@ void sGrid::export_vtu(FILE* fp)
 	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
 
 	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
-	for (int i = 0; i < nx; i++) {
-		for (int j = 0; j < ny; j++) {
-			for (int m = 0; m < nl; m++) {
-				fprintf(fp, "%g %g %g\n", UX0[i * ny * nl + j * nl + m], UY0[i * ny * nl + j * nl + m], UZ0[i * ny * nl + j * nl + m]);
+	if (last) {
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				for (int m = 0; m < nl; m++) {
+					fprintf(fp, "%g %g %g\n", UX1[i * ny * nl + j * nl + m], UY1[i * ny * nl + j * nl + m], UZ1[i * ny * nl + j * nl + m]);
+				}
+			}
+		}
+	}
+	else {
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				for (int m = 0; m < nl; m++) {
+					fprintf(fp, "%g %g %g\n", UX0[i * ny * nl + j * nl + m], UY0[i * ny * nl + j * nl + m], UZ0[i * ny * nl + j * nl + m]);
+				}
 			}
 		}
 	}
@@ -418,15 +429,31 @@ void sGrid::export_vtu(FILE* fp)
 
 	fputs("\t\t\t <Points>\n", fp);
 	fputs("\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n", fp);
-	for (int i = 0; i < nx; i++) {
-		double xpt = domain[0] + dx * i;
-		for (int j = 0; j < ny; j++) {
-			double ypt = domain[2] + dy * j;
-			double eta0_temp = ETA0[i * ny + j];
-			for (int m = 0; m < nl; m++) {
-				double spt = s2tan(-1. + ds * m);
-				double zpt0 = s2z(spt, eta0_temp, water_depth);
-				fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
+	if (last) {
+		for (int i = 0; i < nx; i++) {
+			double xpt = domain[0] + dx * i;
+			for (int j = 0; j < ny; j++) {
+				double ypt = domain[2] + dy * j;
+				double eta1_temp = ETA1[i * ny + j];
+				for (int m = 0; m < nl; m++) {
+					double spt = s2tan(-1. + ds * m);
+					double zpt1 = s2z(spt, eta1_temp, water_depth);
+					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt1);
+				}
+			}
+		}
+	}
+	else {
+		for (int i = 0; i < nx; i++) {
+			double xpt = domain[0] + dx * i;
+			for (int j = 0; j < ny; j++) {
+				double ypt = domain[2] + dy * j;
+				double eta0_temp = ETA0[i * ny + j];
+				for (int m = 0; m < nl; m++) {
+					double spt = s2tan(-1. + ds * m);
+					double zpt0 = s2z(spt, eta0_temp, water_depth);
+					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
+				}
 			}
 		}
 	}

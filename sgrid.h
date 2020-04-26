@@ -66,7 +66,7 @@ public:
 	bool CheckBounds(double* bounds, double x, double y, double z);
 	
 	// export_functions to validate kinematics
-	void export_vtu(FILE* fp);
+	void export_vtu(FILE* fp, bool last);
 
 };
 

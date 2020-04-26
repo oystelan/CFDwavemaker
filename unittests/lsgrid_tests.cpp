@@ -142,7 +142,7 @@ TEST_F(LSgridTest, vtueksporter) {
 	//char name[100];
 	//sprintf(name, "./unittest.vtu");
 	FILE* fp = fopen("./unittest.vtu", "w");
-	sgrid->export_vtu(fp);
+	sgrid->export_vtu(fp, false);
 	fclose(fp);
 	EXPECT_TRUE(true);
 }
