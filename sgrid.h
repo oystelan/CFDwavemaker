@@ -33,6 +33,8 @@ public:
 	double tan_a;
 	double tan_b;
 
+	double bxmin, bxmax, bymin, bymax;
+
 	double slayer(int layerno);
 	double clayer(int layerno);
 
@@ -63,7 +65,13 @@ public:
 
 	// routines for extracting kinematics at walls
 	bool CheckTime(double tpt);
-	bool CheckBounds(double* bounds, double x, double y, double z);
+	bool CheckBounds();
+
+	void update_bounds(double xpt, double ypt);
+	
+	// export_functions to validate kinematics
+	void export_vtu(FILE* fp, bool last);
+
 };
 
 #endif
