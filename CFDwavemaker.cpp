@@ -1376,6 +1376,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+			#pragma omp master
 			sgrid.update(irregular, tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -1416,6 +1417,7 @@ double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double s
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+			#pragma omp master
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
@@ -1462,6 +1464,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+			#pragma omp master
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
@@ -1503,6 +1506,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+#pragma omp master
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);

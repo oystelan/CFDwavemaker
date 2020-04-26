@@ -157,6 +157,11 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 	dx = (domain[1] - domain[0]) / double(nx - 1);
 	dy = (domain[3] - domain[2]) / double(ny - 1);
 
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
+
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
 	omp_set_num_threads(omp_get_max_threads());
@@ -184,6 +189,9 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void sGrid::update(Irregular& irregular, double t_target)
 {
+	// Start by checking bounds
+	CheckBounds();
+	
 	// new time step
 	if ((t_target / dt - (t0+2*dt) / dt) > 0.) {
 		double new_time = dt*std::floor(t_target / dt);
@@ -366,6 +374,7 @@ double sGrid::w(double tpt, double xpt, double ypt, double zpt) {
 }
 
 double sGrid::eta(double tpt, double xpt, double ypt) {
+	update_bounds(xpt, ypt);
 	return bilinear_interpolation(ETA0, ETA1, tpt, xpt, ypt);
 }
 
@@ -382,14 +391,23 @@ bool sGrid::CheckTime(double tpt) {
 
 // function to find if given point 
 // lies inside a given rectangle or not. 
-bool sGrid::CheckBounds(double* bounds, double x, double y, double z)
+bool sGrid::CheckBounds()
 {
-	if (x >= bounds[0] && x <= bounds[1] && y >= bounds[2] && y <= bounds[3] && z >= bounds[4] && z <= bounds[5])
+	if (bxmin >= domain[0] && bxmax <= domain[1] && bymin >= domain[2] && bymax <= domain[3])
 		return true;
 	else {
-		std::cout << "position x,y,z=" << x << "," << y << "," << z << " out of bounds. updating wallx borders" << std::endl;
+		std::cout << "Requested point outside specified grid domain. adjust the bounds of the grid and try again." << std::endl;
+		exit(-1);
 		return false;
 	}
+}
+
+void sGrid::update_bounds(double xpt, double ypt) {
+	bxmin = std::min(xpt, bxmin);
+	bxmax = std::min(xpt, bxmax);
+	bymin = std::min(ypt, bymin);
+	bymax = std::min(ypt, bymax);
+
 }
 
 /* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
