@@ -70,10 +70,10 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		// Main grid
-#pragma omp for
+#pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				double eta0_temp = ETA0[i * ny + j];
 				double eta1_temp = ETA1[i * ny + j];
@@ -169,10 +169,10 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 #pragma omp parallel
 	{
 		// Main grid
-#pragma omp for
+#pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
 			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
 				ETA1[i * ny + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
@@ -207,10 +207,11 @@ void sGrid::update(Irregular& irregular, double t_target)
 #pragma omp parallel
 		{
 			// Main grid
-#pragma omp for
+#pragma omp for collapse(2)
 			for (int i = 0; i < nx; i++) {
-				double xpt = domain[0] + dx * i;
 				for (int j = 0; j < ny; j++) {
+					double xpt = domain[0] + dx * i;
+					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
 					double ypt = domain[2] + dy * j;
 					if (!IGNORE[i * ny + j]) {
 						ETA0[i * ny + j] = ETA1[i * ny + j];
