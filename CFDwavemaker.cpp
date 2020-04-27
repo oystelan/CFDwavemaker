@@ -40,7 +40,6 @@
 
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
 double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
-double depth;
 double mtheta;
 double swl = 0.;
 

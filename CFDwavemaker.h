@@ -42,6 +42,8 @@ extern "C" {
 	double wave_VeloY_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sy}
 	double wave_VeloZ_slope(double, double, double, double, double ); // input variables are {xpoint,ypoint,zpoint,time, s}
 
+	double depth;
+
 	// external functions used by COMFLOW
 	EXPORT double VelocityX(int, int, int, double, double, double, double);
 	EXPORT double VelocityY(int, int, int, double, double, double, double); 
