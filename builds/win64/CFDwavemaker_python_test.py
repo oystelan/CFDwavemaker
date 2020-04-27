@@ -82,6 +82,24 @@ def clean_up(mydll):
 
 # or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.
 
+
+
+
+t = np.arange(0, 300,0.87)
+x = 0.
+#shutil.copy2('./waveinput1.dat','./waveinput.dat')
+print(init_dll(mydll))
+
+eta = []
+for tt in t:
+    dd = waveelev(mydll,tt,x,0.0)
+    eta.append(dd) # x and y position set to 0.
+plt.plot(t, eta)
+plt.show()
+clean_up(mydll)
+
+exit()
+
 t = 5.55
 x = 0.
 shutil.copy2('./waveinput1.dat','./waveinput.dat')

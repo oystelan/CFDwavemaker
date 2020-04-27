@@ -55,6 +55,8 @@ public:
 	std::vector<double> theta;
 	std::vector<double> phase;
 
+	void print();
+
 	// First order
 	double eta1(double t, double xx, double yy); // wave elevation
 	double u1(double t, double xx, double yy, double zz); // velocity component x

@@ -90,6 +90,24 @@ double Irregular::dp(double t, double x, double y, double z) {
 	return dp1(t, x, y, z - swl);
 };
 
+/* Function for printing wave components (sometimes useful for QA)*/
+void Irregular::print()
+{
+	std::cout << "Irregular Waves" << std::endl;
+	std::cout << "===============" << std::endl;
+	std::cout << "\n";
+	std::cout << "Number of frequencies: " << nfreq << std::endl;
+	std::cout << "Number of wave directions " << ndir << std::endl;
+	std::cout << "\n";
+	std::cout << "Wave components:\n";
+	std::cout << "----------------\n";
+	std::cout << "|  Omega (rad/s)   |  Amplitude (m)  |  Wave number k  |   phase (rad)   | \n";
+	for (int i = 0; i < (nfreq * ndir); i++) {
+		std::cout << omega[i] << " " << A[i] << " " << k[i] << " " << phase[i] << std::endl;
+	}
+	std::cout << std::endl;
+}
+
 /* First order wave elevation */
 double Irregular::eta1(double t, double xx, double yy) {
 

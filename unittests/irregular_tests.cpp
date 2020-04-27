@@ -51,6 +51,8 @@ TEST_F(IrregularTest, test1) {
 	double y = 0.;
 	//std::cout << "Wave elevation: " << irregular->eta(0.0, 0.0, 0.0) << std::endl;
 	EXPECT_DOUBLE_EQ(6., irregular->eta(0.0, 0.0, 0.0));
+
+	irregular->print();
 	EXPECT_TRUE(true);
 }
 

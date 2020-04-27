@@ -199,7 +199,7 @@ void sGrid::update(Irregular& irregular, double t_target)
 		initialize_kinematics(irregular);
 	}
 	else {
-		t0 = t0 + dt;
+		t0 += dt;
 		// Updating surface elevations
 		double dd = omp_get_wtime();
 		//omp_set_num_threads(1);
