@@ -3,15 +3,155 @@ Installation
 
 This pages describes how to install and get up and running with the CFDwavemaker C++ library, with different CFD solvers.
 
-Installation with ComFLOW
+Linking up with ComFLOW
+-----------------------
+
+`ComFLOW`_ is a Volume-of-fluids (VOF) Navier-Stokes solver for free-surface flow, and is an excellent CFD solver for modelling free surface waves. External libraries such as CFDwavemaker may be linked to the solver for providing kinematics using a predefined extern C function. These functions are available in CFDwavemaker, and therefore it is straight forward to use the library with ComFLOW once the shared library has been built. The instructions on how to do so is given below.
+
+.. _`ComFLOW`: http://www.math.rug.nl/~veldman/comflow/comflow.html
+
+1. Start by copying the CFDwavemaker.so library to some place ComFLOW can locate it. A good location is among the external library files located in the directory `$(COMFLOW_INSTALL_DIR)/lib/linux/`
+
+2. In your `comflow.cfi` file (main control file for comflow simulation) specify that the external library should be used as show in the example xml code (extract from a `comflow.cfi` file) below.
+
+3. Your done. Now you should be able to run ComFLOW using CFDwavemaker for initialization. Remember to provide `waveinput.dat` file in you comflow run folder when starting a simulation (one level up of the input_files folder). 
+
+.. code:: xml
+
+	...
+
+	<!-- WAVES: Definition of incoming/initial wave field and current -->
+      <waves start_with_still_water="true" initialize_fs="true" mean_depth="1.2">
+
+      <!-- MODEL: Definition of wave model -->
+           <model model="none"/>
+
+      <!-- CURRENT: Current -->
+           <current magnitude="0." angle="0."/>
+
+      <!-- RAMPING: Ramping for smooth startup of a simulation -->
+           <ramping ramptype="0" rampfs="1" ramp1="0." ramp2="0."/>
+    </waves>
+	<!-- COUPLING: Settings for coupling to a.o. moving objects (prescribed and 
+      interactive motions), XMF mooring module, external solutions (e.g. other 
+      ComFLOW simulations), ... -->
+      <coupling>
+
+      <!-- EXTERNAL_SOLUTION: Settings for coupling to a shared library -->
+           <external_solution dllfile="CFDwavemaker_omp.so" initialize="true" ramp="false"/>
+
+    </coupling>
+
+    ...
+
+If you wish to use CFDwavemaker for providing waves at the boundary, this is done by altering the `comflow.cfi` file. Reference is made to the `ComFLOW manual`_.
+
+.. _`ComFLOW manual`: http://poseidon.housing.rug.nl/sphinx/
+
+Linking up with Basilisk (or C)
+-------------------------------
+
+Basilisk is an open source library for the solution of partial differential equations on adaptive Cartesian meshes. The code is built in C (C99) with a few a few improvements to syntax (refered to as `Basilisk C`). 
+Linking CFDwavemaker to this library is straight forward, since it is built on the same programming language (almost). 
+
+Static linking
+..............
+
+
+Dynamic linking
+...............
+
+ 
+
+Linking up  with OpenFOAM
 -------------------------
 
+Linking up with Python
+----------------------
 
-Installation with Basilisk
---------------------------
+Occationally it may be useful generate kinematics data for other reasons than pushing it into a CFD solver. In this case python is a good and easy alternative, using the ctypes package. An example is given below.
 
-Installation with OpenFOAM
---------------------------
+.. code:: python
+
+	from ctypes import*
+	import matplotlib.pylab as plt
+	import numpy as np
+
+	# give location of dll (this is used in windows)
+	# mydll = cdll.CFDwavemaker
+
+	# And this is for Linux/unix
+	mydll = cdll.LoadLibrary("./CFDwavemaker.so") 
+
+	def velocityx(mydll,t,x,y,z):
+	    aa = mydll.VelocityX
+	    aa.restype = c_double
+	    aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
+	    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
+
+	def velocityy(mydll,t,x,y,z):
+	    aa = mydll.VelocityY
+	    aa.restype = c_double
+	    aa.argtypes = [c_int, c_int, c_int, c_double, c_double, c_double, c_double]
+	    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
+
+	def velocityz(mydll,t,x,y,z):
+	    aa = mydll.VelocityZ
+	    aa.restype = c_double
+	    aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
+	    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
+
+	def waveelev(mydll,t,x,y):
+	    aa = mydll.SurfaceElevation
+	    aa.restype = c_double
+	    aa.argtypes = [c_int,c_int,c_double,c_double,c_double]
+	    return aa(c_int(0),c_int(0),c_double(x),c_double(y),c_double(t))
+
+	def volfrac(mydll,x,y,z,t,delta):
+	    aa = mydll.VolumeFraction
+	    aa.restype = c_double
+	    aa.argtypes = [c_double,c_double,c_double,c_double,c_double]
+	    return aa(c_double(x),c_double(y),c_double(z),c_double(t),c_double(delta))
+
+	def init_dll(mydll):
+	    aa = mydll.Init
+	    aa.restype = c_int
+	    aa.argtypes = [POINTER(c_double),POINTER(c_double)]
+	    return aa(c_double(0),c_double(0));
+
+	def clean_up(mydll):
+	    aa = mydll.Cleanup
+	    aa.restype = c_int
+	    return aa();
+
+
+	# We start of by calling the init function. This will read the waveinput.dat file and perform necessary initialization
+	print(init_dll(mydll))
+
+	# We create a time vector from 0 to 100 sec, with 0.5sec spacing
+	time = np.arange(0, 100, 0.5)
+
+	# lets extract the surface elevation at x=y=0
+	wave_elev = np.zeros(len(time))
+	for wave,t in zip(wave_elev,time):
+	    wave = waveelev(mydll,t,0.0,0.0) # x and y position set to 0.
+
+	# or perhaps the horizontal particle velocity at position x = 0, y=0, z = -10.
+
+	ux = np.zeros(len(time))
+	for u,t in zip(ux,time):
+	    u = velocityx(mydll,t,0.0,0.0,-11.0) # x and y position set to 0.
+
+	# You get the idea.
+
+	# Plotting some kinematics data
+	plt.plot(time,wave)
+	plt.plot(time,ux)
+	plt.show()
+
+	# now that we are done, we close down the link to the library before exiting
+	clean_up(mydll)
+
 
 
 
