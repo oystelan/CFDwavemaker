@@ -1693,6 +1693,13 @@ double wave_phase_velocity(int opt) {
 	return irregular.phase_velocity(opt);
 }
 
+double wave_mean_length(int opt) {
+	return irregular.mean_wave_length(opt);
+}
+double wave_mean_period(int opt) {
+	return irregular.mean_wave_period(opt);
+}
+
 /*
 int main() {
 	//cout << GetCurrentWorkingDir() << endl;

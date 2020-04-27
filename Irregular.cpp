@@ -649,6 +649,82 @@ double Irregular::phase_velocity(int opt)
 	return 0.;
 }
 
+/* Function for calculating the mean wave length based integration of the wave spectrum*/
+double Irregular::mean_wave_length(int opt)
+{
+	// check 
+	if (ndir > 1) {
+		std::cerr << "mean wave length only supported for 2D wave spectra at the moment. Sorry for the inconvenience" << std::endl;
+		exit(-1);
+	}
+
+	double w_t, dw, S;
+	double m0 = 0.;
+	double m1 = 0.;
+	double m2 = 0.;
+
+	for (int i = 0; i < (nfreq - 1); i++) {
+		w_t = (omega[i + 1] + omega[i]) / 2.;
+		dw = omega[i + 1] - omega[i];
+		S = pow((A[i + 1] + A[i]) * 0.5, 2.) / (2. * dw);
+		m0 += w_t * S;
+		m1 += w_t * S * w_t;
+		m2 += w_t * S * w_t * w_t;
+	}
+
+	double t1 = 2. * PI * (m0 / m1);
+	double t2 = 2. * PI * sqrt(m0 / m2);
+
+	double w1 = 2 * PI / t1;
+	double w2 = 2 * PI / t2;
+
+	// interpolate wave number
+	double l1 = (2. * PI) / interpolate(omega, k, w1, true);
+	double l2 = (2. * PI) / interpolate(omega, k, w2, true);
+
+	if (opt == 1) {
+		return l1;
+	}
+	else if (opt == 2) {
+		return l2;
+	}
+	return 0.;
+}
+
+/* Function for calculating the mean wave length based integration of the wave spectrum*/
+double Irregular::mean_wave_period(int opt)
+{
+	// check 
+	if (ndir > 1) {
+		std::cerr << "mean wave period only supported for 2D wave spectra at the moment. Sorry for the inconvenience" << std::endl;
+		exit(-1);
+	}
+
+	double w_t, dw, S;
+	double m0 = 0.;
+	double m1 = 0.;
+	double m2 = 0.;
+
+	for (int i = 0; i < (nfreq - 1); i++) {
+		w_t = (omega[i + 1] + omega[i]) / 2.;
+		dw = omega[i + 1] - omega[i];
+		S = pow((A[i + 1] + A[i]) * 0.5, 2.) / (2. * dw);
+		m0 += w_t * S;
+		m1 += w_t * S * w_t;
+		m2 += w_t * S * w_t * w_t;
+	}
+
+	double t1 = 2. * PI * (m0 / m1);
+	double t2 = 2. * PI * sqrt(m0 / m2);
+
+	if (opt == 1) {
+		return t1;
+	}
+	else if (opt == 2) {
+		return t2;
+	}
+	return 0.;
+}
 
 
 
