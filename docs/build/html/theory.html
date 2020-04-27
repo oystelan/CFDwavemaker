@@ -36,7 +36,7 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Lisence" href="lisence.html" />
+    <link rel="next" title="Todo-list" href="todolist.html" />
     <link rel="prev" title="Input File Examples" href="inputfile_examples.html" /> 
 </head>
 
@@ -89,13 +89,24 @@
 <li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">Input File Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">Input File Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Wave Theories</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#linear-potential-wave-theory-irregular-waves">Linear Potential Wave Theory (Irregular waves)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#second-order-potentiaon-wave-theory-irregular-waves">Second order Potentiaon Wave Theory (Irregular waves)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#stokes-5th-regular-wave-theory">Stokes 5th Regular Wave Theory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#piston-wavemaker-theory">Piston Wavemaker Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-theory">Irregular wave theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#linear-potential-wave-theory">Linear potential wave theory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#second-order-potential-wave-theory">Second order Potential Wave Theory</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#regular-wave-theory">Regular wave theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stokes-5th-order-wave">Stokes 5th order wave</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#wave-maker-theory">Wave maker theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#piston-wavemaker-theory">Piston Wavemaker Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">Todo-list</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lisence.html">Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 
             
@@ -162,30 +173,34 @@
             
   <div class="section" id="wave-theories">
 <h1>Wave Theories<a class="headerlink" href="#wave-theories" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="linear-potential-wave-theory-irregular-waves">
-<h2>Linear Potential Wave Theory (Irregular waves)<a class="headerlink" href="#linear-potential-wave-theory-irregular-waves" title="Permalink to this headline">¶</a></h2>
-<p>This is a test</p>
-<div class="math">
-<p><img src="_images/math/b78f846f3a106f8ce08ad131ecca41ae5ac3fff6.png" alt="(a + b)^2 = a^2 + 2ab + b^2
-
-(a - b)^2 = a^2 - 2ab + b^2"/></p>
-</div></div>
-<div class="section" id="second-order-potentiaon-wave-theory-irregular-waves">
-<h2>Second order Potentiaon Wave Theory (Irregular waves)<a class="headerlink" href="#second-order-potentiaon-wave-theory-irregular-waves" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="irregular-wave-theory">
+<h2>Irregular wave theory<a class="headerlink" href="#irregular-wave-theory" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linear-potential-wave-theory">
+<h3>Linear potential wave theory<a class="headerlink" href="#linear-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
+<p>Linear wave theory, also known as Airy waves has been widely used for more than 50 years for describing irregular waves.
+Documentation of this theory exists in a number of places and therefore this will not be further adressed here.
+Reference is made to <a class="reference external" href="https://en.wikipedia.org/wiki/Airy_wave_theory">Wikipedia</a> for a nice overview of this theory. Other sources are <a class="bibtex reference internal" href="references.html#dnvglrpc205" id="id1">[1]</a><a class="bibtex reference internal" href="references.html#faltinsen1993sea" id="id2">[2]</a></p>
 </div>
-<div class="section" id="stokes-5th-regular-wave-theory">
-<h2>Stokes 5th Regular Wave Theory<a class="headerlink" href="#stokes-5th-regular-wave-theory" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="second-order-potential-wave-theory">
+<h3>Second order Potential Wave Theory<a class="headerlink" href="#second-order-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
+<p>Second order wave theory
+Reference is made to the the classic article from Sharma and Dean 1981 ,Ref. <a class="bibtex reference internal" href="references.html#sharma1981second" id="id3">[6]</a>. The current implementation is based on the implementation given by Johannessen 1997 (Ref. <a class="bibtex reference internal" href="references.html#johannessen1997effect" id="id4">[4]</a>).</p>
 </div>
+</div>
+<div class="section" id="regular-wave-theory">
+<h2>Regular wave theory<a class="headerlink" href="#regular-wave-theory" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="stokes-5th-order-wave">
+<h3>Stokes 5th order wave<a class="headerlink" href="#stokes-5th-order-wave" title="Permalink to this headline">¶</a></h3>
+<p>The stokes 5th order wave is a classic. The current implementation is based on Skjelbreia and Hendricksons implementation ,Ref. <a class="bibtex reference internal" href="references.html#skjelbreia1960fifth" id="id5">[7]</a>. Fenton also had a nice implementation of this type of wave.</p>
+</div>
+</div>
+<div class="section" id="wave-maker-theory">
+<h2>Wave maker theory<a class="headerlink" href="#wave-maker-theory" title="Permalink to this headline">¶</a></h2>
+<p>Wave maker theory is generally useful, especially if you want to replicate something which has been generated in a tank.</p>
 <div class="section" id="piston-wavemaker-theory">
-<h2>Piston Wavemaker Theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h2>
-<ul>
-<li><p><em>conservation of momentum</em>:</p>
-<div class="math">
-<p><img src="_images/math/470e095766cd673f13c9ec0a60a99ea2f64fed02.png" alt="\frac{{\partial}{\bf u}}{{\partial}{t}}+{\bf u}\cdot{\nabla}{\bf
-u}=-{\frac{1}{\rho}}{\nabla}{p}+{\frac{\mu}{\rho}}{\nabla}\cdot{\nabla}{\bf u}+{\bf
-F}."/></p>
-</div></li>
-</ul>
+<h3>Piston Wavemaker Theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
+<p>Reference is made to the Kennard1949 (Ref. <a class="bibtex reference internal" href="references.html#kennard1949generation" id="id6">[5]</a>). The input is time series of horizontal paddle movement.</p>
+</div>
 </div>
 </div>
 
@@ -197,7 +212,7 @@ F}."/></p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="lisence.html" class="btn btn-neutral float-right" title="Lisence" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="todolist.html" class="btn btn-neutral float-right" title="Todo-list" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="inputfile_examples.html" class="btn btn-neutral float-left" title="Input File Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

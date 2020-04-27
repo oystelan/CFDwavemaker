@@ -11,8 +11,8 @@ TARGETS_SHARED_OMP:= $(addsuffix _openmp.so, $(TARGETS))
 TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o $(MAINS)
-DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.o
+OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o sgrid.o $(MAINS)
+DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.h sgrid.h
 #OBJ_OMP := $(OBJ)
 
 .PHONY: all clean openmp

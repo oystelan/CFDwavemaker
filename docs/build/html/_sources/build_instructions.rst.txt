@@ -13,8 +13,8 @@ Start by cloning the git repository into a suitable location on you computer
 
 open a terminal and navigate to the location of the CFDwavemaker folder. a Makefile is provided for quick building. The following make commands are available:
 
-Single CPU builds:
-..................
+Single CPU builds
+.................
 
 Make both static (.a) and shared (.so) library
 
@@ -23,8 +23,8 @@ Make both static (.a) and shared (.so) library
 	make all
 
 
-Multi-threading OpenMP builds:
-..............................
+Multi-threading OpenMP builds
+.............................
 
 Make both static (.a) and shared (.so) library with OpenMP parallel support
 
@@ -32,8 +32,8 @@ Make both static (.a) and shared (.so) library with OpenMP parallel support
 
 	make openmp
 
-Other commands:
-...............
+Other commands
+..............
 
 As usual,
 

@@ -23,7 +23,11 @@ CFDwavemaker's documentation
    inputfile_description
    inputfile_examples
    theory
+   todolist
    lisence
+   references
+
+
 
 
 

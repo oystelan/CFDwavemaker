@@ -6,12 +6,62 @@ This pages describes how to install and get up and running with the CFDwavemaker
 Linking up with ComFLOW
 -----------------------
 
-.. code:: C++
+`ComFLOW`_ is a Volume-of-fluids (VOF) Navier-Stokes solver for free-surface flow, and is an excellent CFD solver for modelling free surface waves. External libraries such as CFDwavemaker may be linked to the solver for providing kinematics using a predefined extern C function. These functions are available in CFDwavemaker, and therefore it is straight forward to use the library with ComFLOW once the shared library has been built. The instructions on how to do so is given below.
 
-   fprintf(stderr,"A literal block directive explicitly marked as python code\n");
+.. _`ComFLOW`: http://www.math.rug.nl/~veldman/comflow/comflow.html
+
+1. Start by copying the CFDwavemaker.so library to some place ComFLOW can locate it. A good location is among the external library files located in the directory `$(COMFLOW_INSTALL_DIR)/lib/linux/`
+
+2. In your `comflow.cfi` file (main control file for comflow simulation) specify that the external library should be used as show in the example xml code (extract from a `comflow.cfi` file) below.
+
+3. Your done. Now you should be able to run ComFLOW using CFDwavemaker for initialization. Remember to provide `waveinput.dat` file in you comflow run folder when starting a simulation (one level up of the input_files folder). 
+
+.. code:: xml
+
+	...
+
+	<!-- WAVES: Definition of incoming/initial wave field and current -->
+      <waves start_with_still_water="true" initialize_fs="true" mean_depth="1.2">
+
+      <!-- MODEL: Definition of wave model -->
+           <model model="none"/>
+
+      <!-- CURRENT: Current -->
+           <current magnitude="0." angle="0."/>
+
+      <!-- RAMPING: Ramping for smooth startup of a simulation -->
+           <ramping ramptype="0" rampfs="1" ramp1="0." ramp2="0."/>
+    </waves>
+	<!-- COUPLING: Settings for coupling to a.o. moving objects (prescribed and 
+      interactive motions), XMF mooring module, external solutions (e.g. other 
+      ComFLOW simulations), ... -->
+      <coupling>
+
+      <!-- EXTERNAL_SOLUTION: Settings for coupling to a shared library -->
+           <external_solution dllfile="CFDwavemaker_omp.so" initialize="true" ramp="false"/>
+
+    </coupling>
+
+    ...
+
+If you wish to use CFDwavemaker for providing waves at the boundary, this is done by altering the `comflow.cfi` file. Reference is made to the `ComFLOW manual`_.
+
+.. _`ComFLOW manual`: http://poseidon.housing.rug.nl/sphinx/
 
 Linking up with Basilisk (or C)
 -------------------------------
+
+Basilisk is an open source library for the solution of partial differential equations on adaptive Cartesian meshes. The code is built in C (C99) with a few a few improvements to syntax (refered to as `Basilisk C`). 
+Linking CFDwavemaker to this library is straight forward, since it is built on the same programming language (almost). 
+
+Static linking
+..............
+
+
+Dynamic linking
+...............
+
+ 
 
 Linking up  with OpenFOAM
 -------------------------
@@ -19,7 +69,7 @@ Linking up  with OpenFOAM
 Linking up with Python
 ----------------------
 
-Occationally it may be useful generate kinematics data for other reasons than pushing it into a CFD solver. In this case python 
+Occationally it may be useful generate kinematics data for other reasons than pushing it into a CFD solver. In this case python is a good and easy alternative, using the ctypes package. An example is given below.
 
 .. code:: python
 
