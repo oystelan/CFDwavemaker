@@ -29,9 +29,7 @@ def velocityX(mydll,t,x,y,z):
     aa = mydll.VelocityX
     aa.restype = c_double
     aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
-    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))    
-
-
+    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
     
 def velocityY(mydll,t,x,y,z):
     aa = mydll.VelocityY

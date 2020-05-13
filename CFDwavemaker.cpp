@@ -1462,6 +1462,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+			#pragma omp single
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
@@ -1569,6 +1570,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
@@ -1697,6 +1699,13 @@ double wave_mean_length(int opt) {
 }
 double wave_mean_period(int opt) {
 	return irregular.mean_wave_period(opt);
+}
+
+void wave_sgrid_update(double tpt) {
+	if (!sgrid.CheckTime(tpt)) {
+#pragma omp single
+		sgrid.update(irregular, tpt);
+	}
 }
 
 /*
