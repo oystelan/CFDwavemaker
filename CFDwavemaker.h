@@ -31,6 +31,9 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
+
+	// sgrid updater function
+	void wave_sgrid_update(double); // function checking timestep and updating if neccessary the sgrid kinematics
 	
 	// some helpful function in case of irregular waves
 	double wave_phase_velocity(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
