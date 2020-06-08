@@ -98,37 +98,47 @@ def clean_up(mydll):
 
 #exit()
 
+#
 t = 35.0
 x = 0.
 shutil.copy2('./waveinput3.dat','./waveinput.dat')
+tic()
 print(init_dll(mydll))
-wave = waveelev(mydll,t,x,0.0)
-#print(wave)
-z = np.arange(-76.4,wave,2.)
-# wave = velocityX(mydll,t,x,0.0,-76.3)
+toc()
+clean_up(mydll)
+
+# #wave = waveelev(mydll,t,x,0.0)
+# #print(wave)
+# z = np.arange(-76.4,wave,2.)
+# # wave = velocityX(mydll,t,x,0.0,-76.3)
+# # print(wave)
+# exit()
+# ux = np.zeros(len(z))
+# ux = []
+# for zz in z:
+#     dd = velocityZ(mydll,t,x,0.0,zz)
+#     print(zz, dd)
+#     ux.append(dd) # x and y position set to 0.
+# plt.plot(ux, z)
+# clean_up(mydll)
+
+#
+#
+# shutil.copy2('./waveinput2.dat','./waveinput.dat')
+# print(init_dll(mydll))
+# wave = waveelev(mydll,t,x,0.0)
 # print(wave)
-exit()
-ux = np.zeros(len(z))
-ux = []
-for zz in z:
-    dd = velocityZ(mydll,t,x,0.0,zz)
-    print(zz, dd)
-    ux.append(dd) # x and y position set to 0.
-plt.plot(ux, z)
-clean_up(mydll)
-
-
-shutil.copy2('./waveinput2.dat','./waveinput.dat')
-print(init_dll(mydll))
-wave = waveelev(mydll,t,x,0.0)
-print(wave)
-z = np.arange(-76.4,wave,2.)
-ux = np.zeros(len(z))
-ux = []
-for zz in z:
-    ux.append(velocityZ(mydll,t,x,0.0,zz)) # x and y position set to 0.
-
-plt.plot(ux, z,'r')
-plt.show()
-
-clean_up(mydll)
+# tic()
+# z = np.arange(-76.4,wave,0.1)
+# print(len(z))
+# ux = np.zeros(len(z))
+# ux = []
+# for zz in z:
+#     ux.append(velocityZ(mydll,t,x,0.0,zz)) # x and y position set to 0.
+#
+#
+# toc()
+# plt.plot(ux, z,'r')
+# plt.show()
+#
+# clean_up(mydll)

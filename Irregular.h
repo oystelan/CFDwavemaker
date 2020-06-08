@@ -54,11 +54,14 @@ public:
 	std::vector<double> k;
 	std::vector<double> theta;
 	std::vector<double> phase;
+	std::vector<int> bwlim;
 
 	void print();
 
 	// First order
 	double eta1(double t, double xx, double yy); // wave elevation
+	int bw_limiter(int i1); // calculates the index of the maximum bandwidth frequency
+	void calculate_bwindices();
 	double u1(double t, double xx, double yy, double zz); // velocity component x
 	double v1(double t, double xx, double yy, double zz); // velocity component y
 	double w1(double t, double xx, double yy, double zz); // velocity component z

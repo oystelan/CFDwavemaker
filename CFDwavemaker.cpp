@@ -192,7 +192,7 @@ int check_license()
 //}
 
 
-int read_inputdata_v2() {
+int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Grid& gclass, Ramp& rramp) {
 	std::string lineA;
 	std::ifstream fid;
 	std::string res;
@@ -278,8 +278,8 @@ int read_inputdata_v2() {
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> irregular.ampl;
-			buf >> irregular.normalize;
+			buf >> irreg.ampl;
+			buf >> irreg.normalize;
 			buf.clear();
 			
 		}
@@ -287,9 +287,9 @@ int read_inputdata_v2() {
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> irregular.extrapolation_met;
-			buf >> irregular.order;
-			buf >> irregular.dw_bandwidth;
+			buf >> irreg.extrapolation_met;
+			buf >> irreg.order;
+			buf >> irreg.dw_bandwidth;
 			buf.clear();
 		}
 		if (!lineA.compare("[wave reference point]")) { //optional
@@ -302,56 +302,56 @@ int read_inputdata_v2() {
 			buf.clear();
 		}
 		if (!lineA.compare("[ramps]")) { //optional
-			ramp.ramp_init = true;
+			rramp.ramp_init = true;
 			// read time ramp data
 			
 			// read time rampup
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_time_up;
-			buf >> ramp.time_rampup_start;
-			buf >> ramp.time_rampup_end;;
+			buf >> rramp.ramp_init_time_up;
+			buf >> rramp.time_rampup_start;
+			buf >> rramp.time_rampup_end;;
 			buf.clear();
 			// read time rampdown
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_time_down;
-			buf >> ramp.time_rampdown_start;
-			buf >> ramp.time_rampdown_end;;
+			buf >> rramp.ramp_init_time_down;
+			buf >> rramp.time_rampdown_start;
+			buf >> rramp.time_rampdown_end;;
 			buf.clear();
 			// read x-direction rampup
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_x_up;
-			buf >> ramp.x_rampup_start;
-			buf >> ramp.x_rampup_end;;
+			buf >> rramp.ramp_init_x_up;
+			buf >> rramp.x_rampup_start;
+			buf >> rramp.x_rampup_end;;
 			buf.clear();
 			// read x-direction rampdown
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_x_down;
-			buf >> ramp.x_rampdown_start;
-			buf >> ramp.x_rampdown_end;;
+			buf >> rramp.ramp_init_x_down;
+			buf >> rramp.x_rampdown_start;
+			buf >> rramp.x_rampdown_end;;
 			buf.clear();
 			// read y-direction rampup
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_y_up;
-			buf >> ramp.y_rampup_start;
-			buf >> ramp.y_rampup_end;;
+			buf >> rramp.ramp_init_y_up;
+			buf >> rramp.y_rampup_start;
+			buf >> rramp.y_rampup_end;;
 			buf.clear();
 			// read y-direction rampdown
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> ramp.ramp_init_y_down;
-			buf >> ramp.y_rampdown_start;
-			buf >> ramp.y_rampdown_end;;
+			buf >> rramp.ramp_init_y_down;
+			buf >> rramp.y_rampdown_start;
+			buf >> rramp.y_rampdown_end;;
 			buf.clear();
 			
 		}
@@ -370,26 +370,26 @@ int read_inputdata_v2() {
 					getline(f, lineA);
 					std::cout << "Number of frequency components: " << lineA << std::endl;
 					buf.str(lineA);
-					buf >> irregular.nfreq;
+					buf >> irreg.nfreq;
 					buf.clear();
-					irregular.ndir = 1;
+					irreg.ndir = 1;
 
 					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
 					double temp;
-					for (int i = 0; i < irregular.nfreq; i++) {
+					for (int i = 0; i < irreg.nfreq; i++) {
 						getline(f, lineA);
 						std::cout << lineA << std::endl;
 						buf.str(lineA);
 						buf >> temp;
-						irregular.omega.push_back(temp);
+						irreg.omega.push_back(temp);
 						buf >> temp;
-						irregular.A.push_back(temp);
+						irreg.A.push_back(temp);
 						buf >> temp;
-						irregular.k.push_back(temp);
+						irreg.k.push_back(temp);
 						buf >> temp;
-						irregular.phase.push_back(temp);
+						irreg.phase.push_back(temp);
 						buf >> temp;
-						irregular.theta.push_back(temp);
+						irreg.theta.push_back(temp);
 						buf.clear();
 					}
 				}
@@ -399,19 +399,19 @@ int read_inputdata_v2() {
 					// read number of frequencies and directions
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> irregular.nfreq;
-					buf >> irregular.ndir;
+					buf >> irreg.nfreq;
+					buf >> irreg.ndir;
 					buf.clear();
-					std::cout << "Number of frequency components: " << irregular.nfreq << std::endl;
-					std::cout << "Number of directional components: " << irregular.ndir << std::endl;
+					std::cout << "Number of frequency components: " << irreg.nfreq << std::endl;
+					std::cout << "Number of directional components: " << irreg.ndir << std::endl;
 
 					// Read frequency data (omega, Sw and K)
-					double* omega_temp = new double[irregular.nfreq];
-					double* Ampspec_temp = new double[irregular.nfreq];
-					double* k_temp = new double[irregular.nfreq];
-					double* phas_temp = new double[irregular.nfreq];
+					double* omega_temp = new double[irreg.nfreq];
+					double* Ampspec_temp = new double[irreg.nfreq];
+					double* k_temp = new double[irreg.nfreq];
+					double* phas_temp = new double[irreg.nfreq];
 					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]" << std::endl;
-					for (int i = 0; i < irregular.nfreq; i++) {
+					for (int i = 0; i < irreg.nfreq; i++) {
 						getline(f, lineA);
 						std::cout << lineA << std::endl;
 						buf.str(lineA);
@@ -423,10 +423,10 @@ int read_inputdata_v2() {
 					}
 
 					// Read directional data
-					double* theta_temp = new double[irregular.ndir];
-					double* D_ampl_temp = new double[irregular.ndir];
+					double* theta_temp = new double[irreg.ndir];
+					double* D_ampl_temp = new double[irreg.ndir];
 					std::cout << "# Theta [rad] D(theta)" << std::endl;
-					for (int i = 0; i < irregular.ndir; i++) {
+					for (int i = 0; i < irreg.ndir; i++) {
 						getline(f, lineA);
 						buf.str(lineA);
 						buf >> theta_temp[i];
@@ -435,13 +435,13 @@ int read_inputdata_v2() {
 					}
 
 
-					for (int i = 0; i < irregular.nfreq; i++) {
-						for (int j = 0; j < irregular.ndir; j++) {
-							irregular.omega.push_back(omega_temp[i]);
-							irregular.k.push_back(k_temp[i]);
-							irregular.A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
-							irregular.phase.push_back(phas_temp[i]);
-							irregular.theta.push_back(theta_temp[j]);
+					for (int i = 0; i < irreg.nfreq; i++) {
+						for (int j = 0; j < irreg.ndir; j++) {
+							irreg.omega.push_back(omega_temp[i]);
+							irreg.k.push_back(k_temp[i]);
+							irreg.A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+							irreg.phase.push_back(phas_temp[i]);
+							irreg.theta.push_back(theta_temp[j]);
 
 						}
 					}
@@ -455,29 +455,29 @@ int read_inputdata_v2() {
 				// read alpha values
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> wavemaker.alpha_z;
-				buf >> wavemaker.alpha_u;
+				buf >> wmaker.alpha_z;
+				buf >> wmaker.alpha_u;
 				buf.clear();
 
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> wavemaker.n_timesteps;
+				buf >> wmaker.n_timesteps;
 				//n_timesteps = stoi(lineA);
 				std::cout << "Number of timesteps: " << wavetype << std::endl;
 
 				// declare some vectors to store piston data
-				wavemaker.PD_time = new double[wavemaker.n_timesteps];
-				wavemaker.PD_ampl = new double[wavemaker.n_timesteps];
-				wavemaker.PD_velo = new double[wavemaker.n_timesteps];
-				wavemaker.PD_eta = new double[wavemaker.n_timesteps];
+				wmaker.PD_time = new double[wmaker.n_timesteps];
+				wmaker.PD_ampl = new double[wmaker.n_timesteps];
+				wmaker.PD_velo = new double[wmaker.n_timesteps];
+				wmaker.PD_eta = new double[wmaker.n_timesteps];
 
-				for (int i = 0; i < wavemaker.n_timesteps; i++) {
+				for (int i = 0; i < wmaker.n_timesteps; i++) {
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> wavemaker.PD_time[i];
-					buf >> wavemaker.PD_ampl[i];
-					buf >> wavemaker.PD_velo[i];
-					buf >> wavemaker.PD_eta[i];
+					buf >> wmaker.PD_time[i];
+					buf >> wmaker.PD_ampl[i];
+					buf >> wmaker.PD_velo[i];
+					buf >> wmaker.PD_eta[i];
 					buf.clear();
 				}
 			}
@@ -485,8 +485,8 @@ int read_inputdata_v2() {
 				// read Line 2
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> stokes5.wave_length; // wave length
-				buf >> stokes5.wave_height;  // Wave height
+				buf >> stokes.wave_length; // wave length
+				buf >> stokes.wave_height;  // Wave height
 				buf.clear();
 
 			}
@@ -501,7 +501,7 @@ int read_inputdata_v2() {
 				std::cout << lineA << std::endl;
 				std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
 				buf.str(lineA);
-				buf >> stokes5.current;
+				buf >> stokes.current;
 				buf.clear();
 			}
 			else {
@@ -521,41 +521,41 @@ int read_inputdata_v2() {
 			// Special case for fast initialization of domain
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> gridclass.numgrids;
+			buf >> gclass.numgrids;
 			buf.clear();
 
-			for (int i = 0; i < gridclass.numgrids; i++) {
+			for (int i = 0; i < gclass.numgrids; i++) {
 				getline(f, lineA);
 				trim(lineA);
 				std::cout << "Grid interpolation type: " << lineA << std::endl;
 				if (!lineA.compare("init domain interp")) {
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.domain_start[0];
-					buf >> gridclass.domain_end[0];
-					buf >> gridclass.domain_start[1];
-					buf >> gridclass.domain_end[1];
-					buf >> gridclass.domain_start_L[2];
-					buf >> gridclass.domain_end_L[2];
-					buf >> gridclass.domain_end[2];
-					gridclass.domain_start[2] = gridclass.domain_end_L[2];
-					gridclass.domain_start_L[0] = gridclass.domain_start[0];
-					gridclass.domain_start_L[1] = gridclass.domain_start[1];
-					gridclass.domain_end_L[0] = gridclass.domain_end[0];
-					gridclass.domain_end_L[1] = gridclass.domain_end[1];
+					buf >> gclass.domain_start[0];
+					buf >> gclass.domain_end[0];
+					buf >> gclass.domain_start[1];
+					buf >> gclass.domain_end[1];
+					buf >> gclass.domain_start_L[2];
+					buf >> gclass.domain_end_L[2];
+					buf >> gclass.domain_end[2];
+					gclass.domain_start[2] = gclass.domain_end_L[2];
+					gclass.domain_start_L[0] = gclass.domain_start[0];
+					gclass.domain_start_L[1] = gclass.domain_start[1];
+					gclass.domain_end_L[0] = gclass.domain_end[0];
+					gclass.domain_end_L[1] = gclass.domain_end[1];
 
 					buf.clear();
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.NX;
-					buf >> gridclass.NY;
-					buf >> gridclass.NZ;
+					buf >> gclass.NX;
+					buf >> gclass.NY;
+					buf >> gclass.NZ;
 					buf.clear();
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.NXL;
-					buf >> gridclass.NYL;
-					buf >> gridclass.NZL;
+					buf >> gclass.NXL;
+					buf >> gclass.NYL;
+					buf >> gclass.NZL;
 					buf.clear();
 					if (wavetype == 1)
 						wavetype = 2;
@@ -563,26 +563,26 @@ int read_inputdata_v2() {
 				if (!lineA.compare("wallx")) {
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.wallxsize[0];
-					buf >> gridclass.wallxsize[1];
-					buf >> gridclass.wallxsize[2];
-					buf >> gridclass.wallxsize[3];
-					buf >> gridclass.wallxsize[4];
-					buf >> gridclass.wallxsize[5];
+					buf >> gclass.wallxsize[0];
+					buf >> gclass.wallxsize[1];
+					buf >> gclass.wallxsize[2];
+					buf >> gclass.wallxsize[3];
+					buf >> gclass.wallxsize[4];
+					buf >> gclass.wallxsize[5];
 					buf.clear();
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.wallx_nx;
-					buf >> gridclass.wallx_ny;
-					buf >> gridclass.wallx_nz;
+					buf >> gclass.wallx_nx;
+					buf >> gclass.wallx_ny;
+					buf >> gclass.wallx_nz;
 					buf.clear();
 					getline(f, lineA);
 					buf.str(lineA);
-					buf >> gridclass.dt;
+					buf >> gclass.dt;
 					buf.clear();
-					gridclass.wallx_start[0] = gridclass.wallxsize[0];
-					gridclass.wallx_start[1] = gridclass.wallxsize[2];
-					gridclass.wallx_start[2] = gridclass.wallxsize[4];
+					gclass.wallx_start[0] = gclass.wallxsize[0];
+					gclass.wallx_start[1] = gclass.wallxsize[2];
+					gclass.wallx_start[2] = gclass.wallxsize[4];
 					if (wavetype == 1) // if irregular wave
 						wavetype = 3; // change to special case irregular with gridded wallx condition
 				}
@@ -593,35 +593,35 @@ int read_inputdata_v2() {
 			// Lagrangian streched grid
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> sgrid.domain[0];
-			buf >> sgrid.domain[1];
-			buf >> sgrid.domain[2];
-			buf >> sgrid.domain[3];
+			buf >> lsgrid.domain[0];
+			buf >> lsgrid.domain[1];
+			buf >> lsgrid.domain[2];
+			buf >> lsgrid.domain[3];
 			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
 
 			buf.clear();
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> sgrid.nx;
-			buf >> sgrid.ny;
+			buf >> lsgrid.nx;
+			buf >> lsgrid.ny;
 			if (numparams(lineA) == 3) {
-				buf >> sgrid.nl;
+				buf >> lsgrid.nl;
 			}
 			std::cout << "Grid resolution: " << std::endl;
-			std::cout << "nx: " << sgrid.nx << std::endl;
-			std::cout << "ny: " << sgrid.ny << std::endl;
-			std::cout << "nl: " << sgrid.nl << std::endl;
+			std::cout << "nx: " << lsgrid.nx << std::endl;
+			std::cout << "ny: " << lsgrid.ny << std::endl;
+			std::cout << "nl: " << lsgrid.nl << std::endl;
 
 			// allocate memory
-			sgrid.allocate();
+			lsgrid.allocate();
 
 			buf.clear();
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> sgrid.t0;
-			buf >> sgrid.dt;
-			std::cout << "time init: " << sgrid.t0 << std::endl;
-			std::cout << "dt: " << sgrid.dt << std::endl;		
+			buf >> lsgrid.t0;
+			buf >> lsgrid.dt;
+			std::cout << "time init: " << lsgrid.t0 << std::endl;
+			std::cout << "dt: " << lsgrid.dt << std::endl;		
 
 			buf.clear();
 			getline(f, lineA);
@@ -629,9 +629,9 @@ int read_inputdata_v2() {
 			if (!lineA.compare("stretch_params")) {
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> sgrid.tan_a;
-				buf >> sgrid.tan_b;
-				std::cout << "Stretching parameters set to a=" << sgrid.tan_a << ", b=" << sgrid.tan_b << std::endl;
+				buf >> lsgrid.tan_a;
+				buf >> lsgrid.tan_b;
+				std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
 			}
 				
 			buf.clear();
@@ -640,19 +640,19 @@ int read_inputdata_v2() {
 			if (!lineA.compare("ignore_subdomain")) {
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> sgrid.ignore_at_init;
-				if (sgrid.ignore_at_init) {
+				buf >> lsgrid.ignore_at_init;
+				if (lsgrid.ignore_at_init) {
 					std::cout << "Warning: only boundaries will be initialized size ignore_at_init=" << lineA << std::endl;
 				}
 				buf.clear();
 				getline(f, lineA);
 				buf.str(lineA);
-				buf >> sgrid.domain_ignore[0];
-				buf >> sgrid.domain_ignore[1];
-				buf >> sgrid.domain_ignore[2];
-				buf >> sgrid.domain_ignore[3];
+				buf >> lsgrid.domain_ignore[0];
+				buf >> lsgrid.domain_ignore[1];
+				buf >> lsgrid.domain_ignore[2];
+				buf >> lsgrid.domain_ignore[3];
 				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
-				sgrid.set_ignore();
+				lsgrid.set_ignore();
 			}
 			buf.clear();
 
@@ -675,28 +675,29 @@ int read_inputdata_v2() {
 		irregular.fpoint[1] = y_pos;
 		irregular.swl = swl;
 		irregular.normalize_data();
+		irregular.calculate_bwindices();
 
 	}
 	else if (wavetype == 21) {
-		stokes5.depth = depth;
-		stokes5.theta = mtheta;
-		stokes5.x0 = x_pos;
-		stokes5.y0 = y_pos;
-		stokes5.t0 = tofmax;
-		stokes5.z0 = swl;
+		stokes.depth = depth;
+		stokes.theta = mtheta;
+		stokes.x0 = x_pos;
+		stokes.y0 = y_pos;
+		stokes.t0 = tofmax;
+		stokes.z0 = swl;
 		// set the properties of the wave
-		stokes5.set_stokes5_properties(wave_length, wave_height);
+		stokes.set_stokes5_properties(wave_length, wave_height);
 	}
 
 	if (wavetype == 4) {
-		sgrid.water_depth = depth;
-		if (sgrid.ignore_at_init) {
-			sgrid.initialize_surface_elevation_with_ignore(irregular, sgrid.t0);
-			sgrid.initialize_kinematics_with_ignore(irregular);
+		lsgrid.water_depth = depth;
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(irreg);
 		}
 		else {
-			sgrid.initialize_surface_elevation(irregular, sgrid.t0);
-			sgrid.initialize_kinematics(irregular);
+			lsgrid.initialize_surface_elevation(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics(irreg);
 		}
 	}
 
@@ -1653,7 +1654,7 @@ int wave_Initialize()
 	//for (int i = 0; i < nfreq; i++) {
 	//	k[i] = pow(2. * pi * f[i], 2.) / 9.81;
 	//}
-	int i = read_inputdata_v2();
+	int i = read_inputdata_v2(irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
 
 	return 0;
 }

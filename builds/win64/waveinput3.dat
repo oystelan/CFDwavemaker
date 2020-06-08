@@ -18,7 +18,7 @@ irregular
 
 [perturbation method]
 # EXTMETH PERTMET BANDWIDTH
-    2       2       1000
+    2       2       0.1
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
@@ -249,19 +249,20 @@ userdefined1
 
 [lsgrid]
 # XMIN XMAX YMIN YMAX
--882.6850 882.6850 -882.6850 882.6850
+-882.6850 -872.6850 -882.6850 882.6850
 #NX NY NL
-160 160 3
+2 100 3
 # t0 dt
 35.0 1.
 stretch_params
 # stretch_a* stretch_b*
 0.7   1.2
 ignore_subdomain
-0.5 200. -10. 10.
+1
+-875. 900. -900. 900.
 
 # vtk output only supported by lsgrid at the moment
-[vtk]
+#[vtk]
 # storage directory
 ./vtk/
 # filename (without extension and numbering)
