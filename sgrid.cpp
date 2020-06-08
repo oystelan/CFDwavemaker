@@ -190,7 +190,10 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 void sGrid::update(Irregular& irregular, double t_target)
 {
 	// Start by checking bounds
-	CheckBounds();
+	/*
+	if (!disable_checkbounds){
+		CheckBounds();
+	}*/
 	
 	// new time step
 	if ((t_target / dt - (t0+2*dt) / dt) > 0.) {
@@ -290,10 +293,13 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 		return 0.;
 	}*/
 
+	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
+
 	double spt0 = tan2s(std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, water_depth), -1.));
 	double nsp0 =  (spt0 + 1.) / ds;
 	double spt1 = tan2s(std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, water_depth), -1.));
 	double nsp1 = (spt1 + 1.) / ds;
+
 
 	// Trilinear interpolation.
 	double C000 = VAR0[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
@@ -302,8 +308,8 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 	double C011 = VAR0[int(floor(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
 	double C100 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
 	double C101 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp0))];
-	double C110 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];
-	double C111 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
+	double C110 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];//
+	double C111 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];//
 	double D000 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp1))];
 	double D001 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp1))];
 	double D010 = VAR1[int(floor(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp1))];
@@ -320,6 +326,10 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 	C01 = C001 * (1. - xd) + C101 * xd;
 	C10 = C010 * (1. - xd) + C110 * xd;
 	C11 = C011 * (1. - xd) + C111 * xd;
+	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
+
+	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
+
 	D00 = D000 * (1. - xd) + D100 * xd;
 	D01 = D001 * (1. - xd) + D101 * xd;
 	D10 = D010 * (1. - xd) + D110 * xd;
