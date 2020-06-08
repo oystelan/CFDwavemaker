@@ -640,6 +640,13 @@ int read_inputdata_v2() {
 			if (!lineA.compare("ignore_subdomain")) {
 				getline(f, lineA);
 				buf.str(lineA);
+				buf >> sgrid.ignore_at_init;
+				if (sgrid.ignore_at_init) {
+					std::cout << "Warning: only boundaries will be initialized size ignore_at_init=" << lineA << std::endl;
+				}
+				buf.clear();
+				getline(f, lineA);
+				buf.str(lineA);
 				buf >> sgrid.domain_ignore[0];
 				buf >> sgrid.domain_ignore[1];
 				buf >> sgrid.domain_ignore[2];
@@ -683,8 +690,14 @@ int read_inputdata_v2() {
 
 	if (wavetype == 4) {
 		sgrid.water_depth = depth;
-		sgrid.initialize_surface_elevation(irregular,sgrid.t0);
-		sgrid.initialize_kinematics(irregular);
+		if (sgrid.ignore_at_init) {
+			sgrid.initialize_surface_elevation_with_ignore(irregular, sgrid.t0);
+			sgrid.initialize_kinematics_with_ignore(irregular);
+		}
+		else {
+			sgrid.initialize_surface_elevation(irregular, sgrid.t0);
+			sgrid.initialize_kinematics(irregular);
+		}
 	}
 
 	return 0;

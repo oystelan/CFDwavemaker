@@ -26,6 +26,7 @@ public:
 	int nx, ny, nl;
 	double domain[4] = {};
 	double domain_ignore[4] = {};
+	int ignore_at_init = 0;
 
 	bool disable_checkbounds = true;
 
@@ -47,8 +48,10 @@ public:
 	double tan2s(double t);
 
 	void initialize_kinematics(Irregular& irregular);
+	void initialize_kinematics_with_ignore(Irregular& irregular);
 	void allocate();
 	void initialize_surface_elevation(Irregular& irregular, double t_target);
+	void initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target);
 
 	// Update kinematics data matrices
 	void update(Irregular& irregular, double t_target);
