@@ -647,8 +647,8 @@ void sGrid::set_ignore()
 		double xpt = domain[0] + dx * i;
 		for (int j = 0; j < ny; j++) {
 			double ypt = domain[2] + dy * j;
-			std::cout << xpt << " " << ypt << std::endl;
-			std::cout << domain_ignore[0] << " " << domain_ignore[1] << " " << domain_ignore[2] << " " << domain_ignore[3] << std::endl;
+			//std::cout << xpt << " " << ypt << std::endl;
+			//std::cout << domain_ignore[0] << " " << domain_ignore[1] << " " << domain_ignore[2] << " " << domain_ignore[3] << std::endl;
 			if (xpt >= domain_ignore[0] && xpt <= domain_ignore[1] && ypt >= domain_ignore[2] && ypt <= domain_ignore[3]) {
 				IGNORE[i * ny + j] = 1;
 			}
