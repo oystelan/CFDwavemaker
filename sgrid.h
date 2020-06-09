@@ -15,6 +15,7 @@ public:
 		tan_a = 7. * PI / 18.;
 		tan_b = 1.5;
 		nl = 10;
+		dt = 0.5;
 	};
 	~sGrid() {
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
@@ -60,7 +61,10 @@ public:
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
+	double trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
 	double bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt);
+
+	double bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt);
 
 	// routines for extracting kinematics from initial grid
 	double u(double tpt, double xpt, double ypt, double zpt);

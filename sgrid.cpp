@@ -54,10 +54,10 @@ double sGrid::tan2s(double t) {
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void sGrid::initialize_kinematics(Irregular& irregular) {
 
-	dx = (domain[1] - domain[0]) / double(nx - 1);
-	dy = (domain[3] - domain[2]) / double(ny - 1);
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
-	ds = 1. / double(nl - 1);
+	ds = 1. / std::max(1.,double(nl - 1));
 
 	double dd = omp_get_wtime();
 
@@ -132,10 +132,10 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 
 void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
-	dx = (domain[1] - domain[0]) / double(nx - 1);
-	dy = (domain[3] - domain[2]) / double(ny - 1);
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
-	ds = 1. / double(nl - 1);
+	ds = 1. / std::max(1., double(nl - 1));
 
 	double dd = omp_get_wtime();
 
@@ -234,8 +234,8 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 
 	// Allocating memory for storage of surface elevation and velocities
 
-	dx = (domain[1] - domain[0]) / double(nx - 1);
-	dy = (domain[3] - domain[2]) / double(ny - 1);
+	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1.,double(ny - 1));
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -251,13 +251,15 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 		// Main grid
 #pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
+			
 			for (int j = 0; j < ny; j++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
+				
 				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
 				ETA1[i * ny + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
 				
-			}
+			}			
 		}
 	}
 	dd = omp_get_wtime() - dd;
@@ -274,8 +276,8 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 
 	// Allocating memory for storage of surface elevation and velocities
 
-	dx = (domain[1] - domain[0]) / double(nx - 1);
-	dy = (domain[3] - domain[2]) / double(ny - 1);
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -421,7 +423,8 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 	double spt1 = tan2s(std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, water_depth), -1.));
 	double nsp1 = (spt1 + 1.) / ds;
 
-
+	//std::cout << "orig: nsp0:" << nsp0 << ", nsp1: " << nsp1 << "spt0: " << spt0 << ", wavelev0: " << wave_elev0 << std::endl;
+	//exit(0);
 	// Trilinear interpolation.
 	double C000 = VAR0[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
 	double C001 = VAR0[int(floor(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp0))];
@@ -463,6 +466,104 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 
 	return (C0 * (1. - sd0) + C1 * sd0)*(1.-td) + (D0 * (1. - sd1) + D1 * sd1) * td;
 }
+template <typename T>
+T clip(const T& n, const T& lower, const T& upper) {
+	return std::max(lower, std::min(n, upper));
+}
+
+/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
+double sGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
+
+	float nxp_temp, nyp_temp;
+	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
+	double yd = std::modf(clip((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
+
+	int nxp = int(nxp_temp);
+	int nyp = int(nyp_temp);
+
+	double C00 = ETA0[nxp * ny + nyp];
+	double C01 = ETA0[nxp * ny + clip(nyp + 1, 0, ny - 1)];
+	double C10 = ETA0[clip(nxp + 1, 0, nx - 1) * ny + nyp];
+	double C11 = ETA0[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+	double D00 = ETA1[nxp * ny + nyp];
+	double D01 = ETA1[nxp * ny + clip(nyp + 1, 0, ny - 1)];
+	double D10 = ETA1[clip(nxp + 1, 0, nx - 1) * ny + nyp];
+	double D11 = ETA1[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+
+	double C0 = C00 * (1. - xd) + C10 * xd;
+	double C1 = C01 * (1. - xd) + C11 * xd;
+	double D0 = D00 * (1. - xd) + D10 * xd;
+	double D1 = D01 * (1. - xd) + D11 * xd;
+
+	double wave_elev0 = C0 * (1. - yd) + C1 * yd;
+	double wave_elev1 = D0 * (1. - yd) + D1 * yd;
+
+	/* Todo: fix this check at some point
+	if (zpt > wave_elev) {
+		return 0.;
+	}*/
+
+	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
+
+	double spt0 = tan2s(std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, water_depth), -1.));
+	double nsp0a = (spt0 + 1.) / ds;
+	double spt1 = tan2s(std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, water_depth), -1.));
+	double nsp1a = (spt1 + 1.) / ds;
+
+	float nsp0_temp, nsp1_temp;
+	double sd0 = std::modf((spt0 + 1.) / ds, &nsp0_temp);
+	double sd1 = std::modf((spt1 + 1.) / ds, &nsp1_temp);
+	int nsp0 = int(nsp0_temp);
+	int nsp1 = int(nsp1_temp);
+
+	//std::cout << floor(nsp0a) << " " << nsp0 << "spt0: " << spt0 << ", wavelev0: " << wave_elev0 << std::endl;
+
+	//std::cout << "nsp0:" << nsp0 << ", nsp1: " << nsp1 << std::endl;
+
+	//exit(0);
+	// Trilinear interpolation.
+	double C000 = VAR0[nxp * ny * nl + nyp * nl + nsp0];
+	double C001 = VAR0[nxp * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1)];
+	double C010 = VAR0[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0];
+	double C011 = VAR0[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1)];
+	double C100 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp0];
+	double C101 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1)];
+	double C110 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0];//
+	double C111 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1)];//
+	double D000 = VAR1[nxp * ny * nl + nyp * nl + nsp1];
+	double D001 = VAR1[nxp * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1)];
+	double D010 = VAR1[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1];
+	double D011 = VAR1[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1)];
+	double D100 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp1];
+	double D101 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1)];
+	double D110 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1];
+	double D111 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1)];
+
+	//double sd0 = nsp0 - floor(nsp0);
+	//double sd1 = nsp1 - floor(nsp1);
+
+	C00 = C000 * (1. - xd) + C100 * xd;
+	C01 = C001 * (1. - xd) + C101 * xd;
+	C10 = C010 * (1. - xd) + C110 * xd;
+	C11 = C011 * (1. - xd) + C111 * xd;
+	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
+
+	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
+
+	D00 = D000 * (1. - xd) + D100 * xd;
+	D01 = D001 * (1. - xd) + D101 * xd;
+	D10 = D010 * (1. - xd) + D110 * xd;
+	D11 = D011 * (1. - xd) + D111 * xd;
+
+	C0 = C00 * (1. - yd) + C10 * yd;
+	C1 = C01 * (1. - yd) + C11 * yd;
+	D0 = D00 * (1. - yd) + D10 * yd;
+	D1 = D01 * (1. - yd) + D11 * yd;
+
+	return (C0 * (1. - sd0) + C1 * sd0) * (1. - td) + (D0 * (1. - sd1) + D1 * sd1) * td;
+}
 
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
 double sGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
@@ -492,22 +593,62 @@ double sGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, dou
 	return (C0 * (1. - yd) + C1 * yd)*(1. - td) + (D0 * (1. - yd) + D1 * yd) * td;
 }
 
+//#define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
+
+
+
+/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
+double sGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
+
+
+	
+	float nxp_temp, nyp_temp;
+	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
+	double yd = std::modf(clip((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
+
+	int nxp = int(nxp_temp);
+	int nyp = int(nyp_temp);
+
+	//std::cout << nxp << " " << nyp << "VAR0: " << VAR0[0] << std::endl;
+
+	double C00 = VAR0[nxp * ny + nyp];
+	double C01 = VAR0[nxp * ny + clip(nyp+1, 0, ny-1)];
+	double C10 = VAR0[clip(nxp + 1, 0, nx - 1) * ny + nyp];
+	double C11 = VAR0[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+	double D00 = VAR1[nxp * ny + nyp];
+	double D01 = VAR1[nxp * ny + clip(nyp + 1, 0, ny - 1)];
+	double D10 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + nyp];
+	double D11 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+
+	//std::cout << C00 << " " << C01 << " " << C10 << " " << C11 << " " << D00 << " " << D01 << " " << D10 << " " << D11 << std::endl;
+	//double xd = nxp - floor(nxp);
+	//double yd = nyp - floor(nyp);
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+
+	double C0 = C00 * (1. - xd) + C10 * xd;
+	double C1 = C01 * (1. - xd) + C11 * xd;
+	double D0 = D00 * (1. - xd) + D10 * xd;
+	double D1 = D01 * (1. - xd) + D11 * xd;
+
+	return (C0 * (1. - yd) + C1 * yd) * (1. - td) + (D0 * (1. - yd) + D1 * yd) * td;
+}
+
 
 double sGrid::u(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UX0, UX1, tpt, xpt, ypt, zpt);
+	return trilinear_interpolation2(UX0, UX1, tpt, xpt, ypt, zpt);
 }
 
 double sGrid::v(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UY0, UY1, tpt, xpt, ypt, zpt);
+	return trilinear_interpolation2(UY0, UY1, tpt, xpt, ypt, zpt);
 }
 
 double sGrid::w(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation(UZ0, UZ1, tpt, xpt, ypt, zpt);
+	return trilinear_interpolation2(UZ0, UZ1, tpt, xpt, ypt, zpt);
 }
 
 double sGrid::eta(double tpt, double xpt, double ypt) {
-	update_bounds(xpt, ypt);
-	return bilinear_interpolation(ETA0, ETA1, tpt, xpt, ypt);
+	//update_bounds(xpt, ypt);
+	return bilinear_interpolation2(ETA0, ETA1, tpt, xpt, ypt);
 }
 
 

@@ -44,7 +44,8 @@ struct LSgridTest : testing::Test {
 		irregular->theta.push_back(0.);
 		irregular->theta.push_back(0.);
 
-		
+		irregular->normalize_data();
+		irregular->calculate_bwindices();
 		sgrid->water_depth = irregular->depth;
 		
 	}
@@ -60,7 +61,7 @@ struct LSgridTest : testing::Test {
 TEST_F(LSgridTest, test1) {
 
 	// Set time and location.
-	double x = 0.;
+	double x = -100.;
 	double y = 0.;
 	double z = -10.;
 	double t = 4.;
@@ -71,8 +72,8 @@ TEST_F(LSgridTest, test1) {
 	sgrid->domain[1] = 30.;
 	sgrid->domain[2] = 0.;
 	sgrid->domain[3] = 20.;
-	sgrid->nx = 61;
-	sgrid->ny = 11;
+	sgrid->nx = 3;
+	sgrid->ny = 3;
 	sgrid->nl = 20;
 	//sgrid->tan_a = 0.01;
 	sgrid->tan_b = 2.0;
@@ -84,8 +85,12 @@ TEST_F(LSgridTest, test1) {
 
 
 	// Surface elevation at point
-	//std::cout << "Wave elevation: " << irregular->eta(t, x, y) << ", sgrid: " << sgrid->eta(x, y) << std::endl;
+	std::cout << "Wave elevation: " << irregular->eta(t, x, y) << ", sgrid: " << sgrid->eta(t, x, y) << std::endl;
 	EXPECT_DOUBLE_EQ(irregular->eta(t, x, y), sgrid->eta(t, x, y));
+	
+	
+	
+	//EXPECT_DOUBLE_EQ(irregular->eta(t, x, y), sgrid->eta2(t, x, y));
 
 	// Kinematics at the surface comparison
 	//std::cout << "Kinematics at the free surface for position x=" << x << ", y=" << y << std::endl;
@@ -113,7 +118,7 @@ TEST_F(LSgridTest, test1) {
 	EXPECT_NEAR(irregular->u(t, x, y, z), sgrid->u(t, x, y, z), 1E-1);
 	EXPECT_NEAR(irregular->v(t, x, y, z), sgrid->v(t, x, y, z), 1E-1);
 	EXPECT_NEAR(irregular->w(t, x, y, z), sgrid->w(t, x, y, z), 1E-1);
-
+	
 	EXPECT_TRUE(true);
 }
 

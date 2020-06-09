@@ -2,11 +2,6 @@
 #include "omp.h"
 
 #include "irregular.h"
-#include "CFDwavemaker.h" 
-#include "Stokes5.h"
-#include "Utils.h"
-#include "Wavemaker.h"
-#include "sgrid.h"
 struct IrregularTest : testing::Test {
 	Irregular* irregular;
 	
@@ -110,24 +105,5 @@ TEST_F(IrregularTest, interpolatetest) {
 	EXPECT_TRUE(true);
 }
 
-TEST_F(IrregularTest, test3_secondorder) {
-	// check that linear wave elevtion sums up correctly
-	double t = 0.;
-	double x = 0.;
-	double y = 0.;
-	irregular->extrapolation_met = 2;
-	irregular->order = 2;
-	double dd = omp_get_wtime();
-	for (int i = 0; i < 1000; i++) {
-		double eta = irregular->eta(0.0, 0.0, 0.0);
-	}
-	dd = omp_get_wtime() - dd;
-	std::cout << "100 calls to eta: " << dd << " seconds." << std::endl;
-	
-	
-
-	irregular->print();
-	EXPECT_TRUE(true);
-}
 
 
