@@ -423,8 +423,11 @@ A regular stokes 5th order wave, propagated from still water using a linear ramp
 Special Features
 ----------------
 
-Grid interpolation for fast initialization of domain
-....................................................
+Static Grid interpolation for fast initialization of domain
+...........................................................
+
+.. warning::
+	Update: this feature is replaced by ``[LSgrid]``. static grid interpolation will likely be removed in the future.
 
 Second order wave theory can be time-consuming to calculate, even with modern HPC computers, considering that millions of cells may need to be initialized with wave kinematics.
 For a significant speedup in initialization, kinematics may be precomputed onto a 3D grid, such that initialization can be done by interpolation. This will in most cases give a significant speedup and is recommended to use when using second order irregular wave theory. 
@@ -452,11 +455,11 @@ At the moment the size and resolution of the grid needs to be specified manually
 	Be sure to check that the bounding box specified for the interpolation grid covers the complete domain, including ghost cells which some CFD codes also needs to initialize.
 
 
-Grid interpolation at the boundary
-..................................
+Static Grid interpolation at the boundary
+.........................................
 
 .. warning::
-	Under development. Not really tested yet.
+	Under development. Not really tested yet. Update: this feature is replaced by ``[LSgrid]``
 
 .. code-block:: none
 
@@ -474,3 +477,29 @@ Grid interpolation at the boundary
 	2 100 12
 	# dt
 	0.5
+
+
+Lagrangian Stretched grid interpolation
+.......................................
+
+For the same reason as stated above. The lagrangian grid is a developed version of ``[grid interpolation]``. Lagrangian stretching, based on sigma transforms are used in combination with a stretching factor which is dependent on distance to surface, giving high resolution in z direction at the surface, and lower at depth.
+This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum of points.
+An example input description is given below
+
+.. code-block:: none
+
+	[lsgrid]
+	# XMIN XMAX YMIN YMAX
+	-1401.00 601.00 -901.00 1101.00
+	#NX NY NL
+	500 500 16
+	# t0 dt
+	0. 0.5
+	stretch_params
+	# stretch_a* stretch_b*
+	0.7   1.5
+	ignore_subdomain
+	# ignore at initialization
+	1
+	# xmin xmax ymin ymax
+	-1398.00 602.00 -902.00 1102.00
