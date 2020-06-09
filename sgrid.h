@@ -7,6 +7,7 @@
 
 #include "Irregular.h"
 
+#define largeval 1.E12
 
 class sGrid {
 public:
@@ -27,7 +28,7 @@ public:
 	int* IGNORE; // matrix with cells to ignore when updating surface elevation
 	int nx, ny, nl;
 	double domain[4] = {};
-	double domain_ignore[4] = {HUGE, -HUGE, HUGE, -HUGE};
+	double domain_ignore[4] = {largeval, -largeval, largeval, -largeval};
 	int ignore_at_init = 0;
 
 	bool disable_checkbounds = true;
