@@ -18,7 +18,7 @@ irregular
 
 [perturbation method]
 # EXTMETH PERTMET BANDWIDTH
-    2       2       0.05
+    2       2       0.1
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space

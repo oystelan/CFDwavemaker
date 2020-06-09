@@ -142,7 +142,7 @@ void Irregular::calculate_bwindices() {
 	bwlim.clear();
 	for (int i = 0; i < nfreq * ndir -1 ; i++) {		
 		bwlim.push_back(bw_limiter(i));
-		std::cout << "i: " << i << ", bwlim: " << bw_limiter(i) << ", omega: " << omega[i] << ", omegalim: " << omega[bw_limiter(i)-1] << std::endl;
+		//std::cout << "i: " << i << ", bwlim: " << bw_limiter(i) << ", omega: " << omega[i] << ", omegalim: " << omega[bw_limiter(i)-1] << std::endl;
 	}
 }
 
