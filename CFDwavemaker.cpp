@@ -711,7 +711,6 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 				buf >> lsgrid.domain_ignore[2];
 				buf >> lsgrid.domain_ignore[3];
 				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
-				lsgrid.set_ignore();
 			}
 			buf.clear();
 
@@ -750,6 +749,8 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 
 	if (wavetype == 4) {
 		lsgrid.water_depth = depth;
+		lsgrid.set_ignore();
+
 		if (lsgrid.ignore_at_init) {
 			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);
 			lsgrid.initialize_kinematics_with_ignore(irreg);

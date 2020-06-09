@@ -61,7 +61,7 @@ struct LSgridTest : testing::Test {
 TEST_F(LSgridTest, test1) {
 
 	// Set time and location.
-	double x = -100.;
+	double x = 0.;
 	double y = 0.;
 	double z = -10.;
 	double t = 4.;
@@ -72,7 +72,7 @@ TEST_F(LSgridTest, test1) {
 	sgrid->domain[1] = 30.;
 	sgrid->domain[2] = 0.;
 	sgrid->domain[3] = 20.;
-	sgrid->nx = 3;
+	sgrid->nx = 1;
 	sgrid->ny = 3;
 	sgrid->nl = 20;
 	//sgrid->tan_a = 0.01;
