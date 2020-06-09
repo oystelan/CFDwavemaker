@@ -477,18 +477,34 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 						buf.clear();
 					}
 
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
 
 					for (int i = 0; i < irreg.nfreq; i++) {
 						for (int j = 0; j < irreg.ndir; j++) {
-							irreg.omega.push_back(omega_temp[i]);
-							irreg.k.push_back(k_temp[i]);
-							irreg.A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
-							irreg.phase.push_back(phas_temp[i]);
-							irreg.theta.push_back(theta_temp[j]);
+							omega.push_back(omega_temp[i]);
+							k.push_back(k_temp[i]);
+							A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+							phase.push_back(phas_temp[i]);
+							theta.push_back(theta_temp[j]);
 
 						}
 					}
 					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_ampl_temp;
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
 				}
 
 				
