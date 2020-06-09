@@ -132,7 +132,7 @@ double Irregular::eta1(double t, double xx, double yy) {
 
 int Irregular::bw_limiter(int i1) {
 	int cc = i1;
-	while ((omega[cc]-omega[i1] > dw_bandwidth) || (cc < nfreq * ndir)) {	
+	while ((omega[cc]-omega[i1] < dw_bandwidth) && (cc < nfreq * ndir)) {	
 		cc++;
 	}
 	return cc;
@@ -142,8 +142,10 @@ void Irregular::calculate_bwindices() {
 	bwlim.clear();
 	for (int i = 0; i < nfreq * ndir -1 ; i++) {		
 		bwlim.push_back(bw_limiter(i));
+		std::cout << "i: " << i << ", bwlim: " << bw_limiter(i) << ", omega: " << omega[i] << ", omegalim: " << omega[bw_limiter(i)-1] << std::endl;
 	}
 }
+
 
 /* Second order wave elevation */
 double Irregular::eta2(double t, double xx, double yy) {

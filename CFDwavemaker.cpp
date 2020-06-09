@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <limits>
 #include <ctime>
-#include <algorithm>
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort, std::stable_sort
 //#include <direct.h> // windows only function
 #//include <cctype>
 //#include <locale>
@@ -76,6 +78,25 @@ int wavetype;
 	fftw_free(in); fftw_free(out);
 
 }*/
+
+
+/* A sorting function for vectors whihc returns the indices after sorting */
+template <typename T>
+std::vector<size_t> sort_indices(const std::vector<T>& v) {
+
+	// initialize original index locations
+	std::vector<size_t> idx(v.size());
+	iota(idx.begin(), idx.end(), 0);
+
+	// sort indexes based on comparing values in v
+	// using std::stable_sort instead of std::sort
+	// to avoid unnecessary index re-orderings
+	// when v contains elements of equal values 
+	stable_sort(idx.begin(), idx.end(),
+		[&v](size_t i1, size_t i2) {return v[i1] < v[i2]; });
+
+	return idx;
+}
 
 void wait(int seconds)
 {
@@ -182,6 +203,8 @@ int check_license()
   #endif
 	return licensecheck;
 }
+
+
 
 
 //string GetCurrentWorkingDir(void) {
@@ -374,6 +397,14 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 					buf.clear();
 					irreg.ndir = 1;
 
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
+
+
 					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
 					double temp;
 					for (int i = 0; i < irreg.nfreq; i++) {
@@ -381,17 +412,29 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 						std::cout << lineA << std::endl;
 						buf.str(lineA);
 						buf >> temp;
-						irreg.omega.push_back(temp);
+						omega.push_back(temp);
 						buf >> temp;
-						irreg.A.push_back(temp);
+						A.push_back(temp);
 						buf >> temp;
-						irreg.k.push_back(temp);
+						k.push_back(temp);
 						buf >> temp;
-						irreg.phase.push_back(temp);
+						phase.push_back(temp);
 						buf >> temp;
-						irreg.theta.push_back(temp);
+						theta.push_back(temp);
 						buf.clear();
 					}
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
+					//exit(0);
+
 				}
 				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
 				else if (!lineA.compare("userdefined")) {

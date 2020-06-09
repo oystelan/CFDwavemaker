@@ -18,7 +18,7 @@ irregular
 
 [perturbation method]
 # EXTMETH PERTMET BANDWIDTH
-    2       2       0.1
+    2       2       0.05
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
@@ -251,7 +251,7 @@ userdefined1
 # XMIN XMAX YMIN YMAX
 -882.6850 -872.6850 -882.6850 882.6850
 #NX NY NL
-2 100 3
+2 100 10
 # t0 dt
 35.0 1.
 stretch_params
