@@ -148,11 +148,11 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		// Main grid
-#pragma omp for
-		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {			
 			for (int j = 0; j < ny; j++) {
 				if (!IGNORE[i * ny + j]) {
+					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
 					double eta0_temp = ETA0[i * ny + j];
 					double eta1_temp = ETA1[i * ny + j];
@@ -289,10 +289,10 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 #pragma omp parallel
 	{
 		// Main grid
-#pragma omp for
-		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {			
 			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				if (!IGNORE[i * ny + j]) {
 					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
