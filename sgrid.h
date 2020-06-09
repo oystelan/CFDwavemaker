@@ -20,13 +20,14 @@ public:
 	~sGrid() {
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
 	};
+
 	// Volume grid, used for fast initialization
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
 	double* ETA0, * ETA1;// Surface grid (2D)
 	int* IGNORE; // matrix with cells to ignore when updating surface elevation
 	int nx, ny, nl;
 	double domain[4] = {};
-	double domain_ignore[4] = {};
+	double domain_ignore[4] = {HUGE, -HUGE, HUGE, -HUGE};
 	int ignore_at_init = 0;
 
 	bool disable_checkbounds = true;

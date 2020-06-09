@@ -792,8 +792,8 @@ void sGrid::export_vtu(FILE* fp, bool last)
 /* Set area of domain to ignore when update kinematics data. this is useful when prescribing kinematics at the boundaries*/
 void sGrid::set_ignore()
 {
-	dx = (domain[1] - domain[0]) / double(nx - 1);
-	dy = (domain[3] - domain[2]) / double(ny - 1);
+	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
 	for (int i = 0; i < nx; i++) {
 		double xpt = domain[0] + dx * i;
