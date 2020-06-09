@@ -28,6 +28,8 @@ public:
 	double domain_ignore[4] = {};
 	int ignore_at_init = 0;
 
+	bool disable_checkbounds = true;
+
 	double water_depth;
 	double dx, dy, ds;
 	double t0, dt;
