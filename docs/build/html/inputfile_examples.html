@@ -1,15 +1,19 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Input File Examples &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>6. Input File Examples &mdash; CFDwavemaker 2.0.1 documentation</title>
   
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
 
   
   
@@ -17,7 +21,9 @@
   
 
   
-  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -29,15 +35,11 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Wave Theories" href="theory.html" />
-    <link rel="prev" title="Input File Format" href="inputfile_description.html" /> 
+    <link rel="next" title="7. Wave Theories" href="theory.html" />
+    <link rel="prev" title="5. Input File Format" href="inputfile_description.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -51,7 +53,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> CFDwavemaker
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> CFDwavemaker
           
 
           
@@ -74,6 +76,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -83,31 +86,28 @@
             
               <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="about.html">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">Build Instructions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">Input File Format</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Input File Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#long-crested-irregular-linear-waves">Long-crested Irregular Linear Waves</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-1">Short-crested irregular wave example 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-2">Short-crested irregular wave example 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#stokes-5th-order-regular-wave">Stokes 5th order regular wave</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#special-features">Special Features</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#grid-interpolation-for-fast-initialization-of-domain">Grid interpolation for fast initialization of domain</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#grid-interpolation-at-the-boundary">Grid interpolation at the boundary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Input File Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#long-crested-irregular-linear-waves">6.1. Long-crested Irregular Linear Waves</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-1">6.2. Short-crested irregular wave example 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-2">6.3. Short-crested irregular wave example 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stokes-5th-order-regular-wave">6.4. Stokes 5th order regular wave</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">Wave Theories</a></li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lisence.html">Lisence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lisence.html">9. Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
 </ul>
 
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -146,9 +146,9 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="index.html">Docs</a> &raquo;</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Input File Examples</li>
+      <li><span class="section-number">6. </span>Input File Examples</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -168,19 +168,19 @@
            <div itemprop="articleBody">
             
   <div class="section" id="input-file-examples">
-<h1>Input File Examples<a class="headerlink" href="#input-file-examples" title="Permalink to this headline">¶</a></h1>
+<h1><span class="section-number">6. </span>Input File Examples<a class="headerlink" href="#input-file-examples" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="long-crested-irregular-linear-waves">
-<h2>Long-crested Irregular Linear Waves<a class="headerlink" href="#long-crested-irregular-linear-waves" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">6.1. </span>Long-crested Irregular Linear Waves<a class="headerlink" href="#long-crested-irregular-linear-waves" title="Permalink to this headline">¶</a></h2>
 <p>Description:</p>
 <ul class="simple">
 <li><p>Long crested (unidirectional wave group)</p></li>
 <li><p>irregular (multiple frequency components)</p></li>
 <li><p>linear wave theory (also known as Airy waves)</p></li>
-<li><p>velocity extrapolation <img class="math" src="_images/math/61309bef280fce399ac3cb222a908bc0e328c291.png" alt="\exp(kz)"/>.</p></li>
+<li><p>velocity extrapolation <span class="math">\exp(kz)</span>.</p></li>
 </ul>
 </div>
 <div class="section" id="short-crested-irregular-wave-example-1">
-<h2>Short-crested irregular wave example 1<a class="headerlink" href="#short-crested-irregular-wave-example-1" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">6.2. </span>Short-crested irregular wave example 1<a class="headerlink" href="#short-crested-irregular-wave-example-1" title="Permalink to this headline">¶</a></h2>
 <p>Description:</p>
 <ul class="simple">
 <li><p>user defined wave (Separate list of frequency component and directional components specified)</p></li>
@@ -270,7 +270,7 @@ userdefined
 </div>
 </div>
 <div class="section" id="short-crested-irregular-wave-example-2">
-<h2>Short-crested irregular wave example 2<a class="headerlink" href="#short-crested-irregular-wave-example-2" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">6.3. </span>Short-crested irregular wave example 2<a class="headerlink" href="#short-crested-irregular-wave-example-2" title="Permalink to this headline">¶</a></h2>
 <p>Description:</p>
 <ul class="simple">
 <li><p>user defined wave (variation 1). Direction specified for each frequency component explicitly.</p></li>
@@ -532,7 +532,7 @@ userdefined1
 </div>
 </div>
 <div class="section" id="stokes-5th-order-regular-wave">
-<h2>Stokes 5th order regular wave<a class="headerlink" href="#stokes-5th-order-regular-wave" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">6.4. </span>Stokes 5th order regular wave<a class="headerlink" href="#stokes-5th-order-regular-wave" title="Permalink to this headline">¶</a></h2>
 <p>Description:</p>
 <p>A regular stokes 5th order wave, propagated from still water using a linear rampup from time 0.0 to time 0.5 sec.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Wavedata CFDwavemaker2
@@ -580,59 +580,6 @@ stokes5
 </pre></div>
 </div>
 </div>
-<div class="section" id="special-features">
-<h2>Special Features<a class="headerlink" href="#special-features" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="grid-interpolation-for-fast-initialization-of-domain">
-<h3>Grid interpolation for fast initialization of domain<a class="headerlink" href="#grid-interpolation-for-fast-initialization-of-domain" title="Permalink to this headline">¶</a></h3>
-<p>Second order wave theory can be time-consuming to calculate, even with modern HPC computers, considering that millions of cells may need to be initialized with wave kinematics.
-For a significant speedup in initialization, kinematics may be precomputed onto a 3D grid, such that initialization can be done by interpolation. This will in most cases give a significant speedup and is recommended to use when using second order irregular wave theory.
-At the moment the size and resolution of the grid needs to be specified manually and is done by adding this block of code to the waveinput.dat file:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[grid interpolation]
-#number of grids to read in
-1
-# grid used for kinematics interpolation
-# alternatives: init domain interp, wallx(not implemented yet)
-init domain interp
-# Definition of dualgridbox and
-# XMIN XMAX YMIN YMAX ZMIN ZMIDDLE ZMAX
--882.6850 882.6850 -882.6850 882.6850 -77.3559 -20.0000 46.0000
-# Resolution of upper gridbox (arround the surface)
-#NX NY NZ
-2 100 12
-# Resolution of lower grid box (in the deep, less resolution is required)
-#NXL NYL NZL
-2 100 3
-</pre></div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Be sure to check that the bounding box specified for the interpolation grid covers the complete domain, including ghost cells which some CFD codes also needs to initialize.</p>
-</div>
-</div>
-<div class="section" id="grid-interpolation-at-the-boundary">
-<h3>Grid interpolation at the boundary<a class="headerlink" href="#grid-interpolation-at-the-boundary" title="Permalink to this headline">¶</a></h3>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Under development. Not really tested yet.</p>
-</div>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#[grid interpolation]
-#number of grids to read in
-1
-# grid used for kinematics interpolation
-# alternatives: init domain interp, wallx(not implemented yet)
-wallx
-# Definition of dualgridbox and
-# XMIN XMAX YMIN YMAX ZMIN ZMAX
-0. 1. -200.0 200.0  -77.3559 30.
-# Resolution of upper gridbox (arround the surface)
-#NX NY NZ
-2 100 12
-# dt
-0.5
-</pre></div>
-</div>
-</div>
-</div>
 </div>
 
 
@@ -643,10 +590,10 @@ wallx
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="theory.html" class="btn btn-neutral float-right" title="Wave Theories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="theory.html" class="btn btn-neutral float-right" title="7. Wave Theories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="inputfile_description.html" class="btn btn-neutral float-left" title="Input File Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="inputfile_description.html" class="btn btn-neutral float-left" title="5. Input File Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -655,11 +602,19 @@ wallx
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2014, Øystein Lande
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -670,7 +625,6 @@ wallx
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

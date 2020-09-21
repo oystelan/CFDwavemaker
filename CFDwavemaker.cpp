@@ -215,40 +215,12 @@ int check_license()
 //}
 
 
-int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Grid& gclass, Ramp& rramp) {
+int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Grid& gclass, Ramp& rramp) {
 	std::string lineA;
 	std::ifstream fid;
-	std::string res;
-
-	// READ INPUT FILE AND REMOVE COMMENT LINES
-	fid.open("./waveinput.dat");
-
-	// check one step up in the folder tree (this is used in the latest comflow version)
-	if (fid.fail()) {
-		fid.open("../waveinput.dat");
-	}
-	// Error check
-	if (fid.fail()) {
-		std::cerr << "Could not open file (is it really there?) " << std::endl;
-		return -1;
-		exit(1);
-	}
-	else {
-		std::cout << "Reading data from file: waveinput.dat..." << std::endl;
-	}
-	while (fid.good()) {
-		getline(fid, lineA);
-		//cout << lineA << endl;
-		lineA.erase(find(lineA.begin(), lineA.end(), '#'), lineA.end());
-		if (lineA.length() > 0) {
-			res += lineA + "\n";
-
-		}
-	}
-	fid.close();
-
 	std::istringstream buf;
 	std::istringstream f(res);
+
 	//get and write data lines
 	while (!f.eof()) {
 		getline(f, lineA);
@@ -765,6 +737,548 @@ int read_inputdata_v2(Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGri
 
 }
 
+/* main input file reader function*/
+int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Grid& gclass, Ramp& rramp) {
+	std::string lineA, dummystr;
+	std::ifstream fid;
+	std::istringstream buf;
+	std::istringstream f(res);
+
+	//get and write data lines
+	while (!f.eof()) {
+		getline(f, lineA);
+		trim(lineA);
+		std::cout << lineA << std::endl;
+
+		// Convension for numbering:
+		// irregular wave theory variants: 1-10
+		// wavemaker theory variants: 11-20
+		// Regular wave theories: 21-30
+		// HOSM and other: 31-40
+		if (!lineA.compare("[wave type]")) {
+			getline(f, lineA);
+			trim(lineA);
+			//std::cout << lineA << std::endl;
+			// check if valid wave type is given
+			if (!lineA.compare("irregular") || !lineA.compare("1")) {
+				wavetype = 1;
+				std::cout << "Irregular perturbation wave theory specified" << std::endl;
+			}
+			else if (!lineA.compare("pistonwavemaker")) {
+				wavetype = 11;
+				std::cout << "Piston wave maker theory specified" << std::endl;
+			}
+			else if (!lineA.compare("spectral wave")) {
+				wavetype = 31;
+				std::cout << "spectral wave (HOSM) specified" << std::endl;
+			}
+			else if (!lineA.compare("stokes5")) {
+				wavetype = 21;
+				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
+			}
+			else {
+				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
+				std::cout << "irregular" << std::endl;
+				std::cout << "pistonwavemaker" << std::endl;
+				std::cout << "spectral wave" << std::endl;
+				std::cout << "stokes5" << std::endl;
+				//exit(1);
+			}
+		}
+		if (!lineA.compare("[general input data]")) { //mandatory
+			while (!f.eof()) {
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 5, "depth")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> depth;
+					buf.clear();				
+				}
+				if (!lineA.compare(0, 6, "mtheta")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> mtheta;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 9, "normalize")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.normalize;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 7, "amplify")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.normalize;
+					buf.clear();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					break;
+				}
+			}
+			
+		}
+		
+		if (!lineA.compare("[second order]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> irreg.extrapolation_met;
+			buf >> irreg.order;
+			buf >> irreg.dw_bandwidth;
+			buf.clear();
+		}
+		if (!lineA.compare("[wave reference point]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> tofmax;
+			buf >> x_pos;
+			buf >> y_pos;
+			buf.clear();
+		}
+		if (!lineA.compare("[ramps]")) { //optional
+			rramp.ramp_init = true;
+			// read time ramp data
+
+			// read time rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_time_up;
+			buf >> rramp.time_rampup_start;
+			buf >> rramp.time_rampup_end;;
+			buf.clear();
+			// read time rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_time_down;
+			buf >> rramp.time_rampdown_start;
+			buf >> rramp.time_rampdown_end;;
+			buf.clear();
+			// read x-direction rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_x_up;
+			buf >> rramp.x_rampup_start;
+			buf >> rramp.x_rampup_end;;
+			buf.clear();
+			// read x-direction rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_x_down;
+			buf >> rramp.x_rampdown_start;
+			buf >> rramp.x_rampdown_end;;
+			buf.clear();
+			// read y-direction rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_y_up;
+			buf >> rramp.y_rampup_start;
+			buf >> rramp.y_rampup_end;;
+			buf.clear();
+			// read y-direction rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_y_down;
+			buf >> rramp.y_rampdown_start;
+			buf >> rramp.y_rampdown_end;;
+			buf.clear();
+
+		}
+		// Wave properties: this is where the wave type specific data is given
+		if (!lineA.compare("[wave properties]")) {
+			if (wavetype == 1) {
+				// In case of irregular wave is specified
+				getline(f, lineA);
+				trim(lineA);
+				std::cout << lineA << std::endl;
+				// User defined wave. List of frequency components given
+				// frequency, spectral ampl, wave number, phase, direction (rad)
+				if (!lineA.compare("userdefined1")) {
+					std::cout << "Irregular seas, one directional component for each frequency specified" << std::endl;
+					// read number wave components
+					getline(f, lineA);
+					std::cout << "Number of frequency components: " << lineA << std::endl;
+					buf.str(lineA);
+					buf >> irreg.nfreq;
+					buf.clear();
+					irreg.ndir = 1;
+
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
+
+
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
+					double temp;
+					for (int i = 0; i < irreg.nfreq; i++) {
+						getline(f, lineA);
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> temp;
+						omega.push_back(temp);
+						buf >> temp;
+						A.push_back(temp);
+						buf >> temp;
+						k.push_back(temp);
+						buf >> temp;
+						phase.push_back(temp);
+						buf >> temp;
+						theta.push_back(temp);
+						buf.clear();
+					}
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
+					//exit(0);
+
+				}
+				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
+				else if (!lineA.compare("userdefined")) {
+					std::cout << "Irregular seas, directional spreading defined separately" << std::endl;
+					// read number of frequencies and directions
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> irreg.nfreq;
+					buf >> irreg.ndir;
+					buf.clear();
+					std::cout << "Number of frequency components: " << irreg.nfreq << std::endl;
+					std::cout << "Number of directional components: " << irreg.ndir << std::endl;
+
+					// Read frequency data (omega, Sw and K)
+					double* omega_temp = new double[irreg.nfreq];
+					double* Ampspec_temp = new double[irreg.nfreq];
+					double* k_temp = new double[irreg.nfreq];
+					double* phas_temp = new double[irreg.nfreq];
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]" << std::endl;
+					for (int i = 0; i < irreg.nfreq; i++) {
+						getline(f, lineA);
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> omega_temp[i];
+						buf >> Ampspec_temp[i];
+						buf >> k_temp[i];
+						buf >> phas_temp[i];
+						buf.clear();
+					}
+
+					// Read directional data
+					double* theta_temp = new double[irreg.ndir];
+					double* D_ampl_temp = new double[irreg.ndir];
+					std::cout << "# Theta [rad] D(theta)" << std::endl;
+					for (int i = 0; i < irreg.ndir; i++) {
+						getline(f, lineA);
+						buf.str(lineA);
+						buf >> theta_temp[i];
+						buf >> D_ampl_temp[i];
+						buf.clear();
+					}
+
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
+
+					for (int i = 0; i < irreg.nfreq; i++) {
+						for (int j = 0; j < irreg.ndir; j++) {
+							omega.push_back(omega_temp[i]);
+							k.push_back(k_temp[i]);
+							A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+							phase.push_back(phas_temp[i]);
+							theta.push_back(theta_temp[j]);
+
+						}
+					}
+					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_ampl_temp;
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
+				}
+
+
+			}
+			else if (wavetype == 11) {
+				// Wavemaker theory (piston)
+				// read alpha values
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wmaker.alpha_z;
+				buf >> wmaker.alpha_u;
+				buf.clear();
+
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wmaker.n_timesteps;
+				//n_timesteps = stoi(lineA);
+				std::cout << "Number of timesteps: " << wavetype << std::endl;
+
+				// declare some vectors to store piston data
+				wmaker.PD_time = new double[wmaker.n_timesteps];
+				wmaker.PD_ampl = new double[wmaker.n_timesteps];
+				wmaker.PD_velo = new double[wmaker.n_timesteps];
+				wmaker.PD_eta = new double[wmaker.n_timesteps];
+
+				for (int i = 0; i < wmaker.n_timesteps; i++) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> wmaker.PD_time[i];
+					buf >> wmaker.PD_ampl[i];
+					buf >> wmaker.PD_velo[i];
+					buf >> wmaker.PD_eta[i];
+					buf.clear();
+				}
+			}
+			else if (wavetype == 21) {
+				// read Line 2
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> stokes.wave_length; // wave length
+				buf >> stokes.wave_height;  // Wave height
+				buf.clear();
+
+			}
+			else {
+				std::cout << "Unknown wavetype specified" << std::endl;
+			}
+		}
+
+		if (!lineA.compare("[current speed]")) { //optional
+			if (wavetype == 21) { // Stokes 5th
+				getline(f, lineA);
+				std::cout << lineA << std::endl;
+				std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
+				buf.str(lineA);
+				buf >> stokes.current;
+				buf.clear();
+			}
+			else {
+				std::cout << "Current not supported for selected wave type. Parameter ignored." << std::endl;
+			}
+		}
+		if (!lineA.compare("[still water level]")) { //optional
+			getline(f, lineA);
+			std::cout << "still water level: " << lineA << "m" << std::endl;
+
+			buf.str(lineA);
+			buf >> swl;
+			buf.clear();
+		}
+
+		if (!lineA.compare("[grid interpolation]")) {
+			// Special case for fast initialization of domain
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> gclass.numgrids;
+			buf.clear();
+
+			for (int i = 0; i < gclass.numgrids; i++) {
+				getline(f, lineA);
+				trim(lineA);
+				std::cout << "Grid interpolation type: " << lineA << std::endl;
+				if (!lineA.compare("init domain interp")) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.domain_start[0];
+					buf >> gclass.domain_end[0];
+					buf >> gclass.domain_start[1];
+					buf >> gclass.domain_end[1];
+					buf >> gclass.domain_start_L[2];
+					buf >> gclass.domain_end_L[2];
+					buf >> gclass.domain_end[2];
+					gclass.domain_start[2] = gclass.domain_end_L[2];
+					gclass.domain_start_L[0] = gclass.domain_start[0];
+					gclass.domain_start_L[1] = gclass.domain_start[1];
+					gclass.domain_end_L[0] = gclass.domain_end[0];
+					gclass.domain_end_L[1] = gclass.domain_end[1];
+
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.NX;
+					buf >> gclass.NY;
+					buf >> gclass.NZ;
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.NXL;
+					buf >> gclass.NYL;
+					buf >> gclass.NZL;
+					buf.clear();
+					if (wavetype == 1)
+						wavetype = 2;
+				}
+				if (!lineA.compare("wallx")) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.wallxsize[0];
+					buf >> gclass.wallxsize[1];
+					buf >> gclass.wallxsize[2];
+					buf >> gclass.wallxsize[3];
+					buf >> gclass.wallxsize[4];
+					buf >> gclass.wallxsize[5];
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.wallx_nx;
+					buf >> gclass.wallx_ny;
+					buf >> gclass.wallx_nz;
+					buf.clear();
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> gclass.dt;
+					buf.clear();
+					gclass.wallx_start[0] = gclass.wallxsize[0];
+					gclass.wallx_start[1] = gclass.wallxsize[2];
+					gclass.wallx_start[2] = gclass.wallxsize[4];
+					if (wavetype == 1) // if irregular wave
+						wavetype = 3; // change to special case irregular with gridded wallx condition
+				}
+			}
+		}
+
+		if (!lineA.compare("[lsgrid]")) {
+			// Lagrangian streched grid
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> lsgrid.domain[0];
+			buf >> lsgrid.domain[1];
+			buf >> lsgrid.domain[2];
+			buf >> lsgrid.domain[3];
+			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
+
+			buf.clear();
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> lsgrid.nx;
+			buf >> lsgrid.ny;
+			if (numparams(lineA) == 3) {
+				buf >> lsgrid.nl;
+			}
+			std::cout << "Grid resolution: " << std::endl;
+			std::cout << "nx: " << lsgrid.nx << std::endl;
+			std::cout << "ny: " << lsgrid.ny << std::endl;
+			std::cout << "nl: " << lsgrid.nl << std::endl;
+
+			// allocate memory
+			lsgrid.allocate();
+
+			buf.clear();
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> lsgrid.t0;
+			buf >> lsgrid.dt;
+			std::cout << "time init: " << lsgrid.t0 << std::endl;
+			std::cout << "dt: " << lsgrid.dt << std::endl;
+
+			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("stretch_params")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.tan_a;
+				buf >> lsgrid.tan_b;
+				std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
+			}
+
+			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("ignore_subdomain")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.ignore_at_init;
+				if (lsgrid.ignore_at_init) {
+					std::cout << "Warning: only boundaries will be initialized size ignore_at_init=" << lineA << std::endl;
+				}
+				buf.clear();
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.domain_ignore[0];
+				buf >> lsgrid.domain_ignore[1];
+				buf >> lsgrid.domain_ignore[2];
+				buf >> lsgrid.domain_ignore[3];
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+			}
+			buf.clear();
+
+			if (wavetype == 1)
+				wavetype = 4;
+			else {
+				std::cerr << "LS grid may only be used with irregular waves" << std::endl;
+				exit(-1);
+			}
+
+		}
+	}
+	std::cout << "Input file read successfully." << std::endl;
+
+	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
+		irregular.depth = depth;
+		irregular.mtheta = mtheta;
+		irregular.tofmax = tofmax;
+		irregular.fpoint[0] = x_pos;
+		irregular.fpoint[1] = y_pos;
+		irregular.swl = swl;
+		irregular.normalize_data();
+		irregular.calculate_bwindices();
+
+	}
+	else if (wavetype == 21) {
+		stokes.depth = depth;
+		stokes.theta = mtheta;
+		stokes.x0 = x_pos;
+		stokes.y0 = y_pos;
+		stokes.t0 = tofmax;
+		stokes.z0 = swl;
+		// set the properties of the wave
+		stokes.set_stokes5_properties(wave_length, wave_height);
+	}
+
+	if (wavetype == 4) {
+		lsgrid.water_depth = depth;
+		lsgrid.set_ignore();
+
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(irreg);
+		}
+		else {
+			lsgrid.initialize_surface_elevation(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics(irreg);
+		}
+	}
+
+	return 0;
+
+}
 /*
 int read_inputdata()
 {
@@ -1687,8 +2201,12 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 //EXPORT int Init(double& tmin_in, double& tmax_in)
 int wave_Initialize()
 {
+	std::string lineA;
+	std::ifstream fid;
+	std::string res;
+
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v.2.1.1" << std::endl;
+	std::cout << "CFD WAVEMAKER v.2.1.2" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	// Check if license has expired
@@ -1711,10 +2229,59 @@ int wave_Initialize()
 
 		return -1;
 	}
-	//for (int i = 0; i < nfreq; i++) {
-	//	k[i] = pow(2. * pi * f[i], 2.) / 9.81;
-	//}
-	int i = read_inputdata_v2(irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
+	
+	// Check for waveinput.dat file in most common locations
+
+	// Open and read file to find which input file version to read.
+	// READ INPUT FILE AND REMOVE COMMENT LINES
+	fid.open("./waveinput.dat");
+	// check one step up in the folder tree (this is used in the latest comflow version)
+	if (fid.fail()) {
+		fid.open("../waveinput.dat");
+	}
+	if (fid.fail()) {
+		std::cerr << "Could not open file (is it really there?) " << std::endl;
+		return -1;
+		exit(1);
+	}
+	while (fid.good()) {
+		getline(fid, lineA);
+		//cout << lineA << endl;
+		lineA.erase(find(lineA.begin(), lineA.end(), '#'), lineA.end());
+		if (lineA.length() > 0) {
+			res += lineA + "\n";
+		}
+	}
+	fid.close();
+
+	std::istringstream buf;
+	std::istringstream f(res);
+	int inputfile_version = 0; // 0 = version 2 input format , 1 = version 2009 (new)
+	//check file version
+	while (!f.eof()) {
+		getline(f, lineA);
+		trim(lineA);
+		if (!lineA.compare("@v2009")) {
+			inputfile_version = 1;
+		}
+		if (!lineA.compare("@v1809")) {
+			inputfile_version = 0;
+		}
+
+	}
+
+	if (inputfile_version == 0) {
+		std::cout << "Reading old input file version2 format (@v1809)" << std::endl;
+		int i = process_inputdata_v2(res, irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
+	}
+	else if (inputfile_version == 1) {
+		std::cout << "Reading new input file version2 format (@v2009)" << std::endl;
+		int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
+	}
+	else {
+		std::cout << "Could not locate or input file unrecognizable. exiting." << std::endl;
+		exit(-1);
+	}
 
 	return 0;
 }

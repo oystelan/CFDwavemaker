@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,12 +11,19 @@
   
 
   
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -29,14 +35,10 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Introduction" href="about.html" /> 
+    <link rel="next" title="1. Introduction" href="about.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -50,7 +52,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> CFDwavemaker
+            <a href="#" class="icon icon-home" alt="Documentation Home"> CFDwavemaker
           
 
           
@@ -73,6 +75,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -82,20 +85,22 @@
             
               <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="about.html">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">Build Instructions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">Input File Format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">Input File Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">Wave Theories</a></li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lisence.html">Lisence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lisence.html">9. Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
 </ul>
 
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -134,7 +139,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="#">Docs</a> &raquo;</li>
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
         
       <li>CFDwavemaker’s documentation</li>
     
@@ -170,43 +175,56 @@
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="about.html">Introduction</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="about.html#about">About</a></li>
-<li class="toctree-l2"><a class="reference internal" href="about.html#showcases">Showcases</a></li>
-<li class="toctree-l2"><a class="reference internal" href="about.html#contribute">Contribute?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="about.html#bug-reporting">Bug reporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="about.html#about">1.1. About</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#showcases">1.2. Showcases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#contribute">1.3. Contribute?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#bug-reporting">1.4. Bug reporting</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">Build Instructions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-linux-unix">Build in Linux/Unix</a></li>
-<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-windows">Build in Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-linux-unix">2.1. Build in Linux/Unix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-windows">2.2. Build in Windows</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-comflow">Linking up with ComFLOW</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-basilisk-or-c">Linking up with Basilisk (or C)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-openfoam">Linking up  with OpenFOAM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-python">Linking up with Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-comflow">4.1. Linking up with ComFLOW</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-basilisk-or-c">4.2. Linking up with Basilisk (or C)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-openfoam">4.3. Linking up  with OpenFOAM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-python">4.4. Linking up with Python</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">Input File Format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">Input File Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#long-crested-irregular-linear-waves">Long-crested Irregular Linear Waves</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-1">Short-crested irregular wave example 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-2">Short-crested irregular wave example 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#stokes-5th-order-regular-wave">Stokes 5th order regular wave</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#special-features">Special Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#general-notes-on-the-input-format">5.1. General notes on the input Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-types">5.2. Wave types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#general-input-data">5.3. General input data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-reference-point">5.4. Wave reference point</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#ramps">5.5. Ramps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#irregular-wave-specification">5.6. Irregular wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#grid-interpolation-schemes">5.7. Grid interpolation schemes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#stokes-regular-wave-specification">5.8. Stokes regular wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wavemaker-theory-wave-specification">5.9. Wavemaker theory wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#spectral-method-wave-specification">5.10. Spectral method wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#tips-tricks">5.11. Tips &amp; tricks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">Wave Theories</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="theory.html#irregular-wave-theory">Irregular wave theory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="theory.html#regular-wave-theory">Regular wave theory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="theory.html#wave-maker-theory">Wave maker theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#long-crested-irregular-linear-waves">6.1. Long-crested Irregular Linear Waves</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-1">6.2. Short-crested irregular wave example 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-2">6.3. Short-crested irregular wave example 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#stokes-5th-order-regular-wave">6.4. Stokes 5th order regular wave</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lisence.html">Lisence</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#irregular-wave-theory">7.1. Irregular wave theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#regular-wave-theory">7.2. Regular wave theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="theory.html#wave-maker-theory">7.3. Wave maker theory</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lisence.html">9. Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
 </ul>
 </div>
 </div>
@@ -219,7 +237,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="about.html" class="btn btn-neutral float-right" title="Introduction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="about.html" class="btn btn-neutral float-right" title="1. Introduction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -229,11 +247,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2014, Øystein Lande
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -244,7 +270,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

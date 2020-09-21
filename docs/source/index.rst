@@ -15,6 +15,7 @@ CFDwavemaker's documentation
 
 .. toctree::
    :maxdepth: 2
+   :numbered:
    :caption: Table of Contents:
 
    about

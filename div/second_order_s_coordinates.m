@@ -20,6 +20,9 @@ k = w.^2./g;
 t = 2.;
 x = 0.;
 
+
+% sigma coordinate second order wave implementation
+
 signk1 = [1 -1 1 -1];
 signk2 = [1 -1 -1 1];
 
@@ -234,10 +237,10 @@ for i = 1:length(k)
         eta2b_sum(i,m) = ((a(i) * a(m) * w(i) * w(m)) / (2. * g)) * (alpha_nm_plus * cos(phi_i + phi_m));
         eta2b_diff(i,m) = ((a(i) * a(m) * w(i) * w(m)) / (2. * g)) * (alpha_nm_minus * cos(phi_i - phi_m));
         
-        u2b_sum(i,m) = (a(i) * a(m) * w(i) * w(m))*(k(i)+k(m))*beta_nm_plus*...
-            cos(phi_i+phi_m)*cosh(k_nm_plus*(z+h))/cosh(k_nm_plus*h);
+        u2b_sum(i,m) = (a(i) * a(m) * w(i) * w(m)) * (k(i)+k(m)) * beta_nm_plus*...
+            cos(phi_i+phi_m)*cosh(k_nm_plus * (z+h))/cosh(k_nm_plus*h);
         
-        u2b_diff(i,m) = (a(i) * a(m) * w(i) * w(m))*(k(i)-k(m))*beta_nm_minus*...
+        u2b_diff(i,m) = (a(i) * a(m) * w(i) * w(m)) * (k(i)-k(m)) * beta_nm_minus*...
             cos(phi_i-phi_m)*cosh(k_nm_minus*(z+h))/cosh(k_nm_minus*h);
         
         w2b_sum(i,m) = (a(i) * a(m) * w(i) * w(m))*(k_nm_plus)*beta_nm_plus*...
@@ -245,6 +248,8 @@ for i = 1:length(k)
         
         w2b_diff(i,m) = (a(i) * a(m) * w(i) * w(m))*(k_nm_minus)*beta_nm_minus*...
             sin(phi_i-phi_m)*sinh(k_nm_minus*(z+h))/cosh(k_nm_minus*h);
+        
+        
     end
 end
 
@@ -348,6 +353,7 @@ for i = 1:length(k)
         
         u2c_sum(i,m) = 0.25*(a(i)*g/w(i))*(a(m)*g/w(m))*(k(i)+k(m))*((D_nm_plus/(w(i)+w(m)))*cos(phi_i+phi_m)*...
             cosh(k_nm_plus*(z+h))/cosh(k_nm_plus*h));
+        
         if (w(i) == w(m))
             u2c_diff(i,m) = 0.;
         else

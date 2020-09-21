@@ -11,6 +11,7 @@ Here is a list of planned upgrades,ideas and improvements to the library:
 - update grid interpolation structure to vertical lagrangian type, which follows the wave surface, to make more efficient and accurate.
 - Add commonly used wave spectra and directional spreading functions for easy generation without specifying manually frequency amplitudes, phase etc. (work started)
 - preprogrammed constrained new wave. kind of a nice to have. 
+- At some point it is probably a good idea to add a Cmake file for this project.
 
 .. _`spectral_wave_data`: https://github.com/SpectralWaveData/spectral_wave_data
 

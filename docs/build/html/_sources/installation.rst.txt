@@ -1,7 +1,17 @@
 Installation
 ============
 
+If you do not care about the source or dont fancy compiling C++ code, dont worry. Precompiled versions of the library are provided for both linux and windows (64-bit versions).
+These are found on the git repository and may be downloaded directly:
+
+.. `Linux 64.bit versions`: http://www.math.rug.nl/~veldman/comflow/comflow.html
+
+
+Linking and Usage
+=================
+
 This pages describes how to install and get up and running with the CFDwavemaker C++ library, with different CFD solvers.
+
 
 Linking up with ComFLOW
 -----------------------
