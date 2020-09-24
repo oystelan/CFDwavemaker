@@ -26,7 +26,7 @@ public:
 		normalize = 0;
 		mtheta = 0.;
 		extrapolation_met = 0;
-		order = 2;
+		order = 1;
 		tofmax = 0.;
 		fpoint[0] = 0.;
 		fpoint[1] = 0.;
@@ -44,7 +44,7 @@ public:
 
 	// Variables
 	int nfreq, ndir, extrapolation_met, normalize;
-	int order = 2; // 1 = linear airy wave theory; 2= second order wave theory
+	int order = 1; // 1 = linear airy wave theory; 2= second order wave theory
 	int sloping_bottom = 0;
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl = 0.; // still water level
@@ -79,7 +79,6 @@ public:
 	double phi1_dxdz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component U */
 	double phi1_dydz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component V */
 	double phi1_dzdz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component W */
-
 
 	// main kinematics functions
 	double eta(double t, double x, double y);

@@ -824,6 +824,12 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		
 		if (!lineA.compare("[second order]")) { //optional
+			if (wavetype > 10) {
+				std::cout << "InputError: This tag is only available for irregular waves." << std::endl;
+				exit(-1);
+			}		
+			irreg.order = 2;
+
 			while (!f.eof()) {
 				lineP = lineA;
 				getline(f, lineA);
@@ -837,7 +843,18 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				if (!lineA.compare(0, 9, "bandwidth")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> irreg.dw_bandwidth;
+					buf >> dummystr;
+					if (!dummystr.compare(0, 3, "off")) {
+						// Do nothing. default value is already a very high number
+					}
+					else if (!dummystr.compare(0, 3, "auto")) {
+						// Compute a decent bandwidth value. todo: make a function which does this
+
+					}
+					else { // assumes that a value is given
+						irreg.dw_bandwidth = atof(dummystr.c_str());
+					}
+
 					buf.clear();
 				}			
 				// if new tag is reach. break while loop.
@@ -1293,7 +1310,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.swl = swl;
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
-
 	}
 	else if (wavetype == 21) {
 		stokes.depth = depth;
