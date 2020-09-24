@@ -17,6 +17,7 @@ public:
 		tan_b = 1.5;
 		nl = 10;
 		dt = 0.5;
+		swl = 0.;
 	};
 	~sGrid() {
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
@@ -35,6 +36,7 @@ public:
 	bool ignore_domain = false;
 
 	double water_depth;
+	double swl;
 	double dx, dy, ds;
 	double t0, dt;
 	double tan_a;

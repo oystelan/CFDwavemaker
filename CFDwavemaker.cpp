@@ -1324,6 +1324,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 	if (wavetype == 4) {
 		lsgrid.water_depth = depth;
+		lsgrid.swl = swl;
 		lsgrid.set_ignore();
 
 		if (lsgrid.ignore_at_init) {
@@ -1346,8 +1347,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 Wave kinematics functions
 ----------------------------------------------------------------------
 */
-
-
 
 double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {

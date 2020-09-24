@@ -75,8 +75,8 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 			for (int j = 0; j < ny; j++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
-				double eta0_temp = ETA0[i * ny + j];
-				double eta1_temp = ETA1[i * ny + j];
+				double eta0_temp = ETA0[i * ny + j] - swl;
+				double eta1_temp = ETA1[i * ny + j] - swl;
 
 				double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
 				double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
@@ -154,8 +154,8 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 				if (!IGNORE[i * ny + j]) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
-					double eta0_temp = ETA0[i * ny + j];
-					double eta1_temp = ETA1[i * ny + j];
+					double eta0_temp = ETA0[i * ny + j] - swl;
+					double eta1_temp = ETA1[i * ny + j] - swl;
 
 					double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
 					double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
@@ -256,8 +256,8 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				
-				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
-				ETA1[i * ny + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt);
+				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+				ETA1[i * ny + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt) + swl;
 				
 			}			
 		}
@@ -297,8 +297,8 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				if (!IGNORE[i * ny + j]) {
-					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt);
-					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt);
+					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 				}
 			}
 		}
@@ -341,7 +341,7 @@ void sGrid::update(Irregular& irregular, double t_target)
 					double ypt = domain[2] + dy * j;
 					if (!IGNORE[i * ny + j]) {
 						ETA0[i * ny + j] = ETA1[i * ny + j];
-						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt);
+						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 
 						double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
 						double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
@@ -353,7 +353,7 @@ void sGrid::update(Irregular& irregular, double t_target)
 
 						for (int m = 0; m < nl; m++) {
 							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, ETA1[i * ny + j], water_depth);
+							double zpt1 = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
 
 							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
 							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
@@ -418,9 +418,9 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
-	double spt0 = tan2s(std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, water_depth), -1.));
+	double spt0 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev0 - swl), wave_elev0 - swl, water_depth), -1.));
 	double nsp0 =  (spt0 + 1.) / ds;
-	double spt1 = tan2s(std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, water_depth), -1.));
+	double spt1 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev1 - swl), wave_elev1 - swl, water_depth), -1.));
 	double nsp1 = (spt1 + 1.) / ds;
 
 	//std::cout << "orig: nsp0:" << nsp0 << ", nsp1: " << nsp1 << "spt0: " << spt0 << ", wavelev0: " << wave_elev0 << std::endl;
@@ -432,8 +432,8 @@ double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, do
 	double C011 = VAR0[int(floor(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
 	double C100 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
 	double C101 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp0))];
-	double C110 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];//
-	double C111 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];//
+	double C110 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];
+	double C111 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
 	double D000 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp1))];
 	double D001 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp1))];
 	double D010 = VAR1[int(floor(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp1))];
@@ -507,9 +507,9 @@ double sGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, d
 
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
-	double spt0 = tan2s(std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, water_depth), -1.));
+	double spt0 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev0 - swl), wave_elev0 - swl, water_depth), -1.));
 	double nsp0a = (spt0 + 1.) / ds;
-	double spt1 = tan2s(std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, water_depth), -1.));
+	double spt1 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev1 - swl), wave_elev1 - swl, water_depth), -1.));
 	double nsp1a = (spt1 + 1.) / ds;
 
 	float nsp0_temp, nsp1_temp;

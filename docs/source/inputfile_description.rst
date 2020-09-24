@@ -220,6 +220,48 @@ The second of initializing an irregular wave field. The tag [irregular spectral 
 
 to be updated.
 
+Example 1:
+
+.. code-block:: none
+
+    [irregular spectral properties]
+    # spectral definition
+    w0 0.05
+    dw 0.05
+    wmax 0.5
+    random_seed 123
+    spectrum jonswap3
+    hs 10.0
+    tp 15.0
+    gamma 3.0
+    #spreading definition
+    spread cosn
+    n 4
+    type random_draw
+    dir_seed 1234
+
+Example 2:
+
+.. code-block:: none
+
+    [irregular spectral properties]
+    # spectral definition
+    w_min 0.05
+    w_max 0.5
+    dw 0.05
+    random_seed 9947793
+    spectrum torsethaugen2004
+    hs 5.5
+    tp 8.3
+    #spreading definition
+    spread cos2s
+    s 15
+    type integrate
+    theta_min -1.57
+    theta_max 1.57
+    dtheta 0.3491
+    
+
 
 Second order wave theory
 ........................
@@ -233,7 +275,7 @@ By default, the waves which are generated uses linear wave theory. To switch on 
       - **description**
       - **mandatory**
     * - ``bandwidth``
-      - control the bandwidth of which frequencies are allowed to interact in the second order sum and difference terms. For wide band width spectra this is recommended. the bandwidth is given in rad/s. a good approximation is ``bandwidth``=0.7*m0/m1, where m0 and m1 are the zeroth and first spetral moments. 
+      - control the bandwidth of which frequencies that are allowed to interact in the second order sum and difference terms. For wide band spectra this is recommended. default value is "off", which implies that all frequencies are allowed to interact in the second order terms. Alternatively bandwidth=auto can be used and CFDwavemaker will approximate a reasonable bandwidth for you from the spectral moments, i.e bandwidth``=0.7*m0/m1. The third alternative is to specify a value given in rad/s.
       - no
     * - ``extmeth``
       - Choice of extrapolation method. By default a second order taylor expansion (eularian coordinate system) is used (``extmeth``= 0). A second order lagrangian implementation will be supported in the near future (extmeth = 1). 
@@ -243,7 +285,7 @@ By default, the waves which are generated uses linear wave theory. To switch on 
 
     [second order]
     bandwidth 0.5
-    extmet 0
+    extmet 2
 
 
 Stokes regular wave specification
