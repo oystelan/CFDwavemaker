@@ -144,6 +144,8 @@ Irregular waves can be specified in several ways, but to keep it simple, we dest
 Manual specification
 ....................
 
+The tag [irregular wave components] needs to present. This tag requires the following information to follow:
+
 .. list-table::
     :widths: 20 70 10
 
@@ -167,7 +169,7 @@ Example 1:
 
 .. code-block:: none
     
-    [irregular wave properties]
+    [irregular wave components]
     nfreq 5
     ndir 0
     # OMEGA [rad/s]    A[m]       K[rad/m]        Phase[rad]    theta[rad]
@@ -181,7 +183,7 @@ Example 2:
 
 .. code-block:: none
     
-    [irregular wave properties]
+    [irregular wave components]
     nfreq 4
     ndir 19
     # OMEGA [rad/s] A [m]     K          Phase [rad]
@@ -211,6 +213,13 @@ Example 2:
            0.7854     0.042843
 
 
+Spectral specification
+......................
+
+The second of initializing an irregular wave field. The tag [irregular spectral properties] needs to be specified, followed by the following data
+
+to be updated.
+
 
 Second order wave theory
 ........................
@@ -224,7 +233,7 @@ By default, the waves which are generated uses linear wave theory. To switch on 
       - **description**
       - **mandatory**
     * - ``bandwidth``
-      - control the bandwidth of which frequencies are allowed to interact in the second order sum and difference terms. For wide band width spectra this is recommended. the bandwidth is given in rad/s 
+      - control the bandwidth of which frequencies are allowed to interact in the second order sum and difference terms. For wide band width spectra this is recommended. the bandwidth is given in rad/s. a good approximation is ``bandwidth``=0.7*m0/m1, where m0 and m1 are the zeroth and first spetral moments. 
       - no
     * - ``extmeth``
       - Choice of extrapolation method. By default a second order taylor expansion (eularian coordinate system) is used (``extmeth``= 0). A second order lagrangian implementation will be supported in the near future (extmeth = 1). 
@@ -236,6 +245,102 @@ By default, the waves which are generated uses linear wave theory. To switch on 
     bandwidth 0.5
     extmet 0
 
+
+Stokes regular wave specification
+---------------------------------
+
+Sir George Stokes solved this nonlinear wave problem in 1847 by expanding the relevant potential flow quantities in a Taylor series around the mean (or still) surface elevation. As a result, the boundary conditions can be expressed in terms of quantities at the mean (or still) surface elevation. Stokes's regular wave theory is of direct practical use for waves on intermediate and deep water. It is used in the design of coastal and offshore structures, in order to determine the wave kinematics (free surface elevation and flow velocities). 
+Several implementations of these waves exists. The implementation in CFDwavemaker is based on Ref. :cite:`skjelbreia1960fifth` and goes up to 5th order.
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``wave_length``
+      - Length of the stokes wave. units in meters.
+      - yes
+    * - ``wave_height``
+      - Height of the Stokes wave, measured from through to crest (i.e. not amplitude). units in meters. 
+      - yes
+    * - ``order``
+      - order to use for regular stokes waves. valid input is number from 1 to 5. Default is 5.
+      - no
+    * - ``current_speed``
+      - Current speed. Current speed direction in same direction as wave propagation. units in m/s.
+      - no
+
+.. code-block:: none
+
+   [stokes wave properties]
+   #mandatory properties for stokes wave
+   wave_length  300.
+   wave_height  20. 
+   current_speed 0.       
+
+
+Wavemaker theory wave specification
+-----------------------------------
+
+Wavemaker theory may sometimes be useful when validating wave propagation against model test data were a physical wave maker has been used to generate the waves.
+
+Piston wavemaker theory
+.......................
+
+
+.. figure:: http://www.edesign.co.uk/wp-content/uploads/2013/02/IMGP3051.jpg
+   :alt: Example of edinbourgh designs piston wave makers
+   
+   Example of `Edinbourgh Designs`_ piston wave maker
+
+   .. _`Edinbourgh Designs`: http://www4.edesign.co.uk/product/piston-wave-generators/
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``ntimesteps``
+      - number of timesteps that the time-series that follows consists of. Three columns are required. the first is **Time**, second is **Piston horizontal amplitude** and third is **Piston horizontal velocity**. 
+      - yes
+    * - ``alpha_z``
+      - Simple way of adjusting the amplitude time series. default value for this this is 0. Amplitude applied when calculating kinematics are Piston_ampl = Piston_horizontal_amplitude_time_series + alpha_z
+      - no
+    * - ``alpha_u``
+      - Simple way of adjusting the velocity time series. default value for this this is 0. Amplitude applied when calculating kinematics are Piston_velo = Piston_horizontal_velocity_time_series + alpha_u
+      - no
+
+The time-series describing the wave maker motions shall follow directly after the input parameter as shown in the example below.
+
+Example 1:
+
+.. code-block:: none
+
+  [wave properties]
+  # for piston wave maker
+  # alpha values for adjusting elevation and velocity
+  ntimesteps 24000
+  alpha_z 0.0
+  alpha_u 0.1
+  # Number of lines to be read (time,amplitude,velocity)
+  0.0000  0.0000942  0.0109990
+  0.0025  0.0001217  0.0103278
+  0.0050  0.0001458  0.0089456
+  0.0075  0.0001664  0.0075024
+  0.0100  0.0001833  0.0060345
+  0.0125  0.0001966  0.0045800
+  0.0150  0.0002062  0.0031888
+  0.0175  0.0002125  0.0019247
+  0.0200  0.0002159  0.0008472
+  ...
+
+
+Spectral method wave specification
+----------------------------------
+
+To be updated.
 
 Grid interpolation schemes
 --------------------------
@@ -284,9 +389,6 @@ This provides a very efficient way of describing the velocity profile underneath
       - ignore subdomain is a nifty little feature that comes in hand when propagating waves into a domain from the boundaries at t > 0. Often a kinematics description of the entire domain is only required during initialization (t=0). For all remaining time steps, it is sufficient to only update the LSgrid in the areas around the boundary. This little feature lets you do just that by specifying a set of "inner bounds", which tells the code to ignore all cells within the bounding box for t > 0. This saves a lot of unneccessary compute. The bounds of ``ignore_subdomain`` are defined identical to ``bounds``. Four parameters are given on the same line, XMIN, XMAX, YMIN and YMAX. By default no cells are ignored for t > 0.
       - no
 
-
-
-
 An example input description is given below
 
 .. code-block:: none
@@ -304,24 +406,11 @@ An example input description is given below
   ignore_subdomain -1398.00 602.00 -902.00 1102.00
 
 
-Stokes regular wave specification
----------------------------------
-
-
-Wavemaker theory wave specification
------------------------------------
-
-
-
-Spectral method wave specification
-----------------------------------
 
 Tips & tricks
 -------------
 
-The comment marker # is useful for turning on and off features temporarily. For instance, switching from second order to first order waves are simply done by adding a # infront of [second order]. Turning of grid interpolation is simply done by adding # infront of [lsgrid], and all the remaining parameters assosiated to this tag will be ignored.
-
-example: 
+The comment marker # is useful for turning on and off features temporarily. For instance, switching from second order to first order waves are simply done by adding a # infront of [second order]. Turning of grid interpolation is simply done by adding # infront of [lsgrid], and all the remaining parameters assosiated to this tag will be ignored. Example: 
 
 .. code-block:: none
 
@@ -336,6 +425,9 @@ example:
   stretch_params 0.7   1.5	
   #                 xmin     xmax   ymin   ymax
   ignore_subdomain -1398.00 602.00 -902.00 1102.00
+
+Be sure to calculate a resonable value for ``bandwidth``. This can save quite a lot of computation. 
+
 
     
    

@@ -15,6 +15,7 @@ private:
 	void calculate_stokes_coefficients();
 
 public:
+	bool initialized = false;
 	double wave_length;
 	double wave_height;
 	double current = 0.;

@@ -39,6 +39,8 @@ public:
 	~Irregular() {
 		std::cout << "Irregular class destroyed." << std::endl;
 	};
+	// bools
+	int initialized = false;
 
 	// Variables
 	int nfreq, ndir, extrapolation_met, normalize;

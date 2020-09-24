@@ -32,6 +32,7 @@ public:
 	int ignore_at_init = 0;
 
 	bool disable_checkbounds = true;
+	bool ignore_domain = false;
 
 	double water_depth;
 	double dx, dy, ds;

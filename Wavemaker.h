@@ -7,6 +7,7 @@ private:
 	int findNearestNeighbourIndex(double value, double* x, int len);
 	double interp1(double* x, int x_tam, double* y, double xx);
 public:
+	bool initialized = false;
 	double* PD_time;
 	double* PD_ampl;
 	double* PD_velo;
