@@ -1658,6 +1658,14 @@ int wave_Initialize()
 		fid.open("../waveinput.dat");
 	}
 	if (fid.fail()) {
+		fid.open("./WaveProperties/waveinput.dat");
+		std::cout << "Waveinput.dat file found in folder ./WaveProperties" << std::endl;
+	}
+	if (fid.fail()) {
+		fid.open("./input_files/waveinput.dat");
+		std::cout << "Waveinput.dat file found in folder ./input_files" << std::endl;
+	}
+	if (fid.fail()) {
 		std::cerr << "Could not open file (is it really there?) " << std::endl;
 		return -1;
 		exit(1);

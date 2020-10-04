@@ -7,8 +7,6 @@ struct IrregularTest : testing::Test {
 	
 	IrregularTest() {
 		irregular = new Irregular;
-		// Parameters
-		irregular->nfreq = 3;
 		// Variables
 		irregular->nfreq = 3;
 		irregular->ndir = 1;
