@@ -23,7 +23,7 @@ private:
 public:
 	Irregular() {
 		ampl = 1.;
-		normalize = 0;
+		normalize = false;
 		mtheta = 0.;
 		extrapolation_met = 0;
 		order = 1;
@@ -43,10 +43,10 @@ public:
 	int initialized = false;
 
 	// Variables
-	int nfreq, ndir, normalize;
+	int nfreq, ndir;
+	bool normalize, sloping_bottom;
 	int extrapolation_met = 0; // 0 = exponential all components. 1 
 	int order = 1; // 1 = linear airy wave theory; 2= second order wave theory
-	int sloping_bottom = 0; // not yet implemented.
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl = 0.; // still water level
 	double dw_bandwidth = 100.; // default, frequencies will interact

@@ -48,6 +48,7 @@ TEST_F(IrregularTest, test1) {
 	double t = 0.;
 	double x = 0.;
 	double y = 0.;
+
 	//std::cout << "Wave elevation: " << irregular->eta(0.0, 0.0, 0.0) << std::endl;
 	EXPECT_DOUBLE_EQ(6., irregular->eta(0.0, 0.0, 0.0));
 
@@ -99,6 +100,8 @@ TEST_F(IrregularTest, interpolatetest) {
 	for (int i = 0; i < xData.size(); i++) std::cout SP xData[i] SP yData[i] NL;
 	std::cout << "\nInterpolated data:\n";
 	for (int i = 0; i < xVals.size(); i++) std::cout SP xVals[i] SP yVals[i] NL;
+
+	
 
 	EXPECT_TRUE(true);
 }

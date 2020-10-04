@@ -744,11 +744,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 	std::istringstream buf;
 	std::istringstream f(res);
 
+	std::cout << std::boolalpha; // display booleans as true or false when printed (instead of 0 or 1)
+
 	//get and write data lines
 	while (!f.eof()) {
 		getline(f, lineA);
 		trim(lineA);
-		std::cout << lineA << std::endl;
+		//std::cout << lineA << std::endl;
 
 		// Convension for numbering:
 		// irregular wave theory variants: 1-10
@@ -756,6 +758,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		// Regular wave theories: 21-30
 		// HOSM and other: 31-40
 		if (!lineA.compare("[wave type]")) {
+			std::cout << "----------" << std::endl;
+			std::cout << "Wave type:" << std::endl;
+			std::cout << "----------" << std::endl;
 			getline(f, lineA);
 			trim(lineA);
 			//std::cout << lineA << std::endl;
@@ -786,6 +791,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 		}
 		if (!lineA.compare("[general input data]")) { //mandatory
+			std::cout << "-------------------" << std::endl;
+			std::cout << "General input data:" << std::endl;
+			std::cout << "-------------------" << std::endl;
 			while (!f.eof()) {
 				lineP = lineA;
 				getline(f, lineA);
@@ -794,25 +802,29 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> depth;
-					buf.clear();				
+					buf.clear();
+					std::cout << "Water depth: " << depth << "m" << std::endl;
 				}
 				if (!lineA.compare(0, 6, "mtheta")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> mtheta;
 					buf.clear();
+					std::cout << "Mean wave direction: " << mtheta << "degrees" << std::endl;
 				}
 				if (!lineA.compare(0, 9, "normalize")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> irreg.normalize;
 					buf.clear();
+					std::cout << "Normalize wave amplitudes by spectral zeroth moment: " << irreg.normalize << std::endl;
 				}
 				if (!lineA.compare(0, 7, "amplify")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> irreg.ampl;
 					buf.clear();
+					std::cout << "Amplify (gain): " << irreg.ampl << "m" << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -824,6 +836,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		
 		if (!lineA.compare("[second order]")) { //optional
+			std::cout << "-------------------------------------" << std::endl;
+			std::cout << "Second order irregular wave settings:" << std::endl;
+			std::cout << "-------------------------------------" << std::endl;
 			if (wavetype > 10) {
 				std::cout << "InputError: This tag is only available for irregular waves." << std::endl;
 				exit(-1);
@@ -839,20 +854,24 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> dummystr;
 					buf >> irreg.extrapolation_met;
 					buf.clear();
+					std::cout << "Second order velocity extrapolation method for z > swl: " << irreg.extrapolation_met << std::endl;
 				}
 				if (!lineA.compare(0, 9, "bandwidth")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> dummystr;
+					
 					if (!dummystr.compare(0, 3, "off")) {
 						// Do nothing. default value is already a very high number
+						std::cout << "Bandwidth: off" << std::endl;
 					}
 					else if (!dummystr.compare(0, 3, "auto")) {
 						// Compute a decent bandwidth value. todo: make a function which does this
-
+						std::cout << "Bandwidth: auto" << std::endl;
 					}
 					else { // assumes that a value is given
 						irreg.dw_bandwidth = atof(dummystr.c_str());
+						std::cout << "Bandwidth: " << irreg.dw_bandwidth << " rad/s" << std::endl;
 					}
 
 					buf.clear();
@@ -865,6 +884,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 		}
 		if (!lineA.compare("[wave reference point]")) { //optional
+			std::cout << "---------------------" << std::endl;
+			std::cout << "Wave reference point:" << std::endl;
+			std::cout << "---------------------" << std::endl;
 			while (!f.eof()) {
 				lineP = lineA;
 				getline(f, lineA);
@@ -874,18 +896,21 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> dummystr;
 					buf >> tofmax;
 					buf.clear();
+					std::cout << "t0: " << tofmax << " sec" <<std::endl;
 				}
 				if (!lineA.compare(0, 1, "x")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> x_pos;
 					buf.clear();
+					std::cout << "x0: " << x_pos << " m" << std::endl;
 				}
 				if (!lineA.compare(0, 1, "y")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> y_pos;
 					buf.clear();
+					std::cout << "y0: " << y_pos << " m" << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -895,6 +920,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 		}
 		if (!lineA.compare("[ramps]")) { //optional
+			std::cout << "------" << std::endl;
+			std::cout << "Ramps:" << std::endl;
+			std::cout << "------" << std::endl;
 			rramp.ramp_init = true;
 			// read time ramp data
 			while (!f.eof()) {
@@ -908,6 +936,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.time_rampup_start;
 					buf >> rramp.time_rampup_end;
 					buf.clear();
+					std::cout << "time-rampup: " << rramp.ramp_init_time_up << ", starttime: " << rramp.time_rampup_start  << " sec, endtime: " << rramp.time_rampup_end << " sec." << std::endl;
 				}
 				if (!lineA.compare(0, 13, "time_rampdown")) {
 					buf.str(lineA);
@@ -916,6 +945,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.time_rampdown_start;
 					buf >> rramp.time_rampdown_end;
 					buf.clear();
+					std::cout << "time-rampdown: " << rramp.ramp_init_time_down << ", starttime: " << rramp.time_rampdown_start << " sec, endtime: " << rramp.time_rampdown_end << " sec." << std::endl;
 				}
 				if (!lineA.compare(0, 8, "x_rampup")) {
 					buf.str(lineA);
@@ -924,6 +954,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.x_rampup_start;
 					buf >> rramp.x_rampup_end;
 					buf.clear();
+					std::cout << "x-rampup: " << rramp.ramp_init_x_up << ", startpos: " << rramp.x_rampup_start << " m, endpos: " << rramp.x_rampup_end << " m." << std::endl;
 				}
 				if (!lineA.compare(0, 10, "x_rampdown")) {
 					buf.str(lineA);
@@ -932,6 +963,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.x_rampdown_start;
 					buf >> rramp.x_rampdown_end;
 					buf.clear();
+					std::cout << "x-rampdown: " << rramp.ramp_init_x_down << ", startpos: " << rramp.x_rampdown_start << " m, endpos: " << rramp.x_rampdown_end << " m." << std::endl;
 				}
 				if (!lineA.compare(0, 8, "y_rampup")) {
 					buf.str(lineA);
@@ -940,6 +972,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.y_rampup_start;
 					buf >> rramp.y_rampup_end;
 					buf.clear();
+					std::cout << "y-rampup: " << rramp.ramp_init_y_up << ", startpos: " << rramp.y_rampup_start << " m, endpos: " << rramp.y_rampup_end << " m." << std::endl;
 				}
 				if (!lineA.compare(0, 10, "y_rampdown")) {
 					buf.str(lineA);
@@ -948,6 +981,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> rramp.y_rampdown_start;
 					buf >> rramp.y_rampdown_end;
 					buf.clear();
+					std::cout << "y-rampdown: " << rramp.ramp_init_y_down << ", startpos: " << rramp.y_rampdown_start << " m, endpos: " << rramp.y_rampdown_end << " m." << std::endl;
 				}
 				
 				// if new tag is reach. break while loop.
@@ -959,6 +993,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		// Wave properties: irregular wave components (manual)
 		if (!lineA.compare("[irregular wave components]")) {
+			std::cout << "--------------------------" << std::endl;
+			std::cout << "Irregular Wave components:" << std::endl;
+			std::cout << "--------------------------" << std::endl;
+
 			if (wavetype != 1) {
 				std::cout << "InputError: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
@@ -1192,6 +1230,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 
 		if (!lineA.compare("[lsgrid]")) {
+			std::cout << "-----------------------------------" << std::endl;
+			std::cout << "Lagrangian Stretched grid (lsgrid):" << std::endl;
+			std::cout << "-----------------------------------" << std::endl;
 
 			// allocate memory
 			lsgrid.allocate();
@@ -1299,7 +1340,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 		}
 	}
+	std::cout << "-----------------------------------------------" << std::endl;
 	std::cout << "Input file read successfully." << std::endl;
+	std::cout << "***********************************************\n\n" << std::endl;
 
 	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
 		irregular.depth = depth;
@@ -1622,7 +1665,7 @@ int wave_Initialize()
 	std::string lineA;
 	std::ifstream fid;
 	std::string res;
-
+	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	std::cout << "CFD WAVEMAKER v.2.1.2" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
