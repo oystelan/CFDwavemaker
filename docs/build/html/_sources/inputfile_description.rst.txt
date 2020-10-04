@@ -451,6 +451,58 @@ An example input description is given below
   ignore_subdomain -1398.00 602.00 -902.00 1102.00
 
 
+Output
+------
+
+The primary objective of the library is to provide kinematics by calling the C extern functions provided in CFDwavemaker.h.
+It is also possible to make CFDwavemaker dump kinematics directly to file. This can be convenient for QA, or if wave kinematics is needed for other purposes.
+
+VTK
+...
+
+When using grid interpolation, the kinematics is store on a lagrangian grid in the library. This grid can be dumped to an unstructured grid (.vtu) which is a well established format provided through the `VTK library`_ . The files may be visualized and processed further using `Paraview`_ or other software.
+To achieve this, the tag [vtk output] needs to be specified.
+Everytime the grid is updated, a new .vtu file is written for the time t = t0.
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``storage_path``
+      - Path to the directory where the .vtu files should be stored. 
+      - yes
+    * - ``filename``
+      - prefix kinematics files. Defaults is "kinematics". Hence files will be named kinematics0000.vtu, kinematics0001.vtu, ... etc. 
+      - no
+
+For now, it is not possible to choose a different time step than what is used to in [LSgrid]. This may be updated in the future.
+
+.. _`VTK library`: http://www.vtk.org
+.. _`Paraview`: http://www.paraview.org
+
+
+Example code:
+
+.. code-block:: none
+  
+  [vtk output]
+  storage_path ./vtk/
+  filename kinematics
+  
+
+
+Time-series
+...........
+
+To do.
+
+Spectral data
+.............
+
+To do.
+
 
 Tips & tricks
 -------------

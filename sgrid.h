@@ -35,6 +35,10 @@ public:
 	bool disable_checkbounds = true;
 	bool ignore_domain = false;
 
+	std::string vtk_directory_path = "./";
+	std::string vtk_prefix = "kinematics";
+	bool dump_vtk = false;
+
 	double water_depth;
 	double swl;
 	double dx, dy, ds;
