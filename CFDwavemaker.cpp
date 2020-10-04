@@ -44,6 +44,7 @@
 double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
 double mtheta;
 double swl = 0.;
+bool bw_auto_calc = false;
 
 // Stokes 5 class
 Stokes5 stokes5;
@@ -868,6 +869,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					else if (!dummystr.compare(0, 3, "auto")) {
 						// Compute a decent bandwidth value. todo: make a function which does this
 						std::cout << "Bandwidth: auto" << std::endl;
+						bw_auto_calc = true;
 					}
 					else { // assumes that a value is given
 						irreg.dw_bandwidth = atof(dummystr.c_str());
@@ -1400,6 +1402,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.fpoint[0] = x_pos;
 		irregular.fpoint[1] = y_pos;
 		irregular.swl = swl;
+		if (bw_auto_calc) {
+			irreg.dw_bandwidth = irregular.bandwidth_estimator();
+			std::cout << "BW_autocalc: Bandwidth parameter set to " << irreg.dw_bandwidth << " rad/s." << std::endl;
+		
+		}
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
 	}

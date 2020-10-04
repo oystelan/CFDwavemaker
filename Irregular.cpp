@@ -730,5 +730,32 @@ double Irregular::mean_wave_period(int opt)
 	return 0.;
 }
 
+/* Function for calculating the mean wave length based integration of the wave spectrum*/
+double Irregular::bandwidth_estimator()
+{
+	// check 
+	if (ndir > 1) {
+		std::cerr << "Automatic calculation of bandwidth parameter only supported for 2D wave spectra at the moment. Please specify bandiwidth manually. Sorry for the inconvenience" << std::endl;
+		exit(-1);
+	}
+
+	double w_t, dw, S;
+	double m0 = 0.;
+	double m1 = 0.;
+
+	for (int i = 0; i < (nfreq - 1); i++) {
+		w_t = (omega[i + 1] + omega[i]) / 2.;
+		dw = omega[i + 1] - omega[i];
+		S = pow((A[i + 1] + A[i]) * 0.5, 2.) / (2. * dw);
+		m0 += w_t * S;
+		m1 += w_t * S * w_t;
+		
+	}
+
+	double bw = 0.7 * ( m1 / m0);
+	
+	return bw;
+}
+
 
 

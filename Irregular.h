@@ -98,6 +98,7 @@ public:
 	double phase_velocity(int opt);
 	double mean_wave_length(int opt);
 	double mean_wave_period(int opt);
+	double bandwidth_estimator();
 };
 
 #endif
