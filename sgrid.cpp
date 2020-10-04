@@ -124,6 +124,9 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 		}
 	} // End parallel initialization
 
+	if (dump_vtk) {
+		write_vtk();
+	}
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
@@ -203,11 +206,26 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 			}
 		}
 	} // End parallel initialization
+	if (dump_vtk) {
+		write_vtk();
+	}
 
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	std::cout << "Interpolation can commence..." << std::endl;
+}
+
+// when called, writes stored kinematics to file
+void sGrid::write_vtk() {
+	char buffer[256]; sprintf(buffer, "%05d", update_count);
+	std::string str(buffer);
+	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vtu");
+	FILE* fp = fopen(fpath.c_str(), "w");
+	export_vtu(fp, false);
+	fclose(fp);
+
+	std::cout << "wrote kinematics to: " << fpath << std::endl;
 }
 
 // Allocation of memory to storage matrices
@@ -374,6 +392,11 @@ void sGrid::update(Irregular& irregular, double t_target)
 				}
 			}
 		}
+		
+		if (dump_vtk) {
+			write_vtk();
+		}
+		
 		dd = omp_get_wtime() - dd;
 		std::cout << "update time: " << dd << " sec" << std::endl;
 		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;

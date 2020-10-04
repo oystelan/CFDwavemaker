@@ -146,7 +146,11 @@ TEST_F(LSgridTest, vtueksporter) {
 	// Write vtu file
 	//char name[100];
 	//sprintf(name, "./unittest.vtu");
-	FILE* fp = fopen("./unittest.vtu", "w");
+	char buffer[256]; sprintf(buffer, "%06d", 123);
+	std::string str(buffer);
+	std::string fpath = (sgrid->vtk_directory_path + sgrid->vtk_prefix + buffer + ".vtu");
+	std::cout << fpath << std::endl;
+	FILE* fp = fopen(fpath.c_str(), "w");
 	sgrid->export_vtu(fp, false);
 	fclose(fp);
 	EXPECT_TRUE(true);

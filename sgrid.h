@@ -31,6 +31,7 @@ public:
 	double domain[4] = {};
 	double domain_ignore[4] = {largeval, -largeval, largeval, -largeval};
 	int ignore_at_init = 0;
+	int update_count = 0;
 
 	bool disable_checkbounds = true;
 	bool ignore_domain = false;
@@ -59,6 +60,7 @@ public:
 
 	void initialize_kinematics(Irregular& irregular);
 	void initialize_kinematics_with_ignore(Irregular& irregular);
+	void write_vtk();
 	void allocate();
 	void initialize_surface_elevation(Irregular& irregular, double t_target);
 	void initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target);
