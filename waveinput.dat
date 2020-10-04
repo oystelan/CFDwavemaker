@@ -1,3 +1,4 @@
+@v2009
 # Wavedata CFDwavemaker2
 
 [wave type]
@@ -5,43 +6,35 @@
 irregular
 
 [general input data]
-# DEPTH  MTHETA(deg)
-1.2  0.0000      
+depth 1.2
+mtheta 0.0
+swl 0.0
+normalize 1
+amplify 0.061
 
-[normalize]
-# AMPL  NORMALIZE 
-0.061     1
-
-[perturbation method]
-# EXTMETH PERTMET BANDWIDTH
-    0       0       1000
+[second order]
+bandwidth 0.5
+extmet 0
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
-# Time(s)  x(m)  y(m)
-0.00      0.00  11.00
+time 0.0
+x 0.0
+y 11.0
 
 [ramps]
-#time_rampup rampup_start rampup_end
-0          0.0000       0.5
-#time_rampdown rampdown_start rampdown_end
-0              0.0000         1.0
-#x_rampup rampup_start rampup_end
-0         -11.0000     -10.0
-#x_rampdown rampdown_start rampdown_end
-0           10.0000        12.0
-#y_rampup rampup_start rampup_end
-0         -11.0000     -10.0
-#y_rampdown rampdown_start rampdown_end
-1           10.0000        12.0
+#ramptype    enable  rampup_start rampup_end
+time_rampup     0       0.0000       0.5
+time_rampdown   0       0.0000       1.0
+x_rampup        0     -11.0000     -10.0
+x_rampdown      0      10.0000      12.0
+y_rampup        0     -11.0000     -10.0
+y_rampdown      1      10.0000      12.0
 
-
-[wave properties]
-# for irregular waves
-userdefined
-# NFREQ NDIR
-28 19
-# OMEGA [rad/s] S(omega) K   Phase
+[irregular wave components]
+nfreq 28
+ndir 19
+#   OMEGA      A          K          Phase
     5.2033     0.0369     2.7670     0.0000
     5.3014     0.0356     2.8708     0.0000
     5.3996     0.0343     2.9767     0.0000
