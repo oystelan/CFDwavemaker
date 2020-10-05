@@ -12,6 +12,8 @@ import shutil
 
 # give location of dll
 mydll = cdll.CFDwavemaker
+
+
 def tic():
     import time
     #Homemade version of matlab tic and toc functions    
@@ -105,10 +107,10 @@ shutil.copy2('./waveinput3.dat','./waveinput.dat')
 tic()
 print(init_dll(mydll))
 toc()
-clean_up(mydll)
 
-# #wave = waveelev(mydll,t,x,0.0)
-# #print(wave)
+
+wave = waveelev(mydll,t,x,0.0)
+print(wave)
 # z = np.arange(-76.4,wave,2.)
 # # wave = velocityX(mydll,t,x,0.0,-76.3)
 # # print(wave)
@@ -120,7 +122,7 @@ clean_up(mydll)
 #     print(zz, dd)
 #     ux.append(dd) # x and y position set to 0.
 # plt.plot(ux, z)
-# clean_up(mydll)
+clean_up(mydll)
 
 #
 #

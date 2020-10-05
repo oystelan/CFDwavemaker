@@ -30,7 +30,7 @@ public:
 	int nx, ny, nl;
 	double domain[4] = {};
 	double domain_ignore[4] = {largeval, -largeval, largeval, -largeval};
-	int ignore_at_init = 0;
+	bool ignore_at_init = false;
 	int update_count = 0;
 
 	bool disable_checkbounds = true;
@@ -69,6 +69,10 @@ public:
 	void update(Irregular& irregular, double t_target);
 
 	void set_ignore();
+
+	int dirExists(const char* const path);
+
+	void createDirectory(std::string sPath);
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);

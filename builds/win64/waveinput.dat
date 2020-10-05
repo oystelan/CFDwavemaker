@@ -1,3 +1,4 @@
+@v2009
 # Wavedata CFDwavemaker2
 
 [wave type]
@@ -9,42 +10,30 @@
 irregular
 
 [general input data]
-# DEPTH  MTHETA(deg)
-76.40  0.0000      
+depth 76.40  
+mtheta 0.0000      
 
-[normalize]
-# AMPL  NORMALIZE 
-1.0     0
-
-[perturbation method]
-# EXTMETH PERTMET BANDWIDTH
-    2       2       0.1
+[second order]
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
 # Time(s)  x(m)  y(m)
-50.00      0.00  0.00
+time 50.00
+x     0.00
+y     0.00
 
 [ramps]
-#time_rampup rampup_start rampup_end
-0            0.0000       1.0
-#time_rampdown rampdown_start rampdown_end
-0              0.0000         1.0
-#x_rampup rampup_start rampup_end
-0         -11.0000     -10.0
-#x_rampdown rampdown_start rampdown_end
-0           11.0000        12.0
-#y_rampup rampup_start rampup_end
-0         -11.0000     -10.0
-#y_rampdown rampdown_start rampdown_end
-0           11.0000        12.0
+# ramp_type    enable       rampup_start rampup_end
+time_rampup    0            0.0000       1.0
+time_rampdown  0            0.0000         1.0
+x_rampup       0           -11.0000     -10.0
+x_rampdown     0           11.0000        12.0
+y_rampup       0         -11.0000     -10.0
+y_rampdown     0           11.0000        12.0
 
-
-[wave properties]
-# for irregular waves
-userdefined1
-# NFREQ
-200
+[irregular wave components]
+nfreq 200
+ndir 0
 # OMEGA [rad/s]    A[m]           K             Phase[rad]     theta[rad]
     0.80684460     0.09098686     0.06636591    22.09105101    -0.51238946
     0.57527858     0.08989138     0.03410555    -8.15520380    -1.01219701
@@ -249,24 +238,17 @@ userdefined1
 
 [lsgrid]
 # XMIN XMAX YMIN YMAX
--882.6850 -872.6850 -882.6850 882.6850
-#NX NY NL
-2 100 10
-# t0 dt
-35.0 1.
-stretch_params
-# stretch_a* stretch_b*
-0.7   1.2
-ignore_subdomain
-1
--875. 900. -900. 900.
+bounds -882.6850 -872.6850 -882.6850 882.6850
+nx 2
+ny 50
+nl 10
+t0 35.0
+dt 1.
+#ignore_subdomain -875. 900. -900. 900.
+ignore_at_init 0
 
-# vtk output only supported by lsgrid at the moment
-#[vtk]
-# storage directory
-./vtk/
-# filename (without extension and numbering)
-kin
-# dt
-0.5
+[vtk output]
+storage_path ./vtk/
+filename kin
+
 

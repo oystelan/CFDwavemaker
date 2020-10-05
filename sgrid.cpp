@@ -3,6 +3,12 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string>
+#if defined(_WIN32)
+#include < direct.h >
+#endif
 
 
 
@@ -72,6 +78,7 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 		// Main grid
 #pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
+			
 			for (int j = 0; j < ny; j++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
@@ -123,7 +130,6 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 			}
 		}
 	} // End parallel initialization
-
 	if (dump_vtk) {
 		write_vtk();
 	}
@@ -219,8 +225,16 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 // when called, writes stored kinematics to file
 void sGrid::write_vtk() {
 	char buffer[256]; sprintf(buffer, "%05d", update_count);
+
+	if (dirExists(vtk_directory_path.c_str()) == 0) {
+		std::cout << "WARNING: Specified directory for storage of VTK files does not exist. Directory will be created at the following path:  " << vtk_directory_path << std::endl;
+		createDirectory(vtk_directory_path);
+	}
+	
+
 	std::string str(buffer);
 	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vtu");
+	std::cout << fpath << std::endl;
 	FILE* fp = fopen(fpath.c_str(), "w");
 	export_vtu(fp, false);
 	fclose(fp);
@@ -832,4 +846,43 @@ void sGrid::set_ignore()
 			}
 		}
 	}				
+}
+
+/******************************************************************************
+ * Checks to see if a directory exists. Note: This method only checks the
+ * existence of the full path AND if path leaf is a dir.
+ *
+ * @return  >0 if dir exists AND is a dir,
+ *           0 if dir does not exist OR exists but not a dir,
+ *          <0 if an error occurred (errno is also set)
+ *****************************************************************************/
+int sGrid::dirExists(const char* const path)
+{
+	struct stat info;
+
+	int statRC = stat(path, &info);
+	if (statRC != 0)
+	{
+		if (errno == ENOENT) { return 0; } // something along the path does not exist
+		if (errno == ENOTDIR) { return 0; } // something in path prefix is not a dir
+		return -1;
+	}
+
+	return (info.st_mode & S_IFDIR) ? 1 : 0;
+}
+
+void sGrid::createDirectory(std::string sPath) {
+
+	
+	int nError = 0;
+#if defined(_WIN32)
+	
+	nError = _mkdir(sPath.c_str()); // can be used on Windows
+#else
+	mode_t nMode = 0733; // UNIX style permissions
+	nError = mkdir(sPath.c_str(), nMode); // can be used on non-Windows
+#endif
+	if (nError != 0) {
+		// handle your error here
+	}
 }

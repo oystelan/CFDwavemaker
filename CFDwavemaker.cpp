@@ -17,7 +17,6 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <algorithm>
 #include <limits>
 #include <ctime>
 #include <vector>
@@ -744,14 +743,21 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 	std::ifstream fid;
 	std::istringstream buf;
 	std::istringstream f(res);
+	bool skip_getline = false;
 
 	std::cout << std::boolalpha; // display booleans as true or false when printed (instead of 0 or 1)
 
 	//get and write data lines
 	while (!f.eof()) {
-		getline(f, lineA);
-		trim(lineA);
-		//std::cout << lineA << std::endl;
+		if (skip_getline) {
+			skip_getline = false;
+		}
+		else {
+			getline(f, lineA);
+			trim(lineA);
+		}
+		
+		std::cout << lineA << std::endl;
 
 		// Convension for numbering:
 		// irregular wave theory variants: 1-10
@@ -791,6 +797,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				//exit(1);
 			}
 		}
+
 		if (!lineA.compare("[general input data]")) { //mandatory
 			std::cout << "-------------------" << std::endl;
 			std::cout << "General input data:" << std::endl;
@@ -885,6 +892,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 		}
+
 		if (!lineA.compare("[wave reference point]")) { //optional
 			std::cout << "---------------------" << std::endl;
 			std::cout << "Wave reference point:" << std::endl;
@@ -921,6 +929,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 		}
+
 		if (!lineA.compare("[ramps]")) { //optional
 			std::cout << "------" << std::endl;
 			std::cout << "Ramps:" << std::endl;
@@ -1070,7 +1079,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 				// Sort vectors as a function of omega (ascending)
 				for (auto i : sort_indices(omega)) {
-					std::cout << omega[i] << std::endl;
+					//std::cout << omega[i] << std::endl;
 					irreg.omega.push_back(omega[i]);
 					irreg.A.push_back(A[i]);
 					irreg.k.push_back(k[i]);
@@ -1230,18 +1239,17 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}			
 		}
 
-
 		if (!lineA.compare("[lsgrid]")) {
 			std::cout << "-----------------------------------" << std::endl;
 			std::cout << "Lagrangian Stretched grid (lsgrid):" << std::endl;
 			std::cout << "-----------------------------------" << std::endl;
 
-			// allocate memory
-			lsgrid.allocate();
-
+			
+			
 			while (!f.eof()) {
 				lineP = lineA;
 				getline(f, lineA);
+				std::cout << lineA << std::endl;
 				trim(lineA);
 				if (!lineA.compare(0, 6, "bounds")) {
 					buf.str(lineA);
@@ -1307,12 +1315,16 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
+				
 			}
 
-			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
+			// allocate memory
+			
+
+			std::cout << "LS grid domain bounds: " << std::endl;
 			std::cout << "\tXMIN: " << lsgrid.domain[0] << std::endl;
 			std::cout << "\tXMAX: " << lsgrid.domain[1] << std::endl;
 			std::cout << "\tYMIN: " << lsgrid.domain[2] << std::endl;
@@ -1325,7 +1337,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "dt: " << lsgrid.dt << std::endl;
 			std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
 			if (lsgrid.ignore_domain) {
-				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl;
 				std::cout << "\tXMIN: " << lsgrid.domain_ignore[0] << std::endl;
 				std::cout << "\tXMAX: " << lsgrid.domain_ignore[1] << std::endl;
 				std::cout << "\tYMIN: " << lsgrid.domain_ignore[2] << std::endl;
@@ -1339,8 +1351,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				std::cerr << "LS grid may currently only be used with irregular waves." << std::endl;
 				exit(-1);
 			}
+			lsgrid.allocate();
 
 		}
+		
 
 		if (!lineA.compare("[vtk output]")) { //optional
 			std::cout << "--------------------" << std::endl;
@@ -1350,6 +1364,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				std::cout << "InputError: VTK output only works in combination with LSgrid at the moment." << std::endl;
 				exit(-1);
 			}
+			sgrid.dump_vtk = true;
 
 			while (!f.eof()) {
 				lineP = lineA;
@@ -1360,23 +1375,26 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> dummystr;
 					buf >> lsgrid.vtk_directory_path;
 					buf.clear();
-					std::cout << "Directory for storage of vtk files:  " << lsgrid.vtk_directory_path << std::endl;
+					std::cout << "Directory for storage of vtk files: " << lsgrid.vtk_directory_path << std::endl;
 				}
 				if (!lineA.compare(0, 8, "filename")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> lsgrid.vtk_prefix;
 					buf.clear();
+					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}
 		}
 	}
-	
+	std::cout << "\n-----------------------------------------------" << std::endl;
+	std::cout << "Input file read successfully." << std::endl;
+	std::cout << "***********************************************\n\n" << std::endl;
 
 	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
 		irregular.depth = depth;
@@ -1387,8 +1405,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.swl = swl;
 		if (bw_auto_calc) {
 			irreg.dw_bandwidth = irregular.bandwidth_estimator();
-			std::cout << "BW_autocalc: Bandwidth parameter set to " << irreg.dw_bandwidth << " rad/s." << std::endl;
-		
+			std::cout << "BW_autocalc: Bandwidth parameter set to " << irreg.dw_bandwidth << " rad/s." << std::endl;		
 		}
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
@@ -1419,9 +1436,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 	}
 
-	std::cout << "-----------------------------------------------" << std::endl;
-	std::cout << "Input file read successfully." << std::endl;
-	std::cout << "***********************************************\n\n" << std::endl;
+
 
 	return 0;
 
