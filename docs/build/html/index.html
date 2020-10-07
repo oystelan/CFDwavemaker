@@ -52,9 +52,12 @@
           
 
           
-            <a href="#" class="icon icon-home" alt="Documentation Home"> CFDwavemaker
+            <a href="#">
           
 
+          
+            
+            <img src="_static/logo4.png" class="logo" alt="Logo"/>
           
           </a>
 
@@ -162,6 +165,9 @@
             
   <div class="section" id="cfdwavemaker-s-documentation">
 <h1>CFDwavemaker’s documentation<a class="headerlink" href="#cfdwavemaker-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>CFDwavemaker is a C++ library developed with the purpose of providing wave kinematics input to CFD codes.
+More specifically, CFDwavemaker is capable of generating irregular short crested waves with several hundreds of frequency components using second order potential wave theory in a numerically efficient way. Kinematics may either be generated at the boundary (similar to a traditional wave maker) or used to initialize the entire domain before startup of the simulation (in which case it would be wise to use periodic domains).
+A example snapshot of a simulation is shown below, where CFDwavemaker has been used to inialize a CFD simulation run with open source code <a class="reference external" href="http://basilisk.fr">Basilisk</a>.</p>
 <div class="figure align-default" id="id1">
 <img alt="CFDwavemaker in combination with Basilisk Navier-Stokes solver." src="_images/test3.png" />
 <p class="caption"><span class="caption-text">CFDwavemaker in combination with <a class="reference external" href="http://basilisk.fr">Basilisk</a> Navier-Stokes solver</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>

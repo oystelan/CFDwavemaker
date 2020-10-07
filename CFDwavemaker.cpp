@@ -780,20 +780,21 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				wavetype = 11;
 				std::cout << "Piston wave maker theory specified" << std::endl;
 			}
-			else if (!lineA.compare("spectral wave")) {
+			else if (!lineA.compare("hosm")) {
 				wavetype = 31;
 				std::cout << "spectral wave (HOSM) specified" << std::endl;
 			}
-			else if (!lineA.compare("stokes5")) {
+			else if (!lineA.compare("regular")) {
 				wavetype = 21;
 				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
 			}
 			else {
 				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
 				std::cout << "irregular" << std::endl;
+				std::cout << "regular" << std::endl;
 				std::cout << "pistonwavemaker" << std::endl;
-				std::cout << "spectral wave" << std::endl;
-				std::cout << "stokes5" << std::endl;
+				std::cout << "hosm" << std::endl;
+				
 				//exit(1);
 			}
 		}

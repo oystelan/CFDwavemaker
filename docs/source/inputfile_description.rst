@@ -17,11 +17,10 @@ Wave types
 
 CFDwavemaker currently support the following wave theories.
 
-1. ``irregular`` - linear irregular wave theory
-2. ``irregular`` - Second order irregular wave theory
-3. ``stokes5`` - Stokes 5th order wave theory
-4. ``pistonwavemaker`` - piston wave maker theory
-5. ``spectralwave`` - spectral wave theory through DNVGLs HOSM wave model
+1. ``irregular`` - irregular wave theory (linear or second order)
+2. ``regular`` - Stokes regular wave theory (up to 5th order)
+3. ``pistonwavemaker`` - piston wave maker theory
+4. ``hosm`` - spectral wave theory through DNVGLs HOSM wave model
 
 In general, the most effort has been put into second order irregular wave theory, which is why this library was made in the first place. More wave theories may be added in the future.
 
@@ -76,6 +75,23 @@ Wave reference point
 --------------------
 
 A reference point in time and space for the wave specification is needed. This is specified using the tag [wave reference point], as shown in the example given below. time is given in seconds, position x and y are given in meters.
+Specifying the [wave reference point]-tag is optional. If this is not given, default values will be assumed.
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``time``
+      - reference point in time. (default value: ``time`` = 0)
+      - no
+    * - ``x``
+      - reference point in space, x-axis. (default value: ``x`` = 0)
+      - no
+    * - ``y``
+      - reference point in space, y-coordinate. (default value: ``y`` = 0)
+      - no
 
 .. code-block:: none
 
@@ -433,6 +449,9 @@ This provides a very efficient way of describing the velocity profile underneath
     * - ``ignore_subdomain``
       - ignore subdomain is a nifty little feature that comes in hand when propagating waves into a domain from the boundaries at t > 0. Often a kinematics description of the entire domain is only required during initialization (t=0). For all remaining time steps, it is sufficient to only update the LSgrid in the areas around the boundary. This little feature lets you do just that by specifying a set of "inner bounds", which tells the code to ignore all cells within the bounding box for t > 0. This saves a lot of unneccessary compute. The bounds of ``ignore_subdomain`` are defined identical to ``bounds``. Four parameters are given on the same line, XMIN, XMAX, YMIN and YMAX. By default no cells are ignored for t > 0.
       - no
+    * - ``ignore_at_init``
+      - Initializing the entire grid with second order wave theory is time consuming. If you wish to start the simulation from still water (as in a model test tank), you should set this feature to 1. The initialization of the lsgrid will then be skipped and all kinematics will be set to zero. 
+      - no (default 0)
 
 An example input description is given below
 

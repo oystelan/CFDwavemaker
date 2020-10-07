@@ -14,7 +14,7 @@ Reference is made to `Wikipedia`_ for a nice overview of this theory. Other sour
 .. _`Wikipedia`: https://en.wikipedia.org/wiki/Airy_wave_theory
 
 
-Second order Potential Wave Theory 
+Second order potential wave theory 
 ..................................
 
 Second order wave theory
@@ -33,7 +33,7 @@ Wave maker theory
 
 Wave maker theory is generally useful, especially if you want to replicate something which has been generated in a tank. 
 
-Piston Wavemaker Theory
+Piston wavemaker theory
 .......................
 
 Reference is made to the Kennard1949 (Ref. :cite:`kennard1949generation`). The input is time series of horizontal paddle movement.

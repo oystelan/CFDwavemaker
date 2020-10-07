@@ -51,10 +51,12 @@ exclude_patterns = []
 #html_theme = 'alabaster'
 html_theme = "sphinx_rtd_theme"
 
+html_logo = "images/logo4.png"
+
 html_theme_options = {
 #'canonical_url': '',
 #'analytics_id': 'UA-XXXXXXX-1', # Provided by Google in your dashboard
-#'logo_only': False,
+'logo_only': True,
 'display_version': True
 #'prev_next_buttons_location': 'bottom',
 #'style_external_links': False,
