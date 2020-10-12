@@ -445,7 +445,7 @@ This provides a very efficient way of describing the velocity profile underneath
       - no
     * - ``stretch_params``
       - Parameters which controls the ammount of stretching used. Reference is made to section XX for the definition of stretching
-      - yes
+      - no
     * - ``ignore_subdomain``
       - ignore subdomain is a nifty little feature that comes in hand when propagating waves into a domain from the boundaries at t > 0. Often a kinematics description of the entire domain is only required during initialization (t=0). For all remaining time steps, it is sufficient to only update the LSgrid in the areas around the boundary. This little feature lets you do just that by specifying a set of "inner bounds", which tells the code to ignore all cells within the bounding box for t > 0. This saves a lot of unneccessary compute. The bounds of ``ignore_subdomain`` are defined identical to ``bounds``. Four parameters are given on the same line, XMIN, XMAX, YMIN and YMAX. By default no cells are ignored for t > 0.
       - no

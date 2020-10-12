@@ -837,7 +837,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}
@@ -855,7 +855,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			irreg.order = 2;
 
 			while (!f.eof()) {
-				lineP = lineA;
 				getline(f, lineA);
 				trim(lineA);
 				if (!lineA.compare(0, 6, "extval")) {
@@ -888,7 +887,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}			
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}
@@ -899,7 +898,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "Wave reference point:" << std::endl;
 			std::cout << "---------------------" << std::endl;
 			while (!f.eof()) {
-				lineP = lineA;
 				getline(f, lineA);
 				trim(lineA);
 				if (!lineA.compare(0, 4, "time")) {
@@ -925,7 +923,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}
@@ -998,7 +996,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}

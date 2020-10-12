@@ -29,7 +29,7 @@ A example snapshot of a simulation is shown below, where CFDwavemaker has been u
    inputfile_examples
    theory
    todolist
-   lisence
+   license
    references
 
 

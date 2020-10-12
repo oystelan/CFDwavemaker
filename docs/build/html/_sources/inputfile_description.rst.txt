@@ -17,11 +17,10 @@ Wave types
 
 CFDwavemaker currently support the following wave theories.
 
-1. ``irregular`` - linear irregular wave theory
-2. ``irregular`` - Second order irregular wave theory
-3. ``stokes5`` - Stokes 5th order wave theory
-4. ``pistonwavemaker`` - piston wave maker theory
-5. ``spectralwave`` - spectral wave theory through DNVGLs HOSM wave model
+1. ``irregular`` - irregular wave theory (linear or second order)
+2. ``regular`` - Stokes regular wave theory (up to 5th order)
+3. ``pistonwavemaker`` - piston wave maker theory
+4. ``hosm`` - spectral wave theory through DNVGLs HOSM wave model
 
 In general, the most effort has been put into second order irregular wave theory, which is why this library was made in the first place. More wave theories may be added in the future.
 

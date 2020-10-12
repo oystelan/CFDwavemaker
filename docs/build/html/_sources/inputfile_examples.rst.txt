@@ -146,8 +146,6 @@ Description:
 	# use default parameters
 
 	[wave reference point]
-	# for focused waves this will correspond to the focus point in time and space
-	# Time(s)  x(m)  y(m)
 	time 50.00
 	x     0.00
 	y     0.00
@@ -394,42 +392,23 @@ A regular stokes 5th order wave, propagated from still water using a linear ramp
    @v2009
    # Wavedata CFDwavemaker2
 
-   [wave type] 
-   stokes5
+	[wave type] 
+	regular
 
-   [general input data]
+	[general input data]
 	depth 88.00  
 	mtheta 0.0000     
 
-   [wave properties]
-   #mandatory properties for stokes wave
-   # WAVE_LENGTH  WAVE_HEIGHT   
-      300.           20.0          
+	[wave properties]
+	#mandatory properties for stokes wave
+	wave_length 300.
+	wave_height 20.
+  
+	[ramps]
+	# ramp_type    enable       rampup_start rampup_end
+	time_rampup    1            0.0000       1.0
+	# you do not need to specify all ramps, only the once you need.
 
-   #[ramps]
-   #time_rampup rampup_start rampup_end
-   1          0.0000       0.5
-   #time_rampdown rampdown_start rampdown_end
-   0              0.0000         1.0
-   #x_rampup rampup_start rampup_end
-   0         -11.0000     -10.0
-   #x_rampdown rampdown_start rampdown_end
-   0           11.0000        12.0
-   #y_rampup rampup_start rampup_end
-   0         -11.0000     -10.0
-   #y_rampdown rampdown_start rampdown_end
-   0           11.0000        12.0
+	
 
-   [current speed]
-   # optional
-   0.0
-
-   [still water level]
-   # optional
-   0.0
-
-   [wave reference point]
-   # for focused waves this will correspond to the focus point in time and space
-   # Time(s)  x(m)  y(m)
-   0.00      0.00  0.00
 
