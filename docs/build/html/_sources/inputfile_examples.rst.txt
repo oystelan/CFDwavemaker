@@ -1,24 +1,85 @@
-Input File Examples
+Input file examples
 ===================
 
-Long-crested Irregular Linear Waves
------------------------------------
+To give the user an idea of what a complete *waveinput.dat* file looks like, a set of example inputfiles are given below. If the input description was confusing and overwhelming, these examples should hopefully make it easier to see the bigger picture.
 
-Description:
+Irregular wave examples
+-----------------------
+
+
+Long-crested irregular random waves
+...................................
+
+**Description:**
 
 * Long crested (unidirectional wave group)
 * irregular (multiple frequency components)
 * linear wave theory (also known as Airy waves)
 * velocity extrapolation :math:`\exp(kz)`.
 
+.. code-block:: none
 
-Short-crested irregular wave example 1
---------------------------------------
+	@v2009
+	# Long crested wave example
 
-Description:
+	[wave type]
+	# WAVETYPE 
+	irregular
+
+	[general input data]
+	depth 1.2
+	mtheta 0.0
+	swl 0.0
+	normalize 1
+	amplify 0.061
+
+	[ramps]
+	#ramptype    enable  rampup_start rampup_end
+	time_rampup     0       0.0000       0.5
+	
+	[irregular wave components]
+	nfreq 28
+	ndir 1
+	#   OMEGA      A          K          Phase
+		5.2033     0.0369     2.7670     0.0000
+		5.3014     0.0356     2.8708     0.0000
+		5.3996     0.0343     2.9767     0.0000
+		5.4978     0.0331     3.0849     0.0000
+		5.5960     0.0319     3.1951     0.0000
+		5.6941     0.0308     3.3075     0.0000
+		5.7923     0.0298     3.4219     0.0000
+		5.8905     0.0288     3.5384     0.0000
+		5.9887     0.0279     3.6570     0.0000
+		6.0868     0.0270     3.7776     0.0000
+		6.1850     0.0261     3.9002     0.0000
+		6.2832     0.0253     4.0248     0.0000
+		6.3814     0.0246     4.1514     0.0000
+		6.4795     0.0238     4.2800     0.0000
+		6.5777     0.0231     4.4106     0.0000
+		6.6759     0.0224     4.5432     0.0000
+		6.7741     0.0218     4.6778     0.0000
+		6.8722     0.0212     4.8143     0.0000
+		6.9704     0.0206     4.9528     0.0000
+		7.0686     0.0200     5.0933     0.0000
+		7.1668     0.0195     5.2358     0.0000
+		7.2649     0.0189     5.3802     0.0000
+		7.3631     0.0184     5.5266     0.0000
+		7.4613     0.0180     5.6749     0.0000
+		7.5595     0.0175     5.8252     0.0000
+		7.6576     0.0171     5.9775     0.0000
+		7.7558     0.0166     6.1318     0.0000
+		7.8540     0.0162     6.2880     0.0000
+	# DIRS
+		0.00000     1.0
+		
+
+Short-crested irregular focused wave
+....................................
+
+**Description:**
 
 * user defined wave (Separate list of frequency component and directional components specified)
-* short-crested focused wave(direction spreading). Focus point can be adjusted by adjusting the reference point.
+* short-crested focused wave (direction spreading). Focus point can be adjusted by adjusting the reference point.
 * irregular (multiple frequency components)
 * Linear wave theory 
 * Velocity extrapolation constant above z=0
@@ -114,10 +175,10 @@ Description:
 
 
 
-Short-crested irregular wave example 2
---------------------------------------
+Short-crested irregular random wave
+...................................
 
-Description:
+**Description:**
 
 * user defined wave (variation 1). Direction specified for each frequency component explicitly.
 * short-crested event wave, where focus point is default x=y=t=0. Focus point can be adjusted by adjusting the reference point.
@@ -380,10 +441,13 @@ Description:
 	filename kin
 
 
-Stokes 5th order regular wave
------------------------------
+Regular wave examples
+---------------------
 
-Description:
+Stokes 5th order regular wave
+.............................
+
+**Description:**
 
 A regular stokes 5th order wave, propagated from still water using a linear rampup from time 0.0 to time 0.5 sec.
 

@@ -757,5 +757,20 @@ double Irregular::bandwidth_estimator()
 	return bw;
 }
 
+// when called, writes spectral components stored in irregular class to dump file.
+void Irregular::dumpSpectralComponents() {
+	std::string fpath = "./spectral_components.dat";
+	FILE* fp = fopen(fpath.c_str(), "w");
+	fprintf(fp, "# spectral wave data output\n");
+	fprintf(fp, "# [irregular wave components]\n");
+	fprintf(fp, "# nfreq %d\n",nfreq);
+	fprintf(fp, "# ndir 0\n");
+	fprintf(fp, "# omega [rad/s]    a[m]       k[rad/m]        phi[rad]    theta[rad]\n");
+	for (int i = 0; i < nfreq; i++) {
+		fprintf(fp, "%12.5E  %12.5E  %12.5E  %12.5E  %12.5E\n", omega[i], A[i], k[i], phase[i], theta[i]);
+	}
+	fclose(fp);
+}
+
 
 

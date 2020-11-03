@@ -776,23 +776,24 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
-			else if (!lineA.compare("pistonwavemaker")) {
+			else if (!lineA.compare("wavemaker")) {
 				wavetype = 11;
-				std::cout << "Piston wave maker theory specified" << std::endl;
-			}
-			else if (!lineA.compare("hosm")) {
-				wavetype = 31;
-				std::cout << "spectral wave (HOSM) specified" << std::endl;
+				std::cout << "Wave maker theory specified" << std::endl;
 			}
 			else if (!lineA.compare("regular")) {
 				wavetype = 21;
 				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
 			}
+			else if (!lineA.compare("swd")) {
+				wavetype = 31;
+				std::cout << "Spectral wave data (swd) specified" << std::endl;
+			}
+			
 			else {
 				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
 				std::cout << "irregular" << std::endl;
 				std::cout << "regular" << std::endl;
-				std::cout << "pistonwavemaker" << std::endl;
+				std::cout << "wavemaker" << std::endl;
 				std::cout << "hosm" << std::endl;
 				
 				//exit(1);
@@ -1008,11 +1009,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "--------------------------" << std::endl;
 
 			if (wavetype != 1) {
-				std::cout << "InputError: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
+				std::cerr << "InputError: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
 			if (irreg.initialized) {
-				std::cout << "InputError: Irregular wave already initialized. please check input file" << std::endl;
+				std::cerr << "InputError: Irregular wave already initialized. please check input file" << std::endl;
 				exit(-1);
 			}
 			getline(f, lineA);
@@ -1024,7 +1025,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf.clear();
 			}
 			else {
-				std::cout << "InputError: parameter nfreq missing or not specified correctly" << std::endl;
+				std::cerr << "InputError: parameter nfreq missing or not specified correctly" << std::endl;
 				exit(-1);
 			}
 			getline(f, lineA);
@@ -1036,7 +1037,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf.clear();
 			}
 			else {
-				std::cout << "InputError: parameter ndir missing or not specified correctly" << std::endl;
+				std::cerr << "InputError: parameter ndir missing or not specified correctly" << std::endl;
 				exit(-1);
 			}
 			// if ndir = 0. a single direction is read for each frequency.
@@ -1146,7 +1147,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 				// Sort vectors as a function of omega (ascending)
 				for (auto i : sort_indices(omega)) {
-					std::cout << omega[i] << std::endl;
+					//std::cout << omega[i] << std::endl;
 					irreg.omega.push_back(omega[i]);
 					irreg.A.push_back(A[i]);
 					irreg.k.push_back(k[i]);
@@ -1241,9 +1242,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		if (!lineA.compare("[lsgrid]")) {
 			std::cout << "-----------------------------------" << std::endl;
 			std::cout << "Lagrangian Stretched grid (lsgrid):" << std::endl;
-			std::cout << "-----------------------------------" << std::endl;
-
-			
+			std::cout << "-----------------------------------" << std::endl;			
 			
 			while (!f.eof()) {
 				lineP = lineA;
@@ -1391,6 +1390,16 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 		}
 	}
+
+	// Do some checks of the specified input parameters. Some combinations are prohibited
+
+	if (wavetype == 4 && irregular.order != 2) {
+		std::cerr << "LSgrid interpolation uses strictly second order theory. Doesnt make sence to use grid interpolation for linear theory since this is very fast anyway. Either add the tag [second order] to the input file, or remore [lsgrid]." << std::endl;
+		exit(-1);
+
+	}
+
+
 	std::cout << "\n-----------------------------------------------" << std::endl;
 	std::cout << "Input file read successfully." << std::endl;
 	std::cout << "***********************************************\n\n" << std::endl;
@@ -1408,6 +1417,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
+		irregular.dumpSpectralComponents();
 	}
 	else if (wavetype == 21) {
 		stokes.depth = depth;

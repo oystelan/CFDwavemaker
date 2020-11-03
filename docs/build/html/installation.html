@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>3. Installation &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>4. Installation and usage &mdash; CFDwavemaker 2.0.1 documentation</title>
   
 
   
@@ -31,6 +31,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -38,8 +39,8 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="5. Input File Format" href="inputfile_description.html" />
-    <link rel="prev" title="2. Build from Source" href="build_instructions.html" /> 
+    <link rel="next" title="5. Input file format" href="inputfile_description.html" />
+    <link rel="prev" title="3. Build from Source" href="build_instructions.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -90,9 +91,9 @@
               <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#linking-and-usage">4. Linking and Usage</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="download.html">2. Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from Source</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">4. Installation and usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#linking-up-with-comflow">4.1. Linking up with ComFLOW</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#linking-up-with-basilisk-or-c">4.2. Linking up with Basilisk (or C)</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#static-linking">4.2.1. Static linking</a></li>
@@ -103,11 +104,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#linking-up-with-python">4.4. Linking up with Python</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
 <li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lisence.html">9. Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
 <li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
 </ul>
 
@@ -155,7 +156,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li><span class="section-number">3. </span>Installation</li>
+      <li><span class="section-number">4. </span>Installation and usage</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -174,13 +175,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="installation">
-<h1><span class="section-number">3. </span>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>If you do not care about the source or dont fancy compiling C++ code, dont worry. Precompiled versions of the library are provided for both linux and windows (64-bit versions).
-These are found on the git repository and may be downloaded directly:</p>
-</div>
-<div class="section" id="linking-and-usage">
-<h1><span class="section-number">4. </span>Linking and Usage<a class="headerlink" href="#linking-and-usage" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="installation-and-usage">
+<h1><span class="section-number">4. </span>Installation and usage<a class="headerlink" href="#installation-and-usage" title="Permalink to this headline">¶</a></h1>
 <p>This pages describes how to install and get up and running with the CFDwavemaker C++ library, with different CFD solvers.</p>
 <div class="section" id="linking-up-with-comflow">
 <h2><span class="section-number">4.1. </span>Linking up with ComFLOW<a class="headerlink" href="#linking-up-with-comflow" title="Permalink to this headline">¶</a></h2>
@@ -327,10 +323,10 @@ Linking CFDwavemaker to this library is straight forward, since it is built on t
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="inputfile_description.html" class="btn btn-neutral float-right" title="5. Input File Format" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="inputfile_description.html" class="btn btn-neutral float-right" title="5. Input file format" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="build_instructions.html" class="btn btn-neutral float-left" title="2. Build from Source" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="build_instructions.html" class="btn btn-neutral float-left" title="3. Build from Source" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

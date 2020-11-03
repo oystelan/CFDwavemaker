@@ -31,6 +31,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -89,12 +90,12 @@
               <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">2. Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input file examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a></li>
 <li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
 <li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
 <li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
@@ -166,11 +167,12 @@
   <div class="section" id="cfdwavemaker-s-documentation">
 <h1>CFDwavemaker’s documentation<a class="headerlink" href="#cfdwavemaker-s-documentation" title="Permalink to this headline">¶</a></h1>
 <p>CFDwavemaker is a C++ library developed with the purpose of providing wave kinematics input to CFD codes.
-More specifically, CFDwavemaker is capable of generating irregular short crested waves with several hundreds of frequency components using second order potential wave theory in a numerically efficient way. Kinematics may either be generated at the boundary (similar to a traditional wave maker) or used to initialize the entire domain before startup of the simulation (in which case it would be wise to use periodic domains).
-A example snapshot of a simulation is shown below, where CFDwavemaker has been used to inialize a CFD simulation run with open source code <a class="reference external" href="http://basilisk.fr">Basilisk</a>.</p>
+Kinematics may either be generated at the boundary (similar to a traditional wave maker) or used to initialize the entire domain before startup of the simulation, or both.
+What distinguishes CFDwavemaker from other similar codes is its capablility of generating irregular short crested waves with several hundreds of frequency components using second order potential wave theory in a numerically efficient way.</p>
+<p>A example snapshot of a simulation is shown below, where CFDwavemaker has been used to inialize a CFD simulation run with open source code <a class="reference external" href="http://basilisk.fr">Basilisk</a>.</p>
 <div class="figure align-default" id="id1">
 <img alt="CFDwavemaker in combination with Basilisk Navier-Stokes solver." src="_images/test3.png" />
-<p class="caption"><span class="caption-text">CFDwavemaker in combination with <a class="reference external" href="http://basilisk.fr">Basilisk</a> Navier-Stokes solver</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">CFDwavemaker in combination with <a class="reference external" href="http://basilisk.fr">Basilisk</a> Navier-Stokes solver</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 <div class="legend">
 </div>
 </div>
@@ -188,42 +190,39 @@ A example snapshot of a simulation is shown below, where CFDwavemaker has been u
 <li class="toctree-l2"><a class="reference internal" href="about.html#bug-reporting">1.4. Bug reporting</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-linux-unix">2.1. Build in Linux/Unix</a></li>
-<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-windows">2.2. Build in Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">2. Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-linux-unix">3.1. Build in Linux/Unix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_instructions.html#build-in-windows">3.2. Build in Windows</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-comflow">4.1. Linking up with ComFLOW</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-basilisk-or-c">4.2. Linking up with Basilisk (or C)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-openfoam">4.3. Linking up  with OpenFOAM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installation.html#linking-up-with-python">4.4. Linking up with Python</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#general-notes-on-the-input-format">5.1. General notes on the input Format</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-types">5.2. Wave types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#general-input-data">5.3. General input data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-reference-point">5.4. Wave reference point</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#ramps">5.5. Ramps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#irregular-wave-specification">5.6. Irregular wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#stokes-regular-wave-specification">5.7. Stokes regular wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wavemaker-theory-wave-specification">5.8. Wavemaker theory wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#spectral-method-wave-specification">5.9. Spectral method wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#grid-interpolation-schemes">5.10. Grid interpolation schemes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#output">5.11. Output</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#tips-tricks">5.12. Tips &amp; tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-types">5.1. Wave types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#general-input-data">5.2. General input data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wave-reference-point">5.3. Wave reference point</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#ramps">5.4. Ramps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#irregular-wave-specification">5.5. Irregular wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#stokes-regular-wave-specification">5.6. Stokes regular wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#wavemaker-theory-wave-specification">5.7. Wavemaker theory wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#spectral-method-wave-specification">5.8. Spectral method wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#grid-interpolation-schemes">5.9. Grid interpolation schemes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#output">5.10. Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_description.html#tips-tricks">5.11. Tips &amp; tricks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#long-crested-irregular-linear-waves">6.1. Long-crested Irregular Linear Waves</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-1">6.2. Short-crested irregular wave example 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#short-crested-irregular-wave-example-2">6.3. Short-crested irregular wave example 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#stokes-5th-order-regular-wave">6.4. Stokes 5th order regular wave</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input file examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#irregular-wave-examples">6.1. Irregular wave examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputfile_examples.html#regular-wave-examples">6.2. Regular wave examples</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="theory.html#irregular-wave-theory">7.1. Irregular wave theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="theory.html#regular-wave-theory">7.2. Regular wave theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="theory.html#wave-maker-theory">7.3. Wave maker theory</a></li>

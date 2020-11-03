@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>6. Input File Examples &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>6. Input file examples &mdash; CFDwavemaker 2.0.1 documentation</title>
   
 
   
@@ -31,6 +31,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -38,8 +39,8 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="7. Wave Theories" href="theory.html" />
-    <link rel="prev" title="5. Input File Format" href="inputfile_description.html" /> 
+    <link rel="next" title="7. Wave theories" href="theory.html" />
+    <link rel="prev" title="5. Input file format" href="inputfile_description.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -90,20 +91,26 @@
               <p class="caption"><span class="caption-text">Table of Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">2. Build from Source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html#linking-and-usage">4. Linking and Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input File Format</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Input File Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#long-crested-irregular-linear-waves">6.1. Long-crested Irregular Linear Waves</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-1">6.2. Short-crested irregular wave example 1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#short-crested-irregular-wave-example-2">6.3. Short-crested irregular wave example 2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#stokes-5th-order-regular-wave">6.4. Stokes 5th order regular wave</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">2. Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Input file examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-examples">6.1. Irregular wave examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#long-crested-irregular-random-waves">6.1.1. Long-crested irregular random waves</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#short-crested-irregular-focused-wave">6.1.2. Short-crested irregular focused wave</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#short-crested-irregular-random-wave">6.1.3. Short-crested irregular random wave</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#regular-wave-examples">6.2. Regular wave examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stokes-5th-order-regular-wave">6.2.1. Stokes 5th order regular wave</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a></li>
 <li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lisence.html">9. Lisence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
 <li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
 </ul>
 
@@ -151,7 +158,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li><span class="section-number">6. </span>Input File Examples</li>
+      <li><span class="section-number">6. </span>Input file examples</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -171,23 +178,80 @@
            <div itemprop="articleBody">
             
   <div class="section" id="input-file-examples">
-<h1><span class="section-number">6. </span>Input File Examples<a class="headerlink" href="#input-file-examples" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="long-crested-irregular-linear-waves">
-<h2><span class="section-number">6.1. </span>Long-crested Irregular Linear Waves<a class="headerlink" href="#long-crested-irregular-linear-waves" title="Permalink to this headline">¶</a></h2>
-<p>Description:</p>
+<h1><span class="section-number">6. </span>Input file examples<a class="headerlink" href="#input-file-examples" title="Permalink to this headline">¶</a></h1>
+<p>To give the user an idea of what a complete <em>waveinput.dat</em> file looks like, a set of example inputfiles are given below. If the input description was confusing and overwhelming, these examples should hopefully make it easier to see the bigger picture.</p>
+<div class="section" id="irregular-wave-examples">
+<h2><span class="section-number">6.1. </span>Irregular wave examples<a class="headerlink" href="#irregular-wave-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="long-crested-irregular-random-waves">
+<h3><span class="section-number">6.1.1. </span>Long-crested irregular random waves<a class="headerlink" href="#long-crested-irregular-random-waves" title="Permalink to this headline">¶</a></h3>
+<p><strong>Description:</strong></p>
 <ul class="simple">
 <li><p>Long crested (unidirectional wave group)</p></li>
 <li><p>irregular (multiple frequency components)</p></li>
 <li><p>linear wave theory (also known as Airy waves)</p></li>
-<li><p>velocity extrapolation <span class="math">\exp(kz)</span>.</p></li>
+<li><p>velocity extrapolation <span class="math notranslate nohighlight">\(\exp(kz)\)</span>.</p></li>
 </ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
+# Long crested wave example
+
+[wave type]
+# WAVETYPE
+irregular
+
+[general input data]
+depth 1.2
+mtheta 0.0
+swl 0.0
+normalize 1
+amplify 0.061
+
+[ramps]
+#ramptype    enable  rampup_start rampup_end
+time_rampup     0       0.0000       0.5
+
+[irregular wave components]
+nfreq 28
+ndir 1
+#   OMEGA      A          K          Phase
+        5.2033     0.0369     2.7670     0.0000
+        5.3014     0.0356     2.8708     0.0000
+        5.3996     0.0343     2.9767     0.0000
+        5.4978     0.0331     3.0849     0.0000
+        5.5960     0.0319     3.1951     0.0000
+        5.6941     0.0308     3.3075     0.0000
+        5.7923     0.0298     3.4219     0.0000
+        5.8905     0.0288     3.5384     0.0000
+        5.9887     0.0279     3.6570     0.0000
+        6.0868     0.0270     3.7776     0.0000
+        6.1850     0.0261     3.9002     0.0000
+        6.2832     0.0253     4.0248     0.0000
+        6.3814     0.0246     4.1514     0.0000
+        6.4795     0.0238     4.2800     0.0000
+        6.5777     0.0231     4.4106     0.0000
+        6.6759     0.0224     4.5432     0.0000
+        6.7741     0.0218     4.6778     0.0000
+        6.8722     0.0212     4.8143     0.0000
+        6.9704     0.0206     4.9528     0.0000
+        7.0686     0.0200     5.0933     0.0000
+        7.1668     0.0195     5.2358     0.0000
+        7.2649     0.0189     5.3802     0.0000
+        7.3631     0.0184     5.5266     0.0000
+        7.4613     0.0180     5.6749     0.0000
+        7.5595     0.0175     5.8252     0.0000
+        7.6576     0.0171     5.9775     0.0000
+        7.7558     0.0166     6.1318     0.0000
+        7.8540     0.0162     6.2880     0.0000
+# DIRS
+        0.00000     1.0
+</pre></div>
 </div>
-<div class="section" id="short-crested-irregular-wave-example-1">
-<h2><span class="section-number">6.2. </span>Short-crested irregular wave example 1<a class="headerlink" href="#short-crested-irregular-wave-example-1" title="Permalink to this headline">¶</a></h2>
-<p>Description:</p>
+</div>
+<div class="section" id="short-crested-irregular-focused-wave">
+<h3><span class="section-number">6.1.2. </span>Short-crested irregular focused wave<a class="headerlink" href="#short-crested-irregular-focused-wave" title="Permalink to this headline">¶</a></h3>
+<p><strong>Description:</strong></p>
 <ul class="simple">
 <li><p>user defined wave (Separate list of frequency component and directional components specified)</p></li>
-<li><p>short-crested focused wave(direction spreading). Focus point can be adjusted by adjusting the reference point.</p></li>
+<li><p>short-crested focused wave (direction spreading). Focus point can be adjusted by adjusting the reference point.</p></li>
 <li><p>irregular (multiple frequency components)</p></li>
 <li><p>Linear wave theory</p></li>
 <li><p>Velocity extrapolation constant above z=0</p></li>
@@ -280,9 +344,9 @@ ndir 19
 </pre></div>
 </div>
 </div>
-<div class="section" id="short-crested-irregular-wave-example-2">
-<h2><span class="section-number">6.3. </span>Short-crested irregular wave example 2<a class="headerlink" href="#short-crested-irregular-wave-example-2" title="Permalink to this headline">¶</a></h2>
-<p>Description:</p>
+<div class="section" id="short-crested-irregular-random-wave">
+<h3><span class="section-number">6.1.3. </span>Short-crested irregular random wave<a class="headerlink" href="#short-crested-irregular-random-wave" title="Permalink to this headline">¶</a></h3>
+<p><strong>Description:</strong></p>
 <ul class="simple">
 <li><p>user defined wave (variation 1). Direction specified for each frequency component explicitly.</p></li>
 <li><p>short-crested event wave, where focus point is default x=y=t=0. Focus point can be adjusted by adjusting the reference point.</p></li>
@@ -544,9 +608,12 @@ filename kin
 </pre></div>
 </div>
 </div>
+</div>
+<div class="section" id="regular-wave-examples">
+<h2><span class="section-number">6.2. </span>Regular wave examples<a class="headerlink" href="#regular-wave-examples" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="stokes-5th-order-regular-wave">
-<h2><span class="section-number">6.4. </span>Stokes 5th order regular wave<a class="headerlink" href="#stokes-5th-order-regular-wave" title="Permalink to this headline">¶</a></h2>
-<p>Description:</p>
+<h3><span class="section-number">6.2.1. </span>Stokes 5th order regular wave<a class="headerlink" href="#stokes-5th-order-regular-wave" title="Permalink to this headline">¶</a></h3>
+<p><strong>Description:</strong></p>
 <p>A regular stokes 5th order wave, propagated from still water using a linear rampup from time 0.0 to time 0.5 sec.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
 # Wavedata CFDwavemaker2
@@ -571,6 +638,7 @@ filename kin
 </div>
 </div>
 </div>
+</div>
 
 
            </div>
@@ -580,10 +648,10 @@ filename kin
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="theory.html" class="btn btn-neutral float-right" title="7. Wave Theories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="theory.html" class="btn btn-neutral float-right" title="7. Wave theories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="inputfile_description.html" class="btn btn-neutral float-left" title="5. Input File Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="inputfile_description.html" class="btn btn-neutral float-left" title="5. Input file format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

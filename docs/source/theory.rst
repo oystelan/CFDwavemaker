@@ -1,5 +1,11 @@
-Wave Theories
+Wave theories
 =============
+
+.. _theory_overview:
+.. figure:: images/theories_overview.png
+   :alt: Theory overview
+   
+   Overview of theories implemented (or to be implmented) in CFDwavemaker
 
 Irregular wave theory
 -----------------------

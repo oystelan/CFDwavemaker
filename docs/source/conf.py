@@ -31,7 +31,7 @@ release = '2.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 import sphinx_rtd_theme
-extensions = ['sphinx_rtd_theme','sphinx.ext.imgmath','sphinxcontrib.bibtex']
+extensions = ['sphinx_rtd_theme','sphinx.ext.mathjax','sphinxcontrib.bibtex','sphinx.ext.autosectionlabel']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -41,6 +41,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+autosectionlabel_prefix_document = True
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -50,6 +51,7 @@ exclude_patterns = []
 
 #html_theme = 'alabaster'
 html_theme = "sphinx_rtd_theme"
+numfig = True
 
 html_logo = "images/logo4.png"
 

@@ -1,26 +1,35 @@
-Input File Format
+Input file format
 =================
 
-General notes on the input Format
----------------------------------
+For CFDwavemaker to run, an input file containing all required data must be specified. The name of this file must be *"waveinput.dat"*, and should be located in the path of where the library or program calling CFDwavemaker is run. If this file cannot be located the program will stop and an error message will show in the standard output.
 
-For CFDwavemaker to run, an input file containing all required data must be specified. The name of this file must be "waveinput.dat", and should be located in the path of where the library or program calling CFDwavemaker is run. If this file cannot be located the program will stop and an error message will show in the output.
+The input file system is made up of keywords and tags. Every keyword as a certain number of mandatory tags, and some which are optional. To distinguish between a keyword and a tag, square braces are used for keywords while tags are outlined in red. To be more specific:
 
-The input file system is made up of tags. The order of the tags are almost arbitrary, however it is generally wise to specified which wave type to use before reading the other input.
-The tags for each input is given with braces around the keyword (ex: [wavetype]), followed by the input arguments.
+**[This is a keyword]**
+
+``This is a tag``
+
+All tags belong to a keyword. The order of the keywords are almost arbitrary with one exceptions:
+
+- It is generally wise to specified which wave type to use before specifying other keywords.
+
 Comments are permitted in the input files using # ,which will be stripped away before reading the file. 
-All tags and keywords are ALWAYS given with lower caps letters. Space is used as separator between keyword and values. 
+All tags and keywords are ALWAYS given with lower caps letters. Space is used as separator between keyword and values.
+
+All keywords available in CFDwavemaker (and what they do) are described in sections underneath.
 
 
 Wave types
 ----------
 
-CFDwavemaker currently support the following wave theories.
+CFDwavemaker currently support the following wave theories. Which branch of wave theory to used is controlled by the keyword **[wave type]**
 
 1. ``irregular`` - irregular wave theory (linear or second order)
 2. ``regular`` - Stokes regular wave theory (up to 5th order)
-3. ``pistonwavemaker`` - piston wave maker theory
-4. ``hosm`` - spectral wave theory through DNVGLs HOSM wave model
+3. ``wavemaker`` - Wave maker theory
+4. ``swd`` - `Spectral-Wave-Data`_ (swd) is an external library for generating  through DNVGLs HOSM wave model
+
+.. _`Spectral-Wave-Data`: http://https://github.com/SpectralWaveData
 
 In general, the most effort has been put into second order irregular wave theory, which is why this library was made in the first place. More wave theories may be added in the future.
 
@@ -34,7 +43,7 @@ To chose one of the above use the following code word
 
 General input data
 ------------------
-Some data are mandatory for all wave types. These parameters are specified under the tag [general input data].
+Some data are mandatory for all wave types. These parameters are specified under the tag **[general input data]**.
 
 
 .. list-table::
@@ -74,8 +83,8 @@ Finally, an example:
 Wave reference point
 --------------------
 
-A reference point in time and space for the wave specification is needed. This is specified using the tag [wave reference point], as shown in the example given below. time is given in seconds, position x and y are given in meters.
-Specifying the [wave reference point]-tag is optional. If this is not given, default values will be assumed.
+A reference point in time and space for the wave specification is needed. This is specified using the tag **[wave reference point]**, as shown in the example given below. time is given in seconds, position x and y are given in meters.
+Specifying the **[wave reference point]** is optional. If this is not given, default values will be assumed.
 
 .. list-table::
     :widths: 20 70 10
@@ -104,7 +113,7 @@ Specifying the [wave reference point]-tag is optional. If this is not given, def
 Ramps
 -----
 
-Ramps can sometimes be useful to avoid transient behaviour for example in at startup, or when specifying wave kinematics in corners of a domain. Ramps are specified in time and space (x and y plane only) by calling the tag [ramps] followed by the ramp input. The ramp may be omitted all together, in which case no ramp of any kind is used.
+Ramps can sometimes be useful to avoid transient behaviour for example in at startup, or when specifying wave kinematics in corners of a domain. Ramps are specified in time and space (x and y plane only) by calling the keyword **[ramps]** followed by the ramp input. The ramp may be omitted all together, in which case no ramp of any kind is used.
 
 .. list-table::
     :widths: 20 70 10
@@ -151,16 +160,12 @@ Irregular wave specification
 Irregular waves can be specified in several ways, but to keep it simple, we destinguish between two categories of specification:
 
 1. Manual specification - frequency components, directional components, amplitudes, etc are specified manually. This is useful when you want complete control or need to run a simulation where the spectral components are have been calculated by another program.
-2. Spectral specification - CFDwavemaker does the job for you.
-
-   .. warning::
-   
-    it should be noted that spectral specification is not yet fully implemented.
+2. Spectral specification - CFDwavemaker does the job for you. **Note: it should be noted that spectral specification is not yet fully implemented.**
 
 Manual specification
 ....................
 
-The tag [irregular wave components] needs to present. This tag requires the following information to follow:
+The tag **[irregular wave components]** needs to present. This tag requires the following information to follow:
 
 .. list-table::
     :widths: 20 70 10
@@ -232,7 +237,7 @@ Example 2:
 Spectral specification
 ......................
 
-The second of initializing an irregular wave field. The tag [irregular spectral properties] needs to be specified, followed by the following data
+The second of initializing an irregular wave field. The tag **[irregular spectral properties]** needs to be specified, followed by the following data
 
 to be updated.
 
@@ -282,7 +287,7 @@ Example 2:
 Second order wave theory
 ........................
 
-By default, the waves which are generated uses linear wave theory. To switch on the use of second order wave theory (which you DO want todo for steep waves), the tag [second order] must be specified, followed by some control parameters
+By default, the waves which are generated uses linear wave theory. To switch on the use of second order wave theory (which you DO want todo for steep waves), the keyword **[second order]** must be specified, followed by some optional control parameters
 
 .. list-table::
     :widths: 20 70 10
@@ -303,14 +308,17 @@ By default, the waves which are generated uses linear wave theory. To switch on 
     bandwidth 0.5
     extmet 2
 
+.. note::
+
+  The keyword **[second order]** is only for irregular wave theory. If other theories are used, this keyword is ignored.
 
 Stokes regular wave specification
 ---------------------------------
 
 Sir George Stokes solved this nonlinear wave problem in 1847 by expanding the relevant potential flow quantities in a Taylor series around the mean (or still) surface elevation. As a result, the boundary conditions can be expressed in terms of quantities at the mean (or still) surface elevation. Stokes's regular wave theory is of direct practical use for waves on intermediate and deep water. It is used in the design of coastal and offshore structures, in order to determine the wave kinematics (free surface elevation and flow velocities). 
-Several implementations of these waves exists. The implementation in CFDwavemaker is based on Ref. :cite:`skjelbreia1960fifth` and goes up to 5th order.
+Several implementations of these waves exists. The implementation in CFDwavemaker is based on Ref :cite:`skjelbreia1960fifth` and goes up to 5th order.
 
-To specify the properties of the Stokes waves the following tag is used: [stokes wave properties]. The properties that follows are given in the table below.
+To specify the properties of the Stokes waves the following keyword is used: **[stokes wave properties]**. The properties that follows are given in the table below.
 
 
 .. list-table::
@@ -349,13 +357,17 @@ Wavemaker theory may sometimes be useful when validating wave propagation agains
 Piston wavemaker theory
 .......................
 
-
+.. _pistonwavemaker:
 .. figure:: http://www.edesign.co.uk/wp-content/uploads/2013/02/IMGP3051.jpg
    :alt: Example of edinbourgh designs piston wave makers
    
    Example of `Edinbourgh Designs`_ piston wave maker
 
    .. _`Edinbourgh Designs`: http://www4.edesign.co.uk/product/piston-wave-generators/
+
+A piston wave maker is a flat wall which moves horizontally, thereby generating waves (see :numref:`pistonwavemaker`). In some cases one may be so lucky to get the position of the wall as output from a wave basin tests. This position signal may be used to generate kinematics using piston wave maker theory :cite:`kennard1949generation`. 
+To use piston wave maker theory **[wave type]** must first be set to *wavemaker*. Secondly, the piston wave maker input signal must be specified. This is done through **[piston wavemaker properties]**
+A list of the required input is given below.
 
 .. list-table::
     :widths: 20 70 10
@@ -364,7 +376,7 @@ Piston wavemaker theory
       - **description**
       - **mandatory**
     * - ``ntimesteps``
-      - number of timesteps that the time-series that follows consists of. Three columns are required. the first is **Time**, second is **Piston horizontal amplitude** and third is **Piston horizontal velocity**. 
+      - number of timesteps that the time-series that follows consists of. Three columns are required. the first is **Time**, second is **Piston horizontal amplitude** and third is **Piston horizontal velocity**. Piston hosisontal amplitude is the piston position signal (subtracting the mean). It the velocity is not available, it is recommended to use the gradient of the piston position signal
       - yes
     * - ``alpha_z``
       - Simple way of adjusting the amplitude time series. default value for this this is 0. Amplitude applied when calculating kinematics are Piston_ampl = Piston_horizontal_amplitude_time_series + alpha_z
@@ -379,7 +391,7 @@ Example 1:
 
 .. code-block:: none
 
-  [wave properties]
+  [piston wavemaker properties]
   # for piston wave maker
   # alpha values for adjusting elevation and velocity
   ntimesteps 24000
@@ -397,6 +409,15 @@ Example 1:
   0.0200  0.0002159  0.0008472
   ...
 
+Hinched wavemaker theory
+........................
+
+Note yet implemented
+
+Dual-hinched wavemaker theory
+.............................
+
+Also not yet implemented
 
 Spectral method wave specification
 ----------------------------------
@@ -416,8 +437,8 @@ Grid interpolation is essential in order to speed up initiallization of CFD doma
 Lagrangian Stretched grid interpolation (LSgrid)
 ................................................
 
-Lagrangian stretching, based on sigma transforms are used in combination with a stretching factor which is dependent on distance to surface, giving high resolution in z direction at the surface, and lower at depth.
-This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum number of points. The time interpolation is linear.
+Lagrangian stretching, based on sigma transforms are used in combination with a stretching factor, dependent on distance to surface, giving high resolution in z direction at the surface, and lower at depth.
+This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum number of points. The time interpolation is linear. To specify the use of a lagrangian streched grid interpolation scheme, the keyword **[lsgrid]** is used.
 
 .. list-table::
     :widths: 20 70 10
@@ -479,8 +500,8 @@ It is also possible to make CFDwavemaker dump kinematics directly to file. This 
 VTK
 ...
 
-When using grid interpolation, the kinematics is store on a lagrangian grid in the library. This grid can be dumped to an unstructured grid (.vtu) which is a well established format provided through the `VTK library`_ . The files may be visualized and processed further using `Paraview`_ or other software.
-To achieve this, the tag [vtk output] needs to be specified.
+When using interpolation scheme, wave kinematics is stored on a grid for quick interpolation. This grid can be dumped a VTK file (.vtu) which is a well established format provided through the `VTK library`_ . The files may be visualized and processed further using `Paraview`_ or other software.
+To achieve this, the tag **[vtk output]** needs to be specified.
 Everytime the grid is updated, a new .vtu file is written for the time t = t0.
 
 .. list-table::
@@ -496,13 +517,13 @@ Everytime the grid is updated, a new .vtu file is written for the time t = t0.
       - prefix kinematics files. Defaults is "kinematics". Hence files will be named kinematics0000.vtu, kinematics0001.vtu, ... etc. 
       - no
 
-For now, it is not possible to choose a different time step than what is used to in [LSgrid]. This may be updated in the future.
+For now, it is not possible to choose a different time step than what is used to in **[LSgrid]**. This may be updated in the future.
 
 .. _`VTK library`: http://www.vtk.org
 .. _`Paraview`: http://www.paraview.org
 
 
-Example code:
+**Example code:**
 
 .. code-block:: none
   
@@ -515,18 +536,55 @@ Example code:
 Time-series
 ...........
 
-To do.
+.. warning::
+
+  Not yet fully implemented.
+
+Time traces of surface elevation and kinematics may be dumped during runtime for QA purposes. Thi 
+
+**Example code:**
+
+.. code-block:: none
+  
+  [timeseries output]
+  storage_path ./ts/
+  filename tsfile
+  npos 3
+  # x y z
+  0.0 0.0 0.0
+  3.3 5.4 -10.
+  0.0 5.4 -10.
+
 
 Spectral data
 .............
 
-To do.
+.. warning::
+
+  Not yet fully implemented.
+
+Writes spectral components to file. Useful for QA purposes. data is written to the file *spectral_components.dat*. For convenience the output format is such that it can be copied directly into a *waveinput.dat* file. (see :numref:`inputfile_description:Manual specification`)
+
+The example below illustrates the format for which the spectral data is dumped. 
+
+.. code-block:: none
+    
+    # spectral wave data output
+    # [irregular wave components]
+    # nfreq 5
+    # ndir 0
+    # OMEGA [rad/s]    A[m]       K[rad/m]        Phase[rad]    theta[rad]
+    0.80684460     0.09098686     0.06636591    22.09105101    -0.51238946
+    0.57527858     0.08989138     0.03410555    -8.15520380    -1.01219701
+    0.59315305     0.20143761     0.03615181    -8.35009702    -0.92729522
+    0.71493207     0.09704876     0.05213889    11.00239563    -0.58800260
+    0.73560378     0.15043259     0.05518335    14.76881712    -0.55165498
 
 
 Tips & tricks
 -------------
 
-The comment marker # is useful for turning on and off features temporarily. For instance, switching from second order to first order waves are simply done by adding a # infront of [second order]. Turning of grid interpolation is simply done by adding # infront of [lsgrid], and all the remaining parameters assosiated to this tag will be ignored. Example: 
+The comment marker # is useful for turning on and off features temporarily. For instance, switching from second order to first order waves are simply done by adding a # infront of **[second order]**. Turning of grid interpolation is simply done by adding # infront of **[lsgrid]**, and all the remaining parameters assosiated to this tag will be ignored. Example: 
 
 .. code-block:: none
 
