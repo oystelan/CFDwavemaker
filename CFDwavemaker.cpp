@@ -39,11 +39,30 @@
 //int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
 
 
+// Storage class of input data.
+class CFDwavemakerInputdata {
+public:
+	double depth;
+	double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
+	double mtheta;
+	double swl = 0.;
+	bool bw_auto_calc = false;
+	int wavetype;
+
+	CFDwavemakerInputdata() {
+	}
+
+	~CFDwavemakerInputdata() {
+	}
+
+
+};
+
+
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
-double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
-double mtheta;
-double swl = 0.;
-bool bw_auto_calc = false;
+
+CFDwavemakerInputdata inputdata;
+
 
 // Stokes 5 class
 Stokes5 stokes5;
@@ -65,7 +84,7 @@ Ramp ramp;
 
 //fftw_plan p;
 
-int wavetype;
+
 
 //#define GetCurrentDir _getcwd
 
@@ -237,19 +256,19 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << lineA << std::endl;
 			// check if valid wave type is given
 			if (!lineA.compare("irregular") || !lineA.compare("1")) {
-				wavetype = 1;
+				inputdata.wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
 			else if (!lineA.compare("pistonwavemaker")) {
-				wavetype = 11;
+				inputdata.wavetype = 11;
 				std::cout << "Piston wave maker theory specified" << std::endl;
 			}
 			else if (!lineA.compare("spectral wave")) {
-				wavetype = 31;
+				inputdata.wavetype = 31;
 				std::cout << "spectral wave (HOSM) specified" << std::endl;
 			}
 			else if (!lineA.compare("stokes5")) {
-				wavetype = 21;
+				inputdata.wavetype = 21;
 				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
 			}
 			else {
@@ -265,8 +284,8 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> depth;
-			buf >> mtheta;
+			buf >> inputdata.depth;
+			buf >> inputdata.mtheta;
 			buf.clear();
 		}
 		if (!lineA.compare("[normalize]")) { //optional
@@ -291,9 +310,9 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			getline(f, lineA);
 			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> tofmax;
-			buf >> x_pos;
-			buf >> y_pos;
+			buf >> inputdata.tofmax;
+			buf >> inputdata.x_pos;
+			buf >> inputdata.y_pos;
 			buf.clear();
 		}
 		if (!lineA.compare("[ramps]")) { //optional
@@ -352,7 +371,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		// Wave properties: this is where the wave type specific data is given
 		if (!lineA.compare("[wave properties]")) {
-			if (wavetype == 1) {
+			if (inputdata.wavetype == 1) {
 				// In case of irregular wave is specified
 				getline(f, lineA);
 				trim(lineA);
@@ -481,7 +500,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 				
 			}
-			else if (wavetype == 11) {
+			else if (inputdata.wavetype == 11) {
 				// Wavemaker theory (piston)
 				// read alpha values
 				getline(f, lineA);
@@ -494,7 +513,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf.str(lineA);
 				buf >> wmaker.n_timesteps;
 				//n_timesteps = stoi(lineA);
-				std::cout << "Number of timesteps: " << wavetype << std::endl;
+				std::cout << "Number of timesteps: " << inputdata.wavetype << std::endl;
 
 				// declare some vectors to store piston data
 				wmaker.PD_time = new double[wmaker.n_timesteps];
@@ -512,7 +531,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 				}
 			}
-			else if (wavetype == 21) {
+			else if (inputdata.wavetype == 21) {
 				// read Line 2
 				getline(f, lineA);
 				buf.str(lineA);
@@ -527,7 +546,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 
 		if (!lineA.compare("[current speed]")) { //optional
-			if (wavetype == 21){ // Stokes 5th
+			if (inputdata.wavetype == 21){ // Stokes 5th
 				getline(f, lineA);
 				std::cout << lineA << std::endl;
 				std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
@@ -544,7 +563,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "still water level: " << lineA << "m" << std::endl;
 			
 			buf.str(lineA);
-			buf >> swl;
+			buf >> inputdata.swl;
 			buf.clear();
 		}
 
@@ -588,8 +607,8 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> gclass.NYL;
 					buf >> gclass.NZL;
 					buf.clear();
-					if (wavetype == 1)
-						wavetype = 2;
+					if (inputdata.wavetype == 1)
+						inputdata.wavetype = 2;
 				}
 				if (!lineA.compare("wallx")) {
 					getline(f, lineA);
@@ -614,8 +633,8 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					gclass.wallx_start[0] = gclass.wallxsize[0];
 					gclass.wallx_start[1] = gclass.wallxsize[2];
 					gclass.wallx_start[2] = gclass.wallxsize[4];
-					if (wavetype == 1) // if irregular wave
-						wavetype = 3; // change to special case irregular with gridded wallx condition
+					if (inputdata.wavetype == 1) // if irregular wave
+						inputdata.wavetype = 3; // change to special case irregular with gridded wallx condition
 				}
 			}
 		}
@@ -686,8 +705,8 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 			buf.clear();
 
-			if (wavetype == 1)
-				wavetype = 4;
+			if (inputdata.wavetype == 1)
+				inputdata.wavetype = 4;
 			else {
 				std::cerr << "LS grid may only be used with irregular waves" << std::endl;
 				exit(-1);
@@ -697,30 +716,30 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 	}
 	std::cout << "Input file read successfully." << std::endl;
 
-	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
-		irregular.depth = depth;
-		irregular.mtheta = mtheta;
-		irregular.tofmax = tofmax;
-		irregular.fpoint[0] = x_pos;
-		irregular.fpoint[1] = y_pos;
-		irregular.swl = swl;
+	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
+		irregular.depth = inputdata.depth;
+		irregular.mtheta = inputdata.mtheta;
+		irregular.tofmax = inputdata.tofmax;
+		irregular.fpoint[0] = inputdata.x_pos;
+		irregular.fpoint[1] = inputdata.y_pos;
+		irregular.swl = inputdata.swl;
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
 
 	}
-	else if (wavetype == 21) {
-		stokes.depth = depth;
-		stokes.theta = mtheta;
-		stokes.x0 = x_pos;
-		stokes.y0 = y_pos;
-		stokes.t0 = tofmax;
-		stokes.z0 = swl;
+	else if (inputdata.wavetype == 21) {
+		stokes.depth = inputdata.depth;
+		stokes.theta = inputdata.mtheta;
+		stokes.x0 = inputdata.x_pos;
+		stokes.y0 = inputdata.y_pos;
+		stokes.t0 = inputdata.tofmax;
+		stokes.z0 = inputdata.swl;
 		// set the properties of the wave
-		stokes.set_stokes5_properties(wave_length, wave_height);
+		stokes.set_stokes5_properties(inputdata.wave_length, inputdata.wave_height);
 	}
 
-	if (wavetype == 4) {
-		lsgrid.water_depth = depth;
+	if (inputdata.wavetype == 4) {
+		lsgrid.water_depth = inputdata.depth;
 		lsgrid.set_ignore();
 
 		if (lsgrid.ignore_at_init) {
@@ -773,19 +792,19 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			//std::cout << lineA << std::endl;
 			// check if valid wave type is given
 			if (!lineA.compare("irregular") || !lineA.compare("1")) {
-				wavetype = 1;
+				inputdata.wavetype = 1;
 				std::cout << "Irregular perturbation wave theory specified" << std::endl;
 			}
 			else if (!lineA.compare("wavemaker")) {
-				wavetype = 11;
+				inputdata.wavetype = 11;
 				std::cout << "Wave maker theory specified" << std::endl;
 			}
 			else if (!lineA.compare("regular")) {
-				wavetype = 21;
+				inputdata.wavetype = 21;
 				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
 			}
 			else if (!lineA.compare("swd")) {
-				wavetype = 31;
+				inputdata.wavetype = 31;
 				std::cout << "Spectral wave data (swd) specified" << std::endl;
 			}
 			
@@ -811,16 +830,16 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				if (!lineA.compare(0, 5, "depth")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> depth;
+					buf >> inputdata.depth;
 					buf.clear();
-					std::cout << "Water depth: " << depth << "m" << std::endl;
+					std::cout << "Water depth: " << inputdata.depth << "m" << std::endl;
 				}
 				if (!lineA.compare(0, 6, "mtheta")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> mtheta;
+					buf >> inputdata.mtheta;
 					buf.clear();
-					std::cout << "Mean wave direction: " << mtheta << "degrees" << std::endl;
+					std::cout << "Mean wave direction: " << inputdata.mtheta << "degrees" << std::endl;
 				}
 				if (!lineA.compare(0, 9, "normalize")) {
 					buf.str(lineA);
@@ -849,7 +868,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "-------------------------------------" << std::endl;
 			std::cout << "Second order irregular wave settings:" << std::endl;
 			std::cout << "-------------------------------------" << std::endl;
-			if (wavetype > 10) {
+			if (inputdata.wavetype > 10) {
 				std::cout << "InputError: This tag is only available for irregular waves." << std::endl;
 				exit(-1);
 			}		
@@ -877,7 +896,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					else if (!dummystr.compare(0, 3, "auto")) {
 						// Compute a decent bandwidth value. todo: make a function which does this
 						std::cout << "Bandwidth: auto" << std::endl;
-						bw_auto_calc = true;
+						inputdata.bw_auto_calc = true;
 					}
 					else { // assumes that a value is given
 						irreg.dw_bandwidth = atof(dummystr.c_str());
@@ -904,23 +923,23 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				if (!lineA.compare(0, 4, "time")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> tofmax;
+					buf >> inputdata.tofmax;
 					buf.clear();
-					std::cout << "t0: " << tofmax << " sec" <<std::endl;
+					std::cout << "t0: " << inputdata.tofmax << " sec" <<std::endl;
 				}
 				if (!lineA.compare(0, 1, "x")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> x_pos;
+					buf >> inputdata.x_pos;
 					buf.clear();
-					std::cout << "x0: " << x_pos << " m" << std::endl;
+					std::cout << "x0: " << inputdata.x_pos << " m" << std::endl;
 				}
 				if (!lineA.compare(0, 1, "y")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> y_pos;
+					buf >> inputdata.y_pos;
 					buf.clear();
-					std::cout << "y0: " << y_pos << " m" << std::endl;
+					std::cout << "y0: " << inputdata.y_pos << " m" << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -1008,7 +1027,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "Irregular Wave components:" << std::endl;
 			std::cout << "--------------------------" << std::endl;
 
-			if (wavetype != 1) {
+			if (inputdata.wavetype != 1) {
 				std::cerr << "InputError: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
@@ -1160,7 +1179,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 		// Wave properties: piston wave maker
 		if (!lineA.compare("[pistonwavemaker wave properties]")) {
-			if (wavetype != 11) {
+			if (inputdata.wavetype != 11) {
 				std::cout << "piston wave maker properties does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
@@ -1180,7 +1199,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			buf.str(lineA);
 			buf >> wmaker.n_timesteps;
 			//n_timesteps = stoi(lineA);
-			std::cout << "Number of timesteps: " << wavetype << std::endl;
+			std::cout << "Number of timesteps: " << inputdata.wavetype << std::endl;
 
 			// declare some vectors to store piston data
 			wmaker.PD_time = new double[wmaker.n_timesteps];
@@ -1201,7 +1220,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		
 		// Wave properties: Stokes wave properties
 		if (!lineA.compare("[stokes wave properties]")) {
-			if (wavetype != 21) {
+			if (inputdata.wavetype != 21) {
 				std::cout << "InputError: Stokes wave properties does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
@@ -1343,8 +1362,8 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 			std::cout << "Ignore subdomain at t_init: " << lsgrid.ignore_at_init << std::endl;
 
-			if (wavetype == 1)
-				wavetype = 4;
+			if (inputdata.wavetype == 1)
+				inputdata.wavetype = 4;
 			else {
 				std::cerr << "LS grid may currently only be used with irregular waves." << std::endl;
 				exit(-1);
@@ -1358,7 +1377,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "--------------------" << std::endl;
 			std::cout << "VTK output settings:" << std::endl;
 			std::cout << "--------------------" << std::endl;
-			if (wavetype != 4) {
+			if (inputdata.wavetype != 4) {
 				std::cout << "InputError: VTK output only works in combination with LSgrid at the moment." << std::endl;
 				exit(-1);
 			}
@@ -1393,25 +1412,26 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 	// Do some checks of the specified input parameters. Some combinations are prohibited
 
-	if (wavetype == 4 && irregular.order != 2) {
+	if (inputdata.wavetype == 4 && irregular.order != 2) {
 		std::cerr << "LSgrid interpolation uses strictly second order theory. Doesnt make sence to use grid interpolation for linear theory since this is very fast anyway. Either add the tag [second order] to the input file, or remore [lsgrid]." << std::endl;
 		exit(-1);
 
 	}
 
+	wave_water_depth = inputdata.depth;
 
 	std::cout << "\n-----------------------------------------------" << std::endl;
 	std::cout << "Input file read successfully." << std::endl;
 	std::cout << "***********************************************\n\n" << std::endl;
 
-	if (wavetype == 1 || wavetype == 2 || wavetype == 3 || wavetype == 4) {
-		irregular.depth = depth;
-		irregular.mtheta = mtheta;
-		irregular.tofmax = tofmax;
-		irregular.fpoint[0] = x_pos;
-		irregular.fpoint[1] = y_pos;
-		irregular.swl = swl;
-		if (bw_auto_calc) {
+	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
+		irregular.depth = inputdata.depth;
+		irregular.mtheta = inputdata.mtheta;
+		irregular.tofmax = inputdata.tofmax;
+		irregular.fpoint[0] = inputdata.x_pos;
+		irregular.fpoint[1] = inputdata.y_pos;
+		irregular.swl = inputdata.swl;
+		if (inputdata.bw_auto_calc) {
 			irreg.dw_bandwidth = irregular.bandwidth_estimator();
 			std::cout << "BW_autocalc: Bandwidth parameter set to " << irreg.dw_bandwidth << " rad/s." << std::endl;		
 		}
@@ -1419,20 +1439,20 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.calculate_bwindices();
 		irregular.dumpSpectralComponents();
 	}
-	else if (wavetype == 21) {
-		stokes.depth = depth;
-		stokes.theta = mtheta;
-		stokes.x0 = x_pos;
-		stokes.y0 = y_pos;
-		stokes.t0 = tofmax;
-		stokes.z0 = swl;
+	else if (inputdata.wavetype == 21) {
+		stokes.depth = inputdata.depth;
+		stokes.theta = inputdata.mtheta;
+		stokes.x0 = inputdata.x_pos;
+		stokes.y0 = inputdata.y_pos;
+		stokes.t0 = inputdata.tofmax;
+		stokes.z0 = inputdata.swl;
 		// set the properties of the wave
-		stokes.set_stokes5_properties(wave_length, wave_height);
+		stokes.set_stokes5_properties(inputdata.wave_length, inputdata.wave_height);
 	}
 
-	if (wavetype == 4) {
-		lsgrid.water_depth = depth;
-		lsgrid.swl = swl;
+	if (inputdata.wavetype == 4) {
+		lsgrid.water_depth = inputdata.depth;
+		lsgrid.swl = inputdata.swl;
 		lsgrid.set_ignore();
 
 		if (lsgrid.ignore_at_init) {
@@ -1462,9 +1482,9 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {
 
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-depth, zpt);
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 	// irregular waves
 	case 1:
 		return ramp.ramp(tpt,xpt,ypt)*irregular.u(tpt, xpt, ypt, zpt);
@@ -1515,9 +1535,9 @@ double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double s
 {
 
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-depth, zpt);
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 		// irregular waves
 	case 1:
 		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
@@ -1552,9 +1572,9 @@ double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double s
 double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-depth, zpt);
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 		// irregular waves
 	case 1:
 		return ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
@@ -1594,9 +1614,9 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-depth, zpt);
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 		// irregular waves
 	case 1:
 		return ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
@@ -1635,9 +1655,9 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-depth, zpt);
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 		// irregular waves
 	case 1:
 		return ramp.ramp(tpt, xpt, ypt) * irregular.dp(tpt, xpt, ypt, zpt);
@@ -1655,7 +1675,7 @@ double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
 //
 double wave_SurfElev(double xpt, double ypt, double tpt)
 {
-	switch (wavetype) {
+	switch (inputdata.wavetype) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
 		//return waveelev(tpt, xpt, ypt);
@@ -1680,8 +1700,8 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			std::cout << "updating wall X kinematics tables for time interval t0=" << gridclass.t0 + gridclass.dt << "sec, t1=" << gridclass.t1 + gridclass.dt << "sec." << std::endl;
 		}
 		// check if coordinate is within boundary wallbox
-		if (!gridclass.CheckBounds(gridclass.wallxsize, xpt, ypt, swl)) {
-			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, swl);
+		if (!gridclass.CheckBounds(gridclass.wallxsize, xpt, ypt, inputdata.swl)) {
+			gridclass.redefine_boundary_wallx(irregular, tpt, xpt, ypt, inputdata.swl);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
 	case 4:

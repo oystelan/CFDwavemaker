@@ -559,11 +559,7 @@ Time traces of surface elevation and kinematics may be dumped during runtime for
 Spectral data
 .............
 
-.. warning::
-
-  Not yet fully implemented.
-
-Writes spectral components to file. Useful for QA purposes. data is written to the file *spectral_components.dat*. For convenience the output format is such that it can be copied directly into a *waveinput.dat* file. (see :numref:`inputfile_description:Manual specification`)
+Writes spectral components to file (in case irregular waves are run). Useful for QA purposes. This is always down after input file have been read, hence no additional keyword is required in the input file. Data is written to the file *spectral_components.dat*. For convenience the output format is such that it can be copied directly into a *waveinput.dat* file. (see :numref:`inputfile_description:Manual specification`)
 
 The example below illustrates the format for which the spectral data is dumped. 
 
