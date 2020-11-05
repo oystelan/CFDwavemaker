@@ -1418,7 +1418,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 	}
 
-	wave_water_depth = inputdata.depth;
 
 	std::cout << "\n-----------------------------------------------" << std::endl;
 	std::cout << "Input file read successfully." << std::endl;
@@ -1471,6 +1470,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 }
 
+
+double wave_water_depth() {
+	return inputdata.depth;
+}
 
 /*
 ----------------------------------------------------------------------
