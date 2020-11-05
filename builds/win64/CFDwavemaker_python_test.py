@@ -101,9 +101,9 @@ def clean_up(mydll):
 #exit()
 
 #
-t = 35.0
+t = 0.0
 x = 0.
-shutil.copy2('./waveinput3.dat','./waveinput.dat')
+#shutil.copy2('./waveinput3.dat','./waveinput.dat')
 tic()
 print(init_dll(mydll))
 toc()

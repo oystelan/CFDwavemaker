@@ -48,6 +48,7 @@ public:
 	double swl = 0.;
 	bool bw_auto_calc = false;
 	int wavetype;
+	bool property_read = false;
 
 	CFDwavemakerInputdata() {
 	}
@@ -1175,6 +1176,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 				irreg.initialized = true;
 			}
+			inputdata.property_read = true;
 		}
 
 		// Wave properties: piston wave maker
@@ -1216,6 +1218,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf >> wmaker.PD_eta[i];
 				buf.clear();
 			}
+
+			inputdata.property_read = true;
+			wmaker.initialized = true;
 		}
 		
 		// Wave properties: Stokes wave properties
@@ -1225,7 +1230,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				exit(-1);
 			}
 			if (stokes.initialized) {
-				std::cout << "InputError: Pistonwavemaker already initialized. please check input file" << std::endl;
+				std::cout << "InputError: Stokes 5th wave already initialized. please check input file" << std::endl;
 				exit(-1);
 			}
 			while (!f.eof()) {
@@ -1255,7 +1260,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					lineA = lineP;
 					break;
 				}
-			}			
+			}
+			inputdata.property_read = true;
+			stokes.initialized = true;
 		}
 
 		if (!lineA.compare("[lsgrid]")) {
@@ -1437,6 +1444,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.normalize_data();
 		irregular.calculate_bwindices();
 		irregular.dumpSpectralComponents();
+
+		if (!inputdata.property_read) {
+			std::cout << "Irregular wave selected, but no wave components/wave properties found in input file." << std::endl;
+			exit(-1);
+		}
 	}
 	else if (inputdata.wavetype == 21) {
 		stokes.depth = inputdata.depth;
@@ -1446,7 +1458,17 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		stokes.t0 = inputdata.tofmax;
 		stokes.z0 = inputdata.swl;
 		// set the properties of the wave
-		stokes.set_stokes5_properties(inputdata.wave_length, inputdata.wave_height);
+		stokes.set_stokes5_properties(stokes.wave_length, stokes.wave_height);
+		if (!inputdata.property_read) {
+			std::cout << "Stokes wave selected, but no wave properties found in input file." << std::endl;
+			exit(-1);
+		}
+	}
+	else if (inputdata.wavetype == 11) {
+		if (!inputdata.property_read) {
+			std::cout << "Wave maker selected, but no wavemaker property data found in input file." << std::endl;
+			exit(-1);
+		}
 	}
 
 	if (inputdata.wavetype == 4) {
@@ -1788,20 +1810,27 @@ int wave_Initialize()
 	fid.open("./waveinput.dat");
 	// check one step up in the folder tree (this is used in the latest comflow version)
 	if (fid.fail()) {
-		fid.open("../waveinput.dat");
-	}
-	if (fid.fail()) {
-		fid.open("./WaveProperties/waveinput.dat");
-		std::cout << "Waveinput.dat file found in folder ./WaveProperties" << std::endl;
+		fid.open("./constant/waveinput.dat");
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ./constant/" << std::endl;
+		}
 	}
 	if (fid.fail()) {
 		fid.open("./input_files/waveinput.dat");
-		std::cout << "Waveinput.dat file found in folder ./input_files" << std::endl;
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ./input_files/" << std::endl;
+		}
 	}
 	if (fid.fail()) {
 		std::cerr << "Could not open file (is it really there?) " << std::endl;
 		return -1;
 		exit(1);
+	}
+	if (fid.fail()) {
+		fid.open("../waveinput.dat");
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ../" << std::endl;
+		}
 	}
 	while (fid.good()) {
 		getline(fid, lineA);
