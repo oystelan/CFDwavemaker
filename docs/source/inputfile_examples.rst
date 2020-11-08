@@ -463,7 +463,7 @@ A regular stokes 5th order wave, propagated from still water using a linear ramp
 	depth 88.00  
 	mtheta 0.0000     
 
-	[wave properties]
+	[stokes wave properties]
 	#mandatory properties for stokes wave
 	wave_length 300.
 	wave_height 20.

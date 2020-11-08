@@ -71,7 +71,7 @@ double Stokes5::eta(double t, double X, double Y)
 		pow(eps, 4) * ((B42) * cos(2 * kx) + (B44) * cos(4 * kx)) +
 		pow(eps, 5) * (-((B53) + (B55)) * cos(kx) + (B53) * cos(3 * kx) + (B55) * cos(5 * kx));
 
-	return keta / (k) - depth;
+	return keta / (k) - depth + z0;
 }
 
 
