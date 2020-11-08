@@ -856,7 +856,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 					std::cout << "Amplify (gain): " << irreg.ampl << "m" << std::endl;
 				}
-				if (!lineA.compare(0, 7, "swl")) {
+				if (!lineA.compare(0, 3, "swl")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> inputdata.swl;
