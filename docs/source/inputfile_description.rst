@@ -422,7 +422,73 @@ Also not yet implemented
 Spectral method wave specification
 ----------------------------------
 
-To be updated.
+Support for higher order spectral methods (HOSM) is implemented through the Spectral wave data library (SWD).
+
+.. note::
+
+  HOSM is not a part of this library. To use HOSM data as input to CFD, the simulation first have to be run in HOSM, and saved to the **.swd* file format. The spectral-wave-data library may in turns read this file and generate kinematics from it.
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``swdfile``
+      - Name of swd file. Obviously this is mandatory. a full path may be specified if the file is located in another directory than the  default run directory. (spaces in the file path is not permitted)
+      - yes
+    * - ``x0``
+      - Reference position x [m]. default x0 = 0. 
+      - no
+    * - ``y0``
+      - Reference position y [m]. default y0 = 0. 
+      - no
+    * - ``x0``
+      - Reference position z [m]. default z0 = 0. 
+      - no
+    * - ``beta``
+      - Reference direction of wave field (in degrees). default beta = 0. 
+      - no
+    * - ``nsumx``
+      - Number of spectral components to apply in x direction (<0: apply all)
+      - no
+    * - ``nsumy``
+      - Number of spectral components to apply in y direction (<0: apply all)
+      - no
+    * - ``impl``
+      - Index to determine actual derived class. 0 = Default. <0 = In-house and experimental implementations. >0 = Validated implementations available open software
+      - no
+    * - ``ipol``
+      - Index to request actual temporal interpolation scheme. 0 = Default (C^2 continous scheme). 1 = C^1 continous. 2 = C^3 continous
+      - no  
+    * - ``norder``
+      - Expansion order to apply in kinematics for z>0. 0 = Apply expansion order specified in swd file (default). <0 = Apply exp(kj z). >0 = Apply expansion order = norder
+      - no
+    * - ``dc_bias``
+      - Control application of zero-frequency bias present in SWD file. false = Suppress contribution from zero frequency amplitudes (default). true  = Apply zero frequency amplitudes from SWD file.
+      - no    
+
+An example of the required input parameters which needs to be specified in *waveinput.data* is given below:
+
+.. code-block:: none
+
+    [swd wave properties]
+    swdfile     constant/fenton_h1.2_d1_l2.swd
+    # Relation between SWD and application coordinates. beta in degree. These all have default value 0.0
+    # See also origin above for defining the still water position
+    x0 0.0
+    y0 0.0
+    t0 0.0
+    beta 0.0
+    # Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
+    nsumx -1
+    nsumy -1
+    impl 0
+    ipol 0
+    norder 0
+    dc_bias false
+    
+
 
 Grid interpolation schemes
 --------------------------

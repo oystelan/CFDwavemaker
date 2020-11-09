@@ -565,9 +565,9 @@ current_speed 0.
 <p>Wavemaker theory may sometimes be useful when validating wave propagation against model test data were a physical wave maker has been used to generate the waves.</p>
 <div class="section" id="piston-wavemaker-theory">
 <h3><span class="section-number">5.7.1. </span>Piston wavemaker theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
-<div class="figure align-default" id="id7">
+<div class="figure align-default" id="id9">
 <span id="pistonwavemaker"></span><img alt="Example of edinbourgh designs piston wave makers" src="http://www.edesign.co.uk/wp-content/uploads/2013/02/IMGP3051.jpg" />
-<p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Example of <a class="reference external" href="http://www4.edesign.co.uk/product/piston-wave-generators/">Edinbourgh Designs</a> piston wave maker</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Example of <a class="reference external" href="http://www4.edesign.co.uk/product/piston-wave-generators/">Edinbourgh Designs</a> piston wave maker</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
 <div class="legend">
 </div>
 </div>
@@ -632,7 +632,86 @@ alpha_u 0.1
 </div>
 <div class="section" id="spectral-method-wave-specification">
 <h2><span class="section-number">5.8. </span>Spectral method wave specification<a class="headerlink" href="#spectral-method-wave-specification" title="Permalink to this headline">¶</a></h2>
-<p>To be updated.</p>
+<p>Support for higher order spectral methods (HOSM) is implemented through the Spectral wave data library (SWD).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>HOSM is not a part of this library. To use HOSM data as input to CFD, the simulation first have to be run in HOSM, and saved to the <a href="#id7"><span class="problematic" id="id8">**</span></a>.swd* file format. The spectral-wave-data library may in turns read this file and generate kinematics from it.</p>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 70%" />
+<col style="width: 10%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>name</strong></p></td>
+<td><p><strong>description</strong></p></td>
+<td><p><strong>mandatory</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">swdfile</span></code></p></td>
+<td><p>Name of swd file. Obviously this is mandatory. a full path may be specified if the file is located in another directory than the  default run directory. (spaces in the file path is not permitted)</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">x0</span></code></p></td>
+<td><p>Reference position x [m]. default x0 = 0.</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">y0</span></code></p></td>
+<td><p>Reference position y [m]. default y0 = 0.</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">x0</span></code></p></td>
+<td><p>Reference position z [m]. default z0 = 0.</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">beta</span></code></p></td>
+<td><p>Reference direction of wave field (in degrees). default beta = 0.</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">nsumx</span></code></p></td>
+<td><p>Number of spectral components to apply in x direction (&lt;0: apply all)</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nsumy</span></code></p></td>
+<td><p>Number of spectral components to apply in y direction (&lt;0: apply all)</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">impl</span></code></p></td>
+<td><p>Index to determine actual derived class. 0 = Default. &lt;0 = In-house and experimental implementations. &gt;0 = Validated implementations available open software</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ipol</span></code></p></td>
+<td><p>Index to request actual temporal interpolation scheme. 0 = Default (C^2 continous scheme). 1 = C^1 continous. 2 = C^3 continous</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">norder</span></code></p></td>
+<td><p>Expansion order to apply in kinematics for z&gt;0. 0 = Apply expansion order specified in swd file (default). &lt;0 = Apply exp(kj z). &gt;0 = Apply expansion order = norder</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dc_bias</span></code></p></td>
+<td><p>Control application of zero-frequency bias present in SWD file. false = Suppress contribution from zero frequency amplitudes (default). true  = Apply zero frequency amplitudes from SWD file.</p></td>
+<td><p>no</p></td>
+</tr>
+</tbody>
+</table>
+<p>An example of the required input parameters which needs to be specified in <em>waveinput.data</em> is given below:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[swd wave properties]
+swdfile     constant/fenton_h1.2_d1_l2.swd
+# Relation between SWD and application coordinates. beta in degree. These all have default value 0.0
+# See also origin above for defining the still water position
+x0 0.0
+y0 0.0
+t0 0.0
+beta 0.0
+# Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
+nsumx -1
+nsumy -1
+impl 0
+ipol 0
+norder 0
+dc_bias false
+</pre></div>
+</div>
 </div>
 <div class="section" id="grid-interpolation-schemes">
 <h2><span class="section-number">5.9. </span>Grid interpolation schemes<a class="headerlink" href="#grid-interpolation-schemes" title="Permalink to this headline">¶</a></h2>
@@ -772,11 +851,7 @@ npos 3
 </div>
 <div class="section" id="spectral-data">
 <h3><span class="section-number">5.10.3. </span>Spectral data<a class="headerlink" href="#spectral-data" title="Permalink to this headline">¶</a></h3>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Not yet fully implemented.</p>
-</div>
-<p>Writes spectral components to file. Useful for QA purposes. data is written to the file <em>spectral_components.dat</em>. For convenience the output format is such that it can be copied directly into a <em>waveinput.dat</em> file. (see <a class="reference internal" href="#manual-specification"><span class="std std-numref">Section 5.5.1</span></a>)</p>
+<p>Writes spectral components to file (in case irregular waves are run). Useful for QA purposes. This is always down after input file have been read, hence no additional keyword is required in the input file. Data is written to the file <em>spectral_components.dat</em>. For convenience the output format is such that it can be copied directly into a <em>waveinput.dat</em> file. (see <a class="reference internal" href="#manual-specification"><span class="std std-numref">Section 5.5.1</span></a>)</p>
 <p>The example below illustrates the format for which the spectral data is dumped.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># spectral wave data output
 # [irregular wave components]
