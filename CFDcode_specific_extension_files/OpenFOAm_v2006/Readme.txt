@@ -19,3 +19,4 @@ waveDampToIncident/WaveDampToIncident.C
 4. Now, compile openfoam. Step 1-3 may be done after openfoam has been compiled, just remember to recompile the wave library. This is most easily done by running OpenFOAM-v2006/src/Allrun.
 If you compile openfoam for the first time, be patient. It takes a while! (typically half a day).
 
+
