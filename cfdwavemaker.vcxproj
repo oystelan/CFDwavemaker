@@ -75,6 +75,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.dll</TargetExt>
     <OutDir>$(SolutionDir)builds\win64\</OutDir>
+    <LibraryPath>C:\Program Files %28x86%29\Common Files\Intel\Shared Libraries\redist\intel64_win;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -110,6 +111,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>C:\projects\CFDwavemaker\SpectralWaveData.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Common Files\Intel\Shared Libraries\redist\intel64_win\compiler;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -120,6 +124,7 @@
     <ClCompile Include="CFDwavemaker.cpp" />
     <ClCompile Include="sgrid.cpp" />
     <ClCompile Include="Irregular.cpp" />
+    <ClCompile Include="SpectralWaveData.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Wavemaker.cpp" />
@@ -129,6 +134,7 @@
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="sgrid.h" />
     <ClInclude Include="Irregular.h" />
+    <ClInclude Include="SpectralWaveData.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Wavemaker.h" />

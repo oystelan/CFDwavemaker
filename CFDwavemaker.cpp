@@ -31,6 +31,7 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
+#include "SpectralWaveData.h"
 
 //#include <fftw3.h>
 
@@ -82,6 +83,9 @@ sGrid sgrid;
 
 // Ramp class
 Ramp ramp;
+
+// SWD class;
+//SpectralWaveData *swd;
 
 //fftw_plan p;
 
@@ -1271,6 +1275,140 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			inputdata.property_read = true;
 			stokes.initialized = true;
 		}
+
+		if (!lineA.compare("[swd wave properties]")) { //optional
+			std::cout << "-------------------------------------" << std::endl;
+			std::cout << "Spectral wave data:" << std::endl;
+			std::cout << "-------------------------------------" << std::endl;
+			if (inputdata.wavetype != 31) {
+				std::cout << "InputError: please set [wave type] = swd when using keyword [swd wave properties]." << std::endl;
+				exit(-1);
+			}
+			std::string swdFileName_;
+			double x0_ = 0., y0_ = 0., t0_ = 0., beta_ = 0., rho_ = 1025., nsumx_ = -1, nsumy_ = -1, impl_ = 0, ipol_ = 0, norder_ = 0;
+			bool dc_bias_ = false;
+			while (!f.eof()) {
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 7, "swdfile")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> swdFileName_;
+					buf.clear();
+					std::cout << "Swd file specified:  " << swdFileName_ << std::endl;
+				}
+				if (!lineA.compare(0, 2, "x0")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> x0_;
+					buf.clear();
+					std::cout << "x0:  " << x0_ << " m." << std::endl;
+				}
+				if (!lineA.compare(0, 2, "y0")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> y0_;
+					buf.clear();
+					std::cout << "y0:  " << y0_ << " m." << std::endl;
+				}
+				if (!lineA.compare(0, 2, "t0")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> t0_;
+					buf.clear();
+					std::cout << "t0:  " << t0_ << " sec." << std::endl;
+				}
+				if (!lineA.compare(0, 4, "beta")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> beta_;
+					buf.clear();
+					std::cout << "beta:  " << beta_ << " deg." <<std::endl;
+				}
+				if (!lineA.compare(0, 3, "rho")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rho_;
+					buf.clear();
+					std::cout << "rho:  " << rho_ << " kg/m^3." << std::endl;
+				}
+				if (!lineA.compare(0, 5, "nsumx")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> nsumx_;
+					buf.clear();
+					std::cout << "nsumx:  " << nsumx_ << std::endl;
+				}
+				if (!lineA.compare(0, 5, "nsumy")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> nsumy_;
+					buf.clear();
+					std::cout << "nsumy:  " << nsumy_ << std::endl;
+				}
+				if (!lineA.compare(0, 4, "impl")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> impl_;
+					buf.clear();
+					std::cout << "impl:  " << impl_ << std::endl;
+				}
+				if (!lineA.compare(0, 4, "ipol")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> ipol_;
+					buf.clear();
+					std::cout << "ipol:  " << ipol_ << std::endl;
+				}
+				if (!lineA.compare(0, 6, "norder")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> norder_;
+					buf.clear();
+					std::cout << "norder:  " << ipol_ << std::endl;
+				}
+				if (!lineA.compare(0, 9, "dc_bias")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> dummystr;
+
+					if (!dummystr.compare(0, 5, "false")) {
+						// Do nothing. default value is already a very high number
+						dc_bias_ = false;
+					}
+					else if (!dummystr.compare(0, 4, "true")) {
+						// Compute a decent bandwidth value. todo: make a function which does this						
+						dc_bias_ = true;
+					}
+					else { // assumes that a value is given
+						dc_bias_ = atof(dummystr.c_str());
+					}
+					std::cout << "dc_bias:   " << dc_bias_ << std::endl;
+
+					buf.clear();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+
+			SpectralWaveData *swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
+
+		}
+
 
 		if (!lineA.compare("[lsgrid]")) {
 			std::cout << "-----------------------------------" << std::endl;
