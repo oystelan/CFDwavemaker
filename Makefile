@@ -1,7 +1,7 @@
 CC      := g++
 CCFLAGS := -O2 -fPIC -pthread -std=c++11
 LDFLAGS :=
-LIBS += -lm
+LIBS += -lm libSpectralWaveData.a
 BUILD_DIR += ./builds/linux64/
 
 TARGETS:= CFDwavemaker
@@ -11,8 +11,8 @@ TARGETS_SHARED_OMP:= $(addsuffix _openmp.so, $(TARGETS))
 TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o sgrid.o $(MAINS)
-DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.h sgrid.h
+OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o sgrid.o SpectralWaveData.o $(MAINS)
+DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.h sgrid.h SpectralWaveData.h
 #OBJ_OMP := $(OBJ)
 
 .PHONY: all clean openmp
