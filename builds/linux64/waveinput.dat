@@ -1,0 +1,30 @@
+@v2009
+# Wavedata CFDwavemaker2
+
+[wave type]
+swd
+
+[general input data]
+depth 15.00
+mtheta 0.0000
+
+[swd wave properties]
+swdfile  fenton_h1.2_d1_l2.swd
+# Relation between SWD and application coordinates. beta in degree. These all have default value 0.0
+# See also origin above for defining the still water position
+x0 0.0
+y0 0.0
+t0 0.0
+beta 0.0
+# Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
+nsumx -1
+nsumy -1
+impl 0
+ipol 0
+norder 0
+dc_bias false
+
+[ramps]
+# ramp_type    enable       rampup_start rampup_end
+time_rampup    1            0.0000       1.0
+# you do not need to specify all ramps, only the once you need.

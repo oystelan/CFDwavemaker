@@ -118,13 +118,13 @@
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\projects\CFDwavemaker\mods;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
     <ClCompile Include="sgrid.cpp" />
     <ClCompile Include="Irregular.cpp" />
-    <ClCompile Include="SpectralWaveData.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Wavemaker.cpp" />
@@ -134,7 +134,6 @@
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="sgrid.h" />
     <ClInclude Include="Irregular.h" />
-    <ClInclude Include="SpectralWaveData.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Wavemaker.h" />
