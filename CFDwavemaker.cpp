@@ -31,7 +31,8 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
-#include "SpectralWaveData.h"
+//#include "SpectralWaveData.h"
+
 
 //#include <fftw3.h>
 
@@ -85,7 +86,7 @@ sGrid sgrid;
 Ramp ramp;
 
 // SWD class;
-SpectralWaveData *swd;
+//SpectralWaveData *swd;
 
 //fftw_plan p;
 
@@ -1405,7 +1406,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 
-			swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
+			//swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
 
 		}
 
@@ -1595,6 +1596,12 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			exit(-1);
 		}
 	}
+	else if (inputdata.wavetype == 11) {
+		if (!inputdata.property_read) {
+			std::cout << "Wave maker selected, but no wavemaker property data found in input file." << std::endl;
+			exit(-1);
+		}
+	}
 	else if (inputdata.wavetype == 21) {
 		stokes.depth = inputdata.depth;
 		stokes.theta = inputdata.mtheta;
@@ -1609,12 +1616,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			exit(-1);
 		}
 	}
-	else if (inputdata.wavetype == 11) {
-		if (!inputdata.property_read) {
-			std::cout << "Wave maker selected, but no wavemaker property data found in input file." << std::endl;
-			exit(-1);
-		}
-	}
+	
 
 	if (inputdata.wavetype == 4) {
 		lsgrid.water_depth = inputdata.depth;
@@ -1691,9 +1693,14 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-	
+	// wavemaker
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+		// swd
+	/*case 31:
+		{swd->UpdateTime(tpt);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.x; }*/
 	default:
 		return 0.0;
 	}
@@ -1774,7 +1781,11 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
-
+		// swd
+	/*case 31:
+		{swd->UpdateTime(tpt);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.y; }*/
 	default:
 		return 0.0;
 	}
@@ -1815,7 +1826,11 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
-
+		// swd
+	/*case 31:
+		{swd->UpdateTime(tpt);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.z; }*/
 	default:
 		return 0.0;
 	}
@@ -1884,7 +1899,10 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
-		
+		// swd
+	/*case 31:
+	{swd->UpdateTime(tpt);
+	return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt); }*/
 	default:
 		return 0.0;
 	}
@@ -1924,7 +1942,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v.2.1.2" << std::endl;
+	std::cout << "CFD WAVEMAKER v.2.1.3" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	// Check if license has expired

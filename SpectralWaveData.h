@@ -10,7 +10,6 @@ Coded by: Jens B. Helmers DNVGL,  2019.08.11
 */
 #include <string>
 #include <stdexcept>
-
 #include "spectral_wave_data.h"  // The core C interface
 
 // Specific Exception Classes...
@@ -100,7 +99,7 @@ public:
     SwdInputValueException:     Input arguments for class methods are not sound
     SwdAllocateException:       Not able to allocate internal SWD storage
 
-    /**/
+    */
 
     ~SpectralWaveData();
 
@@ -206,4 +205,4 @@ public:
     void ExceptionClear();
 
 };
-#endif SWD_CPP_H_INCLUDED
+#endif // SWD_CPP_H_INCLUDED
