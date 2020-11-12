@@ -31,7 +31,7 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
-#include "SpectralWaveData.h"
+//#include "SpectralWaveData.h"
 
 //#include <fftw3.h>
 
@@ -1405,7 +1405,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 
-			SpectralWaveData *swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
+			//SpectralWaveData *swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
 
 		}
 
