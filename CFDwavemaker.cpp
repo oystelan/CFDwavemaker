@@ -31,7 +31,7 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
-//#include "SpectralWaveData.h"
+#include "SpectralWaveData.h"
 
 
 //#include <fftw3.h>
@@ -86,7 +86,7 @@ sGrid sgrid;
 Ramp ramp;
 
 // SWD class;
-//SpectralWaveData *swd;
+SpectralWaveData *swd;
 
 //fftw_plan p;
 
@@ -1405,7 +1405,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					break;
 				}
 			}
-			//swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
+			swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
 
 
 		}
@@ -1697,10 +1697,21 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 		// swd
-	/*case 31:
-		{swd->UpdateTime(tpt);
+	case 31:
+	{
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.x; }*/
+		return ramp.ramp(tpt, xpt, ypt) * U.x; 
+	}
 	default:
 		return 0.0;
 	}
@@ -1782,10 +1793,21 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 		// swd
-	/*case 31:
-		{swd->UpdateTime(tpt);
+	case 31:
+	{
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.y; }*/
+		return ramp.ramp(tpt, xpt, ypt) * U.y; 
+	}
 	default:
 		return 0.0;
 	}
@@ -1827,10 +1849,21 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 		// swd
-	/*case 31:
-		{swd->UpdateTime(tpt);
+	case 31:
+	{
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.z; }*/
+		return ramp.ramp(tpt, xpt, ypt) * U.z; 
+	}
 	default:
 		return 0.0;
 	}
@@ -1900,9 +1933,21 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
 		// swd
-	/*case 31:
-	{swd->UpdateTime(tpt);
-	return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt); }*/
+	case 31:
+	{
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+		
+		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
+	}
 	default:
 		return 0.0;
 	}

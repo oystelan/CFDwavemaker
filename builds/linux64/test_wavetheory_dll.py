@@ -23,33 +23,36 @@ mydll = cdll.LoadLibrary("./libCFDwavemaker.so")
 
 #exit()
 
-def velocityx(mydll,t,x,y,z):
+def velocityX(mydll,t,x,y,z):
     aa = mydll.VelocityX
     aa.restype = c_double
-    aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
-    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))    
-
-def velocityy(mydll,t,x,y,z):
+    aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
+    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
+    
+def velocityY(mydll,t,x,y,z):
     aa = mydll.VelocityY
     aa.restype = c_double
-    aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
-    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t)) 
+    aa.argtypes = [c_int, c_int, c_int, c_double, c_double, c_double, c_double]
+    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
 
-def velocityz(mydll,t,x,y,z):
+def velocityZ(mydll,t,x,y,z):
     aa = mydll.VelocityZ
     aa.restype = c_double
-    aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
-    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t)) 
-    
+    aa.argtypes = [c_int,c_int,c_int,c_double,c_double,c_double,c_double]
+    return aa(c_int(0),c_int(0),c_int(0),c_double(x),c_double(y),c_double(z),c_double(t))
+
 def waveelev(mydll,t,x,y):
     aa = mydll.SurfaceElevation
     aa.restype = c_double
-    aa.argtypes = [POINTER(c_int),POINTER(c_int),POINTER(c_double),POINTER(c_double),POINTER(c_double)]
-    #print aa(byref(c_int(0)),byref(c_int(0)),byref(c_int(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)),byref(c_double(0)))    
-    return aa(c_int(0),c_int(0),c_double(x),c_double(y),c_double(t))    
+    aa.argtypes = [c_int,c_int,c_double,c_double,c_double]
+    return aa(c_int(0),c_int(0),c_double(x),c_double(y),c_double(t))
+
+
+def volfrac(mydll,x,y,z,t,delta):
+    aa = mydll.VolumeFraction
+    aa.restype = c_double
+    aa.argtypes = [c_double,c_double,c_double,c_double,c_double]
+    return aa(c_double(x),c_double(y),c_double(z),c_double(t),c_double(delta))
 
 def init_dll(mydll):
     aa = mydll.Init
@@ -64,28 +67,19 @@ def clean_up(mydll):
 
 print(init_dll(mydll))
 
-#print(waveelev(mydll,5.,0,0))
 
-
-exit()
-time = np.arange(0,10,0.05)
+time = np.arange(0,10,0.5)
 
 z = []
 u = []
 v = []
 w = []
 for t in time:
-    z.append(waveelev(mydll,t,0,0))
-    u.append(velocityx(mydll,t,0,0,0))
-    v.append(velocityy(mydll,t,0,0,0))
-    w.append(velocityz(mydll,t,0,0,0))
+    z.append(waveelev(mydll,0.,t,0))
+    u.append(velocityX(mydll,t,0,0,0))
+    v.append(velocityY(mydll,t,0,0,0))
+    w.append(velocityZ(mydll,t,0,0,0))
 
-#plt.plot(time,z,time,u,time,v,time,w)
-#plt.plot(time,z)
-#plt.show()
-##result1= mydll.add(10,1)
-##result2= mydll.sub(10,1)
-##print "Addition value:-"+result1
-##print "Substraction:-"+result2
+
 
 

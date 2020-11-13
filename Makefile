@@ -1,6 +1,6 @@
 CC      := g++-9
 CCFLAGS := -O2 -fPIC -pthread -std=c++11
-LDFLAGS := -L./ -L/usr/lib/gcc/x86_64-linux-gnu/9 
+LDFLAGS := -L./swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9 
 LIBS += -lm -lgfortran
 BUILD_DIR += ./builds/linux64/
 
@@ -11,8 +11,8 @@ TARGETS_SHARED_OMP:= $(addsuffix _openmp.so, $(TARGETS))
 TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o sgrid.o $(MAINS)
-DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.h sgrid.h
+OBJ    := Stokes5.o Irregular.o Wavespectra.o Utils.o Wavemaker.o sgrid.o SpectralWaveData.o $(MAINS)
+DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Wavespectra.h Utils.h Wavemaker.h sgrid.h spectral_wave_data.h SpectralWaveData.h
 #OBJ_OMP := $(OBJ)
 
 .PHONY: all clean openmp
@@ -23,7 +23,10 @@ test: $(TARGETS_SHARED)
 
 clean:
 	rm -f $(OBJ)
-	#ar x libSpectralWaveData.a
+	ar x ./swd/lib/libSpectralWaveData.a
+	cp ./swd/cpp/SpectralWaveData.cpp .
+	cp ./swd/inc/SpectralWaveData.h .
+	cp ./swd/inc/spectral_wave_data.h .
 
 openmp: $(TARGETS_SHARED_OMP) $(TARGETS_STATIC_OMP)
 
@@ -36,21 +39,21 @@ $(OBJ): %.o : %.cpp
 #$(OBJ_OMP): %.o : %.cpp $(DEPS)
 #	$(CC) -c -o $@ $< $(CCFLAGS) -fopenmp
 
-$(TARGETS_SHARED): $(OBJ) 
+$(TARGETS_SHARED): $(OBJ) *.o
 	$(CC) $(CCFLAGS) -shared -o $(BUILD_DIR)lib$@ $^ $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
-$(TARGETS_STATIC): $(OBJ)
+$(TARGETS_STATIC): $(OBJ) *.o
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_SHARED_OMP): EXTRA_FLAGS = -fopenmp 
-$(TARGETS_SHARED_OMP): $(OBJ)
+$(TARGETS_SHARED_OMP): $(OBJ) *.o
 	$(CC) $(CCFLAGS) -shared -fopenmp -o $(BUILD_DIR)lib$@ $^ $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_STATIC_OMP): EXTRA_FLAGS = -fopenmp 
-$(TARGETS_STATIC_OMP): $(OBJ) 
+$(TARGETS_STATIC_OMP): $(OBJ) *.o
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
 

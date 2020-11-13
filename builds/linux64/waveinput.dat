@@ -26,5 +26,5 @@ dc_bias false
 
 [ramps]
 # ramp_type    enable       rampup_start rampup_end
-time_rampup    1            0.0000       1.0
+time_rampup    0            0.0000       1.0
 # you do not need to specify all ramps, only the once you need.
