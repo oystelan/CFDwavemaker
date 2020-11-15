@@ -68,14 +68,16 @@ def clean_up(mydll):
 print(init_dll(mydll))
 
 
-time = np.arange(0,10,0.5)
+time = np.arange(0,100,0.5)
 
 z = []
 u = []
 v = []
 w = []
 for t in time:
-    z.append(waveelev(mydll,0.,t,0))
+    ww = waveelev(mydll,t,0,0)
+    print(t, ww)
+    z.append(ww)
     u.append(velocityX(mydll,t,0,0,0))
     v.append(velocityY(mydll,t,0,0,0))
     w.append(velocityZ(mydll,t,0,0,0))

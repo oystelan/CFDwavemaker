@@ -139,6 +139,100 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
+void sGrid::initialize_kinematics(SpectralWaveData *swd) {
+	// Tell the swd object current application time...
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
+	ds = 1. / std::max(1., double(nl - 1));
+
+	double dd = omp_get_wtime();
+
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel // start parallel initialization
+	{
+		// timestep T0.
+#pragma omp master
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+		try {
+			swd->UpdateTime(t0);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double eta_temp = ETA0[i * ny + j] - swl;
+
+
+				for (int m = 0; m < nl; m++) {
+					//std::cout << i << " " << j << " " << m << std::endl;
+					double spt = s2tan(-1. + ds * m);
+					double zpt = s2z(spt, eta_temp, water_depth);
+					vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+					
+					UX0[i * ny * nl + j * nl + m] = U.x;
+					UY0[i * ny * nl + j * nl + m] = U.y;
+					UZ0[i * ny * nl + j * nl + m] = U.z;
+
+				}
+			}
+		}
+		// timestep T1.
+#pragma omp master
+		try {
+			swd->UpdateTime(t0+dt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double eta_temp = ETA1[i * ny + j] - swl;
+
+
+				for (int m = 0; m < nl; m++) {
+					double spt = s2tan(-1. + ds * m);
+					double zpt = s2z(spt, eta_temp, water_depth);
+					vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+					UX1[i * ny * nl + j * nl + m] = U.x;
+					UY1[i * ny * nl + j * nl + m] = U.y;
+					UZ1[i * ny * nl + j * nl + m] = U.z;
+
+				}
+			}
+		}
+	} // End parallel initialization
+	if (dump_vtk) {
+		write_vtk();
+	}
+	std::cout << "Generation of domain kinematics data completed. ";
+	dd = omp_get_wtime() - dd;
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	std::cout << "Interpolation can commence..." << std::endl;
+}
+
 void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
@@ -222,6 +316,100 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
+void sGrid::initialize_kinematics_with_ignore(SpectralWaveData *swd) {
+	// Tell the swd object current application time...
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
+	ds = 1. / std::max(1., double(nl - 1));
+
+	double dd = omp_get_wtime();
+
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel // start parallel initialization
+	{
+		// timestep T0.
+#pragma omp master
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+		try {
+			swd->UpdateTime(t0);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double eta_temp = ETA0[i * ny + j] - swl;
+
+				if (!IGNORE[i * ny + j]) {
+					for (int m = 0; m < nl; m++) {
+						double spt = s2tan(-1. + ds * m);
+						double zpt = s2z(spt, eta_temp, water_depth);
+						vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+						UX0[i * ny * nl + j * nl + m] = U.x;
+						UY0[i * ny * nl + j * nl + m] = U.y;
+						UZ0[i * ny * nl + j * nl + m] = U.z;
+
+					}
+				}
+			}
+		}
+		// timestep T1.
+#pragma omp master
+		try {
+			swd->UpdateTime(t0 + dt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double eta_temp = ETA1[i * ny + j] - swl;
+
+				if (!IGNORE[i * ny + j]) {
+					for (int m = 0; m < nl; m++) {
+						double spt = s2tan(-1. + ds * m);
+						double zpt = s2z(spt, eta_temp, water_depth);
+						vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+						UX1[i * ny * nl + j * nl + m] = U.x;
+						UY1[i * ny * nl + j * nl + m] = U.y;
+						UZ1[i * ny * nl + j * nl + m] = U.z;
+
+					}
+				}
+			}
+		}
+	} // End parallel initialization
+	if (dump_vtk) {
+		write_vtk();
+	}
+	std::cout << "Generation of domain kinematics data completed. ";
+	dd = omp_get_wtime() - dd;
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	std::cout << "Interpolation can commence..." << std::endl;
+}
 // when called, writes stored kinematics to file
 void sGrid::write_vtk() {
 	char buffer[256]; sprintf(buffer, "%05d", update_count);
@@ -258,8 +446,8 @@ void sGrid::allocate() {
 	UZ1 = new double[nx * ny * nl];
 }
 
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
+
+void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
@@ -280,18 +468,48 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 
 #pragma omp parallel
 	{
+#pragma omp master
+		try {
+			swd->UpdateTime(t0);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-			
+		for (int i = 0; i < nx; i++) {	
 			for (int j = 0; j < ny; j++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				
-				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-				ETA1[i * ny + j] = irregular.eta1(t0+dt, xpt, ypt) + irregular.eta2(t0+dt, xpt, ypt) + swl;
-				
-			}			
+				ETA0[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+			}
+
+		}
+#pragma omp master
+		try {
+			swd->UpdateTime(t0+dt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+
+				ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+
+			}
 		}
 	}
 	dd = omp_get_wtime() - dd;
@@ -300,6 +518,46 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
+// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
+void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
+	std::cout << "time: " << t_target << std::endl;
+	t0 = t_target;
+
+	// Allocating memory for storage of surface elevation and velocities
+
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
+
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel
+	{
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+
+				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+				ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+
+			}
+		}
+	}
+	dd = omp_get_wtime() - dd;
+
+	std::cout << "Surface Elevation generated successfully. ";
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+}
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
 
@@ -341,6 +599,76 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
+void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData *swd, double t_target) {
+	std::cout << "time: " << t_target << std::endl;
+	t0 = t_target;
+
+	// Allocating memory for storage of surface elevation and velocities
+
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
+
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel
+	{
+#pragma omp master
+		try {
+			swd->UpdateTime(t0);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				if (!IGNORE[i * ny + j]) {
+					double xpt = domain[0] + dx * i;
+					double ypt = domain[2] + dy * j;
+
+					ETA0[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+				}
+			}
+		}
+#pragma omp master
+		try {
+			swd->UpdateTime(t0 + dt);
+		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				if (!IGNORE[i * ny + j]) {
+					double xpt = domain[0] + dx * i;
+					double ypt = domain[2] + dy * j;
+					ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+				}
+			}
+		}
+	}
+	dd = omp_get_wtime() - dd;
+
+	std::cout << "Surface Elevation generated successfully. ";
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+}
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void sGrid::update(Irregular& irregular, double t_target)
 {
@@ -409,6 +737,7 @@ void sGrid::update(Irregular& irregular, double t_target)
 		
 		if (dump_vtk) {
 			write_vtk();
+			update_count++;
 		}
 		
 		dd = omp_get_wtime() - dd;
@@ -417,6 +746,77 @@ void sGrid::update(Irregular& irregular, double t_target)
 	}
 }
 
+void sGrid::update(SpectralWaveData* swd, double t_target)
+{
+	// Start by checking bounds
+/*
+if (!disable_checkbounds){
+	CheckBounds();
+}*/
+
+// new time step
+	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
+		double new_time = dt * std::floor(t_target / dt);
+		initialize_surface_elevation(swd, new_time);
+		initialize_kinematics(swd);
+	}
+	else {
+		t0 += dt;
+		// Updating surface elevations
+		double dd = omp_get_wtime();
+		//omp_set_num_threads(1);
+		omp_set_num_threads(omp_get_max_threads());
+#pragma omp parallel
+		{
+#pragma omp master
+			try {
+				swd->UpdateTime(t0 + dt);
+			}
+			catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+				std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+				// If we will try again with a new value of t
+				// we first need to call: swd.ExceptionClear()
+				exit(EXIT_FAILURE);  // In this case we just abort.
+			}
+			// Main grid
+#pragma omp for collapse(2)
+			for (int i = 0; i < nx; i++) {
+				for (int j = 0; j < ny; j++) {
+					if (!IGNORE[i * ny + j]) {
+					double xpt = domain[0] + dx * i;
+					double ypt = domain[2] + dy * j;					
+						ETA0[i * ny + j] = ETA1[i * ny + j];
+						ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+
+						for (int m = 0; m < nl; m++) {
+							double spt = s2tan(-1. + ds * m);
+							double zpt = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
+
+							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
+							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
+							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
+
+							vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+							UX1[i * ny * nl + j * nl + m] = U.x;
+							UY1[i * ny * nl + j * nl + m] = U.y;
+							UZ1[i * ny * nl + j * nl + m] = U.z;
+						}
+					}
+				}
+			}
+		}
+
+		if (dump_vtk) {
+			write_vtk();
+			update_count++;
+		}
+		
+		dd = omp_get_wtime() - dd;
+		std::cout << "update time: " << dd << " sec" << std::endl;
+		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	}
+}
 
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/

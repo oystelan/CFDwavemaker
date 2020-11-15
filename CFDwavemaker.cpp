@@ -1407,7 +1407,25 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 			swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
 
+			std::string cid = swd->GetChr("cid");
 
+			std::vector<std::string> v;
+
+			std::stringstream ss(cid);
+
+			while (ss.good()) {
+				std::string substr;
+				getline(ss, substr, ',');
+				v.push_back(substr);
+			}
+
+
+			std::cout << "************************************************************************* " << std::endl;
+			std::cout << "The following info is stored in the specified swd file " << swdFileName_ << std::endl;
+			std::cout << "************************************************************************* " << std::endl;
+			for (size_t i = 0; i < v.size(); i++)
+				std::cout << v[i] << std::endl;
+			std::cout << "************************************************************************* " << std::endl;
 		}
 
 
@@ -1515,10 +1533,16 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 			std::cout << "Ignore subdomain at t_init: " << lsgrid.ignore_at_init << std::endl;
 
-			if (inputdata.wavetype == 1)
+			if (inputdata.wavetype == 1) {
 				inputdata.wavetype = 4;
+				std::cout << "LS grid + irregular = True." << std::endl;
+			}
+			else if (inputdata.wavetype == 31){
+				inputdata.wavetype = 34;
+				std::cout << "LS grid + swd = True." << std::endl;
+			}
 			else {
-				std::cerr << "LS grid may currently only be used with irregular waves." << std::endl;
+				std::cerr << "LS grid may currently only be used with irregular second order wave theory and spectral wave method" << std::endl;
 				exit(-1);
 			}
 			lsgrid.allocate();
@@ -1530,7 +1554,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "--------------------" << std::endl;
 			std::cout << "VTK output settings:" << std::endl;
 			std::cout << "--------------------" << std::endl;
-			if (inputdata.wavetype != 4) {
+			if (inputdata.wavetype != 4 && inputdata.wavetype != 34)  {
 				std::cout << "InputError: VTK output only works in combination with LSgrid at the moment." << std::endl;
 				exit(-1);
 			}
@@ -1632,11 +1656,29 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			lsgrid.initialize_kinematics(irreg);
 		}
 	}
+	// swd with lsgrid
+	if (inputdata.wavetype == 34) {
+		double dt_swd_file = swd->GetReal("d");
+		if (dt_swd_file != inputdata.depth && dt_swd_file > 0) {
+			std::cout << "Warning: Specified water depth, " << inputdata.depth << "m,  not the same as used in swd file d = " << dt_swd_file << "m. Depth specified in SWD file will be used." << std::endl;
+			lsgrid.water_depth = dt_swd_file;
+		}
+		else {
+			lsgrid.water_depth = inputdata.depth;
+		}
 
-
-
+		lsgrid.swl = inputdata.swl;
+		lsgrid.set_ignore();
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(swd, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(swd);
+		}
+		else {
+			lsgrid.initialize_surface_elevation(swd, lsgrid.t0);
+			lsgrid.initialize_kinematics(swd);
+		}
+	}
 	return 0;
-
 }
 
 
@@ -1946,8 +1988,15 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 		
+		std::cout << "time: " << tpt << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
 	}
+	case 34:
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+			sgrid.update(swd, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
 	default:
 		return 0.0;
 	}

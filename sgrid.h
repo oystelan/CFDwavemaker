@@ -6,6 +6,7 @@
 #define SGrid_H
 
 #include "Irregular.h"
+#include "SpectralWaveData.h"
 
 #define largeval 1.E12
 
@@ -59,14 +60,22 @@ public:
 	double tan2s(double t);
 
 	void initialize_kinematics(Irregular& irregular);
+	void initialize_kinematics(SpectralWaveData *swd);
+
 	void initialize_kinematics_with_ignore(Irregular& irregular);
+	void initialize_kinematics_with_ignore(SpectralWaveData *swd);
 	void write_vtk();
 	void allocate();
+
 	void initialize_surface_elevation(Irregular& irregular, double t_target);
+	void initialize_surface_elevation(SpectralWaveData *swd, double t_target);
+	
 	void initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target);
+	void initialize_surface_elevation_with_ignore(SpectralWaveData *swd, double t_target);
 
 	// Update kinematics data matrices
 	void update(Irregular& irregular, double t_target);
+	void update(SpectralWaveData* swd, double t_target);
 
 	void set_ignore();
 
