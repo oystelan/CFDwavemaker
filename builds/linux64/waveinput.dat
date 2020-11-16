@@ -5,7 +5,7 @@
 swd
 
 [general input data]
-depth 300.00
+depth 21.00
 mtheta 0.0000
 
 [swd wave properties]
@@ -31,7 +31,7 @@ time_rampup    0            0.0000       1.0
 
 [lsgrid]
 #         XMIN   XMAX   YMIN   YMAX
-bounds -200.00 200.00 -0.5 0.5
+bounds  -200.00 200.00 0.00 0.00
 nx  100
 ny  1
 nl  16
@@ -39,7 +39,8 @@ t0  0.0
 dt  1.0
 stretch_params 0.7   1.5
 #                 xmin     xmax   ymin   ymax
-#ignore_subdomain -50.00 50.00 -0.01 0.01
+ignore_subdomain -100.00 100.00 -150. 150.
+ignore_at_init 1
 
 [vtk output]
 storage_path ./vtk/

@@ -1754,43 +1754,15 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.x; 
 	}
-	default:
-		return 0.0;
-	}
-
-
-}
-
-double wave_VeloX_slope(double xpt, double ypt, double zpt, double tpt, double sx)
-{
-
-	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = std::max(-inputdata.depth, zpt);
-
-	switch (inputdata.wavetype) {
-		// irregular waves
-	case 1:
-		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
-		// irregular gridded waves
-	case 2:
-		if (gridclass.initkin == 0) {
-			std::cout << "Generating kinematics for interpolation:" << std::endl;
-			gridclass.initialize_kinematics(irregular, 0.0);
-		}
-		return ramp.ramp(tpt, xpt, ypt) * gridclass.u(xpt, ypt, zpt);
-
-		// irregular LSgrid waves
-	case 4:
+	case 34:
 		if (!sgrid.CheckTime(tpt)) {
-			sgrid.update(irregular, tpt);
+			//#pragma omp single
+			sgrid.update(swd, tpt);
 		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-		// stokes 5th
-	case 21:
-		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
 
-	case 11:
-		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+
 	default:
 		return 0.0;
 	}
@@ -1850,6 +1822,13 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.y; 
 	}
+	// swd + lsgrid
+	case 34:
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+			sgrid.update(swd, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
 	default:
 		return 0.0;
 	}
@@ -1890,7 +1869,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
-		// swd
+	// swd
 	case 31:
 	{
 		// Tell the swd object current application time...
@@ -1906,6 +1885,12 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.z; 
 	}
+	// Swd + lsgrid
+	case 34:
+		if (!sgrid.CheckTime(tpt)) {
+			sgrid.update(swd, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	default:
 		return 0.0;
 	}

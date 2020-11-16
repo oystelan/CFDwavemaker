@@ -21,6 +21,9 @@ public:
 		swl = 0.;
 	};
 	~sGrid() {
+		if (dump_vtk) {
+			write_vtk(true);
+		}
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
 	};
 
@@ -64,7 +67,7 @@ public:
 
 	void initialize_kinematics_with_ignore(Irregular& irregular);
 	void initialize_kinematics_with_ignore(SpectralWaveData *swd);
-	void write_vtk();
+	void write_vtk(bool endtime);
 	void allocate();
 
 	void initialize_surface_elevation(Irregular& irregular, double t_target);

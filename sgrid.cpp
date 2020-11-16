@@ -131,7 +131,8 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 		}
 	} // End parallel initialization
 	if (dump_vtk) {
-		write_vtk();
+		write_vtk(false);
+		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
@@ -225,7 +226,8 @@ void sGrid::initialize_kinematics(SpectralWaveData *swd) {
 		}
 	} // End parallel initialization
 	if (dump_vtk) {
-		write_vtk();
+		write_vtk(false);
+		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
@@ -303,11 +305,22 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 					}
 				}
+				else {
+					for (int m = 0; m < nl; m++) {
+						UX0[i * ny * nl + j * nl + m] = 0.;
+						UY0[i * ny * nl + j * nl + m] = 0.;
+						UZ0[i * ny * nl + j * nl + m] = 0.;
+						UX1[i * ny * nl + j * nl + m] = 0.;
+						UY1[i * ny * nl + j * nl + m] = 0.;
+						UZ1[i * ny * nl + j * nl + m] = 0.;
+					}
+				}
 			}
 		}
 	} // End parallel initialization
 	if (dump_vtk) {
-		write_vtk();
+		write_vtk(false);
+		update_count++;
 	}
 
 	std::cout << "Generation of domain kinematics data completed. ";
@@ -364,6 +377,13 @@ void sGrid::initialize_kinematics_with_ignore(SpectralWaveData *swd) {
 
 					}
 				}
+				else {
+					for (int m = 0; m < nl; m++) {
+						UX0[i * ny * nl + j * nl + m] = 0.;
+						UY0[i * ny * nl + j * nl + m] = 0.;
+						UZ0[i * ny * nl + j * nl + m] = 0.;
+					}
+				}
 			}
 		}
 		// timestep T1.
@@ -399,36 +419,26 @@ void sGrid::initialize_kinematics_with_ignore(SpectralWaveData *swd) {
 
 					}
 				}
+				else {
+					for (int m = 0; m < nl; m++) {
+						UX1[i * ny * nl + j * nl + m] = 0.;
+						UY1[i * ny * nl + j * nl + m] = 0.;
+						UZ1[i * ny * nl + j * nl + m] = 0.;
+					}
+				}
 			}
 		}
 	} // End parallel initialization
 	if (dump_vtk) {
-		write_vtk();
+		write_vtk(false);
+		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	std::cout << "Interpolation can commence..." << std::endl;
 }
-// when called, writes stored kinematics to file
-void sGrid::write_vtk() {
-	char buffer[256]; sprintf(buffer, "%05d", update_count);
 
-	if (dirExists(vtk_directory_path.c_str()) == 0) {
-		std::cout << "WARNING: Specified directory for storage of VTK files does not exist. Directory will be created at the following path:  " << vtk_directory_path << std::endl;
-		createDirectory(vtk_directory_path);
-	}
-	
-
-	std::string str(buffer);
-	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vtu");
-	std::cout << fpath << std::endl;
-	FILE* fp = fopen(fpath.c_str(), "w");
-	export_vtu(fp, false);
-	fclose(fp);
-
-	std::cout << "wrote kinematics to: " << fpath << std::endl;
-}
 
 // Allocation of memory to storage matrices
 void sGrid::allocate() {
@@ -590,6 +600,10 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
 					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 				}
+				else {
+					ETA0[i * ny + j] = swl;
+					ETA1[i * ny + j] = swl;
+				}
 			}
 		}
 	}
@@ -639,6 +653,9 @@ void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData *swd, doub
 
 					ETA0[i * ny + j] = swd->Elev(xpt, ypt) + swl;
 				}
+				else {
+					ETA0[i * ny + j] = 0. + swl;
+				}
 			}
 		}
 #pragma omp master
@@ -660,6 +677,9 @@ void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData *swd, doub
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
 					ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
+				}
+				else {
+					ETA1[i * ny + j] = 0. + swl;
 				}
 			}
 		}
@@ -736,7 +756,7 @@ void sGrid::update(Irregular& irregular, double t_target)
 		}
 		
 		if (dump_vtk) {
-			write_vtk();
+			write_vtk(false);
 			update_count++;
 		}
 		
@@ -808,7 +828,7 @@ if (!disable_checkbounds){
 		}
 
 		if (dump_vtk) {
-			write_vtk();
+			write_vtk(false);
 			update_count++;
 		}
 		
@@ -1120,6 +1140,29 @@ void sGrid::update_bounds(double xpt, double ypt) {
 
 }
 
+// when called, writes stored kinematics to file
+void sGrid::write_vtk(bool endtime) {
+	char buffer[256]; sprintf(buffer, "%05d", update_count);
+
+	if (dirExists(vtk_directory_path.c_str()) == 0) {
+		std::cout << "WARNING: Specified directory for storage of VTK files does not exist. Directory will be created at the following path:  " << vtk_directory_path << std::endl;
+		createDirectory(vtk_directory_path);
+	}
+
+
+	std::string str(buffer);
+	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vtu");
+	std::cout << fpath << std::endl;
+	FILE* fp = fopen(fpath.c_str(), "w");
+	if (endtime)
+		export_vtu(fp, true);
+	else
+		export_vtu(fp, false);
+	fclose(fp);
+
+	std::cout << "wrote kinematics to: " << fpath << std::endl;
+}
+
 /* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
 void sGrid::export_vtu(FILE* fp, bool last)
 {
@@ -1127,7 +1170,7 @@ void sGrid::export_vtu(FILE* fp, bool last)
 	fputs("<?xml version=\"1.0\"?>\n"
 		"<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n", fp);
 	fputs("\t <UnstructuredGrid>\n", fp);
-	fprintf(fp, "\t\t <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", nx*ny*nl, (nx-1)*(ny-1)*(nl-1));
+	fprintf(fp, "\t\t <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", nx*ny*nl, std::max((nx-1),1)* std::max((ny-1),1)* std::max((nl-1),1));
 	
 	// Loop over velocity data and store kinematics in cell vector stucture
 	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
@@ -1191,33 +1234,115 @@ void sGrid::export_vtu(FILE* fp, bool last)
 	fputs("\t\t\t <Cells>\n", fp);
 	fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">\n", fp);
 
-	for (int i = 0; i < (nx-1); i++) {
-		for (int j = 0; j < (ny-1); j++) {
-			for (int m = 0; m < (nl-1); m++) {
-				int ape1 = nl * ny * i + nl * j + m;
-				int ape2 = nl * ny * (i + 1) + nl * j + m;
-				int ape3 = nl * ny * (i + 1) + nl * (j + 1) + m;
-				int ape4 = nl * ny * i + nl * (j + 1) + m;
-				int ape5 = nl * ny * i + nl * j + (m + 1);
-				int ape6 = nl * ny * (i + 1) + nl * j + (m + 1);
-				int ape7 = nl * ny * (i + 1) + nl * (j + 1) + (m + 1);
-				int ape8 = nl * ny * i + nl * (j + 1) + (m + 1);
-				fprintf(fp, "%u %u %u %u %u %u %u %u\n", ape1, ape2, ape3, ape4, ape5, ape6, ape7, ape8);
+	if (nx > 1 && ny > 1 && nl > 1) {
+		for (int i = 0; i < (nx - 1); i++) {
+			for (int j = 0; j < (ny - 1); j++) {
+				for (int m = 0; m < (nl - 1); m++) {
+					int ape1 = nl * ny * i + nl * j + m;
+					int ape2 = nl * ny * (i + 1) + nl * j + m;
+					int ape3 = nl * ny * (i + 1) + nl * (j + 1) + m;
+					int ape4 = nl * ny * i + nl * (j + 1) + m;
+					int ape5 = nl * ny * i + nl * j + (m + 1);
+					int ape6 = nl * ny * (i + 1) + nl * j + (m + 1);
+					int ape7 = nl * ny * (i + 1) + nl * (j + 1) + (m + 1);
+					int ape8 = nl * ny * i + nl * (j + 1) + (m + 1);
+					fprintf(fp, "%u %u %u %u %u %u %u %u\n", ape1, ape2, ape3, ape4, ape5, ape6, ape7, ape8);
+				}
 			}
+		}
+
+
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+
+		for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
+			fprintf(fp, "%d \n", i * 8);
+		}
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
+		for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
+			fputs("12 \n", fp);
+		}
+	}
+	// only single dimension i y direction.
+	else if (nx > 1 && ny == 1 && nl > 1) {
+		for (int i = 0; i < (nx - 1); i++) {		
+			for (int m = 0; m < (nl - 1); m++) {
+				int ape1 = nl * i + m;
+				int ape2 = nl * (i + 1) + m;
+				int ape3 = nl * (i + 1) + (m + 1);
+				int ape4 = nl * i + (m + 1);
+				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
+			}
+
+		}
+
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+
+		for (int i = 1; i < ((nx - 1) * (nl - 1) + 1); i++) {
+			fprintf(fp, "%d \n", i * 4);
+		}
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
+		for (int i = 1; i < ((nx - 1) * (nl - 1) + 1); i++) {
+			fputs("9 \n", fp);
+		}
+
+	}
+	// only single dimension i x direction.
+	else if (nx == 1 && ny > 1 && nl > 1) {
+		for (int j = 0; j < (ny - 1); j++) {
+			for (int m = 0; m < (nl - 1); m++) {
+				int ape1 = nl * j + m;
+				int ape2 = nl * (j + 1) + m;
+				int ape3 = nl * (j + 1) + (m + 1);
+				int ape4 = nl * j + (m + 1);
+				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
+			}
+
+		}
+
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+
+		for (int j = 1; j < ((ny - 1) * (nl - 1) + 1); j++) {
+			fprintf(fp, "%d \n", j * 4);
+		}
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
+		for (int j = 1; j < ((ny - 1) * (nl - 1) + 1); j++) {
+			fputs("9 \n", fp);
 		}
 	}
 
-	fputs("\t\t\t\t </DataArray>\n", fp);
-	fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+	// only single dimension i z direction (lagrangian).
+	else if (nx > 1 && ny > 1 && nl == 1) {
+		for (int i = 0; i < (nx - 1); i++) {
+			for (int j = 0; j < (ny - 1); j++) {
+				int ape1 = ny * i + j;
+				int ape2 = ny * (i + 1) + j;
+				int ape3 = ny * (i + 1) + (j + 1);
+				int ape4 = ny * i + (j + 1);
+				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
+			}
 
-	for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
-		fprintf(fp, "%d \n", i * 8);
+		}
+
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
+
+		for (int i = 1; i < ((nx - 1) * (ny - 1) + 1); i++) {
+			fprintf(fp, "%d \n", i * 4);
+		}
+		fputs("\t\t\t\t </DataArray>\n", fp);
+		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
+		for (int i = 1; i < ((nx - 1) * (ny - 1) + 1); i++) {
+			fputs("9 \n", fp);
+		}
+
 	}
-	fputs("\t\t\t\t </DataArray>\n", fp);
-	fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
-	for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
-		fputs("12 \n", fp);
-	}
+
 	fputs("\t\t\t\t </DataArray>\n", fp);
 	fputs("\t\t\t </Cells>\n", fp);
 	fputs("\t\t </Piece>\n", fp);
