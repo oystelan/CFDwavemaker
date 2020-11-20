@@ -1,6 +1,6 @@
 CC      := g++-9
-CCFLAGS := -O2 -fPIC -pthread -std=c++11
-LDFLAGS := -L./swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9 
+CCFLAGS := -O2 -fPIC -pthread -std=c++17
+LDFLAGS := -L./ -L./swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9 
 LIBS += -lm -lgfortran
 BUILD_DIR += ./builds/linux64/
 
@@ -49,7 +49,7 @@ $(TARGETS_STATIC): $(OBJ) *.o
 
 $(TARGETS_SHARED_OMP): EXTRA_FLAGS = -fopenmp 
 $(TARGETS_SHARED_OMP): $(OBJ) *.o
-	$(CC) $(CCFLAGS) -shared -fopenmp -o $(BUILD_DIR)lib$@ $^ $(LIBS) $(LDFLAGS)
+	$(CC) $(CCFLAGS) -shared -fopenmp -fPIC -o $(BUILD_DIR)lib$@ $^ $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_STATIC_OMP): EXTRA_FLAGS = -fopenmp 

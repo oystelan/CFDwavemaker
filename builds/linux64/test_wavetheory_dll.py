@@ -15,11 +15,11 @@ import os
 temp = os.path.abspath(__file__)
 temp = os.path.realpath(temp)
 temp = os.path.dirname(temp)
-path = os.path.join(temp, "libCFDwavemaker.so")
+#path = os.path.join(temp, "libCFDwavemaker_openmp.so")
 print(temp)
 #lib = CDLL("./comflow_wavemaker.so")
 
-mydll = cdll.LoadLibrary("./libCFDwavemaker.so")     
+mydll = cdll.LoadLibrary("./libCFDwavemaker_openmp.so")     
 
 #exit()
 
@@ -68,19 +68,39 @@ def clean_up(mydll):
 print(init_dll(mydll))
 
 
-time = np.arange(0,100,0.5)
+time = np.arange(0,20,0.1)
 
-z = []
+
+ww = []
+ww2 = []
 u = []
 v = []
 w = []
+
 for t in time:
-    ww = waveelev(mydll,t,0,0)
-    print(t, ww)
-    z.append(ww)
-    u.append(velocityX(mydll,t,0,0,0))
-    v.append(velocityY(mydll,t,0,0,0))
-    w.append(velocityZ(mydll,t,0,0,0))
+    print(waveelev(mydll,t,-200,0))
+
+    ww.append(waveelev(mydll,t,-200,0))
+    ww2.append(waveelev(mydll,t,-150.,5.))
+    u.append(velocityX(mydll,t,-200.,0.,-5.))
+    v.append(velocityY(mydll,t,-200.,0.,-5.))
+    w.append(velocityZ(mydll,t,-200.,0.,-5.))
+    
+
+plt.plot(time, ww, label="x=-200, y=0")
+plt.plot(time, ww2, label="x=-150, y=5.")
+plt.legend()
+plt.grid(True)
+plt.savefig("./result_eta.png")
+
+plt.clf()
+plt.plot(time,u, label='u')
+plt.plot(time,v, label='v')
+plt.plot(time,w, label='w')
+plt.legend()
+plt.grid(True)
+plt.savefig("./result_u.png")
+
 
 
 

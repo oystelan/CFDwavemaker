@@ -7,8 +7,8 @@
 // dean), wave paddle theory (2D only at the moment)
 //
 //
-// Current version: v2.0.1
-// Date: 2019-09-30
+// Current version: v2009
+// Date: 2020-11-16
 // --------------------------------------------------------------------------------
 #include <stdio.h>
 //#include <cstdlib>
@@ -22,6 +22,8 @@
 #include <vector>
 #include <numeric>      // std::iota
 #include <algorithm>    // std::sort, std::stable_sort
+#include <filesystem>
+
 //#include <direct.h> // windows only function
 #//include <cctype>
 //#include <locale>
@@ -32,6 +34,7 @@
 #include "Wavemaker.h"
 #include "sgrid.h"
 #include "SpectralWaveData.h"
+
 
 
 //#include <fftw3.h>
@@ -51,6 +54,12 @@ public:
 	bool bw_auto_calc = false;
 	int wavetype;
 	bool property_read = false;
+	double rho = 1025.;
+	// SWD parameters
+	double nsumx = -1, nsumy = -1, impl = 0, ipol = 0, norder = 0;
+	bool dc_bias = false;
+	std::string swdFileName;
+
 
 	CFDwavemakerInputdata() {
 	}
@@ -160,73 +169,6 @@ int numparams(std::string str)
 	while (s >> word)
 		count++;
 	return count;
-}
-
-int check_license()
-{
-
-	int licensecheck = 1;
-  // Date for program to stop working
-  int expyear = 2020;
-  int expmonth = 12;
-  int expday = 31;
-
-  time_t t = time(0);   // get time now
-
-	#if defined(_MSC_VER)
-
-      struct tm now;
-
-      localtime_s(&now, &t);
-
-
-
-    	std::cout << (now.tm_year + 1900) << '-'
-    		<< (now.tm_mon + 1) << '-'
-    		<< now.tm_mday
-    		<< std::endl;
-    	if ((now.tm_year + 1900) > expyear) {
-    		licensecheck = 0;
-    	}
-    	else if ((now.tm_year + 1900) == expyear) {
-    		if ((now.tm_mon + 1) > expmonth) {
-    			licensecheck = 0;
-    		}
-    	}
-    	else if ((now.tm_year + 1900) == expyear) {
-    		if ((now.tm_mon + 1) == expmonth) {
-    			if (now.tm_mday > expday) {
-    				licensecheck = 0;
-    			}
-    		}
-    	}
-  #else
-      struct tm * now;
-      //time(&t)
-      now = localtime(&t);
-
-      std::cout << (now->tm_year + 1900) << '-'
-    		<< (now->tm_mon + 1) << '-'
-    		<< now->tm_mday
-    		<< std::endl;
-    	if ((now->tm_year + 1900) > expyear) {
-    		licensecheck = 0;
-    	}
-    	else if ((now->tm_year + 1900) == expyear) {
-    		if ((now->tm_mon + 1) > expmonth) {
-    			licensecheck = 0;
-    		}
-    	}
-    	else if ((now->tm_year + 1900) == expyear) {
-    		if ((now->tm_mon + 1) == expmonth) {
-    			if (now->tm_mday > expday) {
-    				licensecheck = 0;
-    			}
-    		}
-    	}
-
-  #endif
-	return licensecheck;
 }
 
 
@@ -782,7 +724,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			trim(lineA);
 		}
 		
-		std::cout << lineA << std::endl;
+		//std::cout << lineA << std::endl;
 
 		// Convension for numbering:
 		// irregular wave theory variants: 1-10
@@ -815,13 +757,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			}
 			
 			else {
-				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
-				std::cout << "irregular" << std::endl;
-				std::cout << "regular" << std::endl;
-				std::cout << "wavemaker" << std::endl;
-				std::cout << "hosm" << std::endl;
+				std::cerr << "INPUTFILE ERROR: Unknown wave type specified. Valid alternatives are:" << std::endl;
+				std::cerr << "irregular" << std::endl;
+				std::cerr << "regular" << std::endl;
+				std::cerr << "wavemaker" << std::endl;
+				std::cerr << "swd" << std::endl;
 				
-				//exit(1);
+				exit(-1);
 			}
 		}
 
@@ -878,11 +820,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 		
 		if (!lineA.compare("[second order]")) { //optional
-			std::cout << "-------------------------------------" << std::endl;
-			std::cout << "Second order irregular wave settings:" << std::endl;
-			std::cout << "-------------------------------------" << std::endl;
+			
+			std::cout << "Second order irregular waves Specified." << std::endl;
+
 			if (inputdata.wavetype > 10) {
-				std::cout << "InputError: This tag is only available for irregular waves." << std::endl;
+				std::cerr << "INPUTFILE ERROR: This tag is only available for irregular waves." << std::endl;
 				exit(-1);
 			}		
 			irreg.order = 2;
@@ -1041,11 +983,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "--------------------------" << std::endl;
 
 			if (inputdata.wavetype != 1) {
-				std::cerr << "InputError: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
+				std::cerr << "INPUTFILE ERROR: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
 			if (irreg.initialized) {
-				std::cerr << "InputError: Irregular wave already initialized. please check input file" << std::endl;
+				std::cerr << "INPUTFILE ERROR: Irregular wave already initialized. please check input file" << std::endl;
 				exit(-1);
 			}
 			getline(f, lineA);
@@ -1057,7 +999,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf.clear();
 			}
 			else {
-				std::cerr << "InputError: parameter nfreq missing or not specified correctly" << std::endl;
+				std::cerr << "INPUTFILE ERROR: parameter nfreq missing or not specified correctly" << std::endl;
 				exit(-1);
 			}
 			getline(f, lineA);
@@ -1069,7 +1011,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				buf.clear();
 			}
 			else {
-				std::cerr << "InputError: parameter ndir missing or not specified correctly" << std::endl;
+				std::cerr << "INPUTFILE ERROR: parameter ndir missing or not specified correctly" << std::endl;
 				exit(-1);
 			}
 			// if ndir = 0. a single direction is read for each frequency.
@@ -1091,7 +1033,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					getline(f, lineA);
 					// if new tag is reach. break while loop.
 					if (!lineA.compare(0, 1, "[")) {
-						std::cout << "InputError: Not enough frequency components specified. please check to make sure that the number of lines matches the specified number of frequency components" << std::endl;
+						std::cerr << "INPUTFILE ERROR: Not enough frequency components specified. please check to make sure that the number of lines matches the specified number of frequency components" << std::endl;
 						exit(-1);
 					}
 					std::cout << lineA << std::endl;
@@ -1149,7 +1091,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				for (int i = 0; i < irreg.ndir; i++) {
 					getline(f, lineA);
 					if (!lineA.compare(0, 1, "[")) {
-						std::cout << "InputError: too few directional components.." << std::endl;
+						std::cerr << "INPUTFILE ERROR: too few directional components.." << std::endl;
 						exit(-1);
 					}
 					buf.str(lineA);
@@ -1194,11 +1136,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		// Wave properties: piston wave maker
 		if (!lineA.compare("[pistonwavemaker wave properties]")) {
 			if (inputdata.wavetype != 11) {
-				std::cout << "piston wave maker properties does not match the specified wave type. Check inputfile" << std::endl;
+				std::cerr << "piston wave maker properties does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
 			if (wmaker.initialized) {
-				std::cout << "InputError: Pistonwavemaker already initialized. please check input file" << std::endl;
+				std::cerr << "INPUTFILE ERROR: Pistonwavemaker already initialized. please check input file" << std::endl;
 				exit(-1);
 			}
 			// Wavemaker theory (piston)
@@ -1238,11 +1180,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		// Wave properties: Stokes wave properties
 		if (!lineA.compare("[stokes wave properties]")) {
 			if (inputdata.wavetype != 21) {
-				std::cout << "InputError: Stokes wave properties does not match the specified wave type. Check inputfile" << std::endl;
+				std::cerr << "INPUTFILE ERROR: Stokes wave properties does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
 			if (stokes.initialized) {
-				std::cout << "InputError: Stokes 5th wave already initialized. please check input file" << std::endl;
+				std::cerr << "INPUTFILE ERROR: Stokes 5th wave already initialized. please check input file" << std::endl;
 				exit(-1);
 			}
 			while (!f.eof()) {
@@ -1282,12 +1224,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cout << "Spectral wave data:" << std::endl;
 			std::cout << "-------------------------------------" << std::endl;
 			if (inputdata.wavetype != 31) {
-				std::cout << "InputError: please set [wave type] = swd when using keyword [swd wave properties]." << std::endl;
+				std::cerr << "INPUTFILE ERROR: please set [wave type] = swd when using keyword [swd wave properties]." << std::endl;
 				exit(-1);
 			}
-			std::string swdFileName_;
-			double x0_ = 0., y0_ = 0., t0_ = 0., beta_ = 0., rho_ = 1025., nsumx_ = -1, nsumy_ = -1, impl_ = 0, ipol_ = 0, norder_ = 0;
-			bool dc_bias_ = false;
+			
 			while (!f.eof()) {
 				getline(f, lineA);
 				trim(lineA);
@@ -1295,89 +1235,57 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> swdFileName_;
+					buf >> inputdata.swdFileName;
 					buf.clear();
-					std::cout << "Swd file specified:  " << swdFileName_ << std::endl;
-				}
-				if (!lineA.compare(0, 2, "x0")) {
-					//  - Dict input data									
-					buf.str(lineA);
-					buf >> dummystr;
-					buf >> x0_;
-					buf.clear();
-					std::cout << "x0:  " << x0_ << " m." << std::endl;
-				}
-				if (!lineA.compare(0, 2, "y0")) {
-					//  - Dict input data									
-					buf.str(lineA);
-					buf >> dummystr;
-					buf >> y0_;
-					buf.clear();
-					std::cout << "y0:  " << y0_ << " m." << std::endl;
-				}
-				if (!lineA.compare(0, 2, "t0")) {
-					//  - Dict input data									
-					buf.str(lineA);
-					buf >> dummystr;
-					buf >> t0_;
-					buf.clear();
-					std::cout << "t0:  " << t0_ << " sec." << std::endl;
-				}
-				if (!lineA.compare(0, 4, "beta")) {
-					//  - Dict input data									
-					buf.str(lineA);
-					buf >> dummystr;
-					buf >> beta_;
-					buf.clear();
-					std::cout << "beta:  " << beta_ << " deg." <<std::endl;
+					std::cout << "Swd file specified:  " << inputdata.swdFileName << std::endl;
 				}
 				if (!lineA.compare(0, 3, "rho")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> rho_;
+					buf >> inputdata.rho;
 					buf.clear();
-					std::cout << "rho:  " << rho_ << " kg/m^3." << std::endl;
+					std::cout << "rho:  " << inputdata.rho << " kg/m^3." << std::endl;
 				}
 				if (!lineA.compare(0, 5, "nsumx")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> nsumx_;
+					buf >> inputdata.nsumx;
 					buf.clear();
-					std::cout << "nsumx:  " << nsumx_ << std::endl;
+					std::cout << "nsumx:  " << inputdata.nsumx << std::endl;
 				}
 				if (!lineA.compare(0, 5, "nsumy")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> nsumy_;
+					buf >> inputdata.nsumy;
 					buf.clear();
-					std::cout << "nsumy:  " << nsumy_ << std::endl;
+					std::cout << "nsumy:  " << inputdata.nsumy << std::endl;
 				}
 				if (!lineA.compare(0, 4, "impl")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> impl_;
+					buf >> inputdata.impl;
 					buf.clear();
-					std::cout << "impl:  " << impl_ << std::endl;
+					std::cout << "impl:  " << inputdata.impl << std::endl;
 				}
 				if (!lineA.compare(0, 4, "ipol")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> ipol_;
+					buf >> inputdata.ipol;
 					buf.clear();
-					std::cout << "ipol:  " << ipol_ << std::endl;
+					std::cout << "ipol:  " << inputdata.ipol << std::endl;
 				}
 				if (!lineA.compare(0, 6, "norder")) {
 					//  - Dict input data									
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> norder_;
+					buf >> inputdata.norder;
 					buf.clear();
-					std::cout << "norder:  " << ipol_ << std::endl;
+					std::cout << "norder:  " << inputdata.norder << std::endl;
 				}
 				if (!lineA.compare(0, 9, "dc_bias")) {
 					buf.str(lineA);
@@ -1386,16 +1294,16 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 					if (!dummystr.compare(0, 5, "false")) {
 						// Do nothing. default value is already a very high number
-						dc_bias_ = false;
+						inputdata.dc_bias = false;
 					}
 					else if (!dummystr.compare(0, 4, "true")) {
 						// Compute a decent bandwidth value. todo: make a function which does this						
-						dc_bias_ = true;
+						inputdata.dc_bias = true;
 					}
 					else { // assumes that a value is given
-						dc_bias_ = atof(dummystr.c_str());
+						inputdata.dc_bias = atof(dummystr.c_str());
 					}
-					std::cout << "dc_bias:   " << dc_bias_ << std::endl;
+					std::cout << "dc_bias:   " << inputdata.dc_bias << std::endl;
 
 					buf.clear();
 				}
@@ -1405,27 +1313,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					break;
 				}
 			}
-			swd = new SpectralWaveData(swdFileName_.c_str(), x0_, y0_, t0_, beta_, rho_, nsumx_, nsumy_, impl_, ipol_);
-
-			std::string cid = swd->GetChr("cid");
-
-			std::vector<std::string> v;
-
-			std::stringstream ss(cid);
-
-			while (ss.good()) {
-				std::string substr;
-				getline(ss, substr, ',');
-				v.push_back(substr);
-			}
-
-
-			std::cout << "************************************************************************* " << std::endl;
-			std::cout << "The following info is stored in the specified swd file " << swdFileName_ << std::endl;
-			std::cout << "************************************************************************* " << std::endl;
-			for (size_t i = 0; i < v.size(); i++)
-				std::cout << v[i] << std::endl;
-			std::cout << "************************************************************************* " << std::endl;
+			
 		}
 
 
@@ -1542,7 +1430,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				std::cout << "LS grid + swd = True." << std::endl;
 			}
 			else {
-				std::cerr << "LS grid may currently only be used with irregular second order wave theory and spectral wave method" << std::endl;
+				std::cerr << "INPUTFILE ERROR: LS grid may currently only be used with irregular second order wave theory and spectral wave method" << std::endl;
 				exit(-1);
 			}
 			lsgrid.allocate();
@@ -1616,13 +1504,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		irregular.dumpSpectralComponents();
 
 		if (!inputdata.property_read) {
-			std::cout << "Irregular wave selected, but no wave components/wave properties found in input file." << std::endl;
+			std::cerr << "INPUTFILE ERROR: Irregular wave selected, but no wave components/wave properties found in input file." << std::endl;
 			exit(-1);
 		}
 	}
 	else if (inputdata.wavetype == 11) {
 		if (!inputdata.property_read) {
-			std::cout << "Wave maker selected, but no wavemaker property data found in input file." << std::endl;
+			std::cerr << "INPUTFILE ERROR: Wave maker selected, but no wavemaker property data found in input file." << std::endl;
 			exit(-1);
 		}
 	}
@@ -1636,7 +1524,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		// set the properties of the wave
 		stokes.set_stokes5_properties(stokes.wave_length, stokes.wave_height);
 		if (!inputdata.property_read) {
-			std::cout << "Stokes wave selected, but no wave properties found in input file." << std::endl;
+			std::cerr << "INPUTFILE ERROR: Stokes wave selected, but no wave properties found in input file." << std::endl;
 			exit(-1);
 		}
 	}
@@ -1656,6 +1544,36 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			lsgrid.initialize_kinematics(irreg);
 		}
 	}
+
+	// swd
+	if (inputdata.wavetype >= 30 && inputdata.wavetype < 40) {
+
+		double x0_, y0_, t0_, beta_;
+
+		// Initialize spectral wave data
+		swd = new SpectralWaveData(inputdata.swdFileName.c_str(), inputdata.x_pos, inputdata.y_pos, inputdata.tofmax, inputdata.mtheta, inputdata.rho, inputdata.nsumx, inputdata.nsumy, inputdata.impl, inputdata.ipol);
+
+		std::string cid = swd->GetChr("cid");
+
+		std::vector<std::string> v;
+
+		std::stringstream ss(cid);
+
+		while (ss.good()) {
+			std::string substr;
+			getline(ss, substr, ',');
+			v.push_back(substr);
+		}
+
+
+		std::cout << "************************************************************************* " << std::endl;
+		std::cout << "The following info is stored in the specified swd file " << inputdata.swdFileName << std::endl;
+		std::cout << "************************************************************************* " << std::endl;
+		for (size_t i = 0; i < v.size(); i++)
+			std::cout << v[i] << std::endl;
+		std::cout << "************************************************************************* " << std::endl;
+	}
+
 	// swd with lsgrid
 	if (inputdata.wavetype == 34) {
 		double dt_swd_file = swd->GetReal("d");
@@ -1678,6 +1596,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			lsgrid.initialize_kinematics(swd);
 		}
 	}
+
+	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
+
 	return 0;
 }
 
@@ -1950,6 +1871,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		}
 		return ramp.ramp(tpt, xpt, ypt) * gridclass.eta_wall(tpt, xpt, ypt);
 	case 4:
+		
 		if (!sgrid.CheckTime(tpt)) {
 //#pragma omp single
 			sgrid.update(irregular, tpt);
@@ -2021,30 +1943,14 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v.2.1.3" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.3" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
-	// Check if license has expired
-	if (check_license() == 1){
-		std::cout << "License checks out...carry on..." << std::endl;
-	}
-	else {
-		std::cout << "License for CFDwavemaker has expired. Please contact Oeystein Lande to update the program." << std::endl << std::endl;
-		std::cout << "This program will auto-distruct in \n5..." << std::endl;
-		wait(1);
-		std::cout << "4..." << std::endl;
-		wait(1);
-		std::cout << "3..." << std::endl;
-		wait(1);
-		std::cout << "2..." << std::endl;
-		wait(1);
-		std::cout << "1..." << std::endl;
-		wait(1);
-		std::cout << "Bang!" << std::endl;
 
-		return -1;
-	}
-	
+	std::filesystem::path cwd = std::filesystem::current_path();
+
+	std::cout <<"working directory: " << cwd << std::endl;
+
 	// Check for waveinput.dat file in most common locations
 
 	// Open and read file to find which input file version to read.
@@ -2057,22 +1963,23 @@ int wave_Initialize()
 			std::cout << "Waveinput.dat file found in folder ./constant/" << std::endl;
 		}
 	}
+	// Special cases for comflow
 	if (fid.fail()) {
-		fid.open("./input_files/waveinput.dat");
+		fid.open("../input_files/waveinput.dat");
 		if (!fid.fail()) {
 			std::cout << "Waveinput.dat file found in folder ./input_files/" << std::endl;
 		}
-	}
-	if (fid.fail()) {
-		std::cerr << "Could not open file (is it really there?) " << std::endl;
-		return -1;
-		exit(1);
 	}
 	if (fid.fail()) {
 		fid.open("../waveinput.dat");
 		if (!fid.fail()) {
 			std::cout << "Waveinput.dat file found in folder ../" << std::endl;
 		}
+	}
+	if (fid.fail()) {
+		std::cerr << "Could not open file (is it really there?) " << std::endl;
+		return -1;
+		exit(1);
 	}
 	while (fid.good()) {
 		getline(fid, lineA);
@@ -2091,21 +1998,25 @@ int wave_Initialize()
 	while (!f.eof()) {
 		getline(f, lineA);
 		trim(lineA);
-		if (!lineA.compare("@v2009")) {
+		if (!lineA.compare("@v213")) {
 			inputfile_version = 1;
 		}
-		if (!lineA.compare("@v1809")) {
+		else if (!lineA.compare("@v209")) {
 			inputfile_version = 0;
+		}
+		else if (!lineA.compare(0, 2, "@v")) {
+			std::cout << "Unknown version of input file specified: Currently supported are: @v209 and @v213" << std::endl;
+			exit(-1);
 		}
 
 	}
 
 	if (inputfile_version == 0) {
-		std::cout << "Reading old input file version2 format (@v1809)" << std::endl;
+		std::cout << "Reading old input file version2 format v.2.0.9(@v209)" << std::endl;
 		int i = process_inputdata_v2(res, irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
 	}
 	else if (inputfile_version == 1) {
-		std::cout << "Reading new input file version2 format (@v2009)" << std::endl;
+		std::cout << "Reading new input file version2 format v2.1.3 (@v213)" << std::endl;
 		int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, gridclass, ramp);
 	}
 	else {
