@@ -2,7 +2,6 @@
 #define Irregular_H
 
 #include <iostream>
-#include "Wavespectra.h"
 #include <vector>
 #include <iomanip>
 #ifndef PI
@@ -17,8 +16,6 @@ private:
 	double phi2_pot(double t, double xx, double yy, double zz);
 
 	double sum(double ll[], int nsum);
-
-	Wavespectra wavespec;
 
 public:
 	Irregular() {

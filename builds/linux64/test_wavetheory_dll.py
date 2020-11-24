@@ -81,7 +81,7 @@ for t in time:
     print(waveelev(mydll,t,-200,0))
 
     ww.append(waveelev(mydll,t,-200,0))
-    ww2.append(waveelev(mydll,t,-150.,5.))
+    ww2.append(waveelev(mydll,t,-200.,3.))
     u.append(velocityX(mydll,t,-200.,0.,-5.))
     v.append(velocityY(mydll,t,-200.,0.,-5.))
     w.append(velocityZ(mydll,t,-200.,0.,-5.))

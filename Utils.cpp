@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cmath>
 
+/***
 void Grid::update_boundary_arrays(Irregular &irregular, double tpt) {
 	t0 = t1;
 	t1 += dt;
@@ -265,9 +266,9 @@ void Grid::initialize_kinematics(Irregular &irregular, double tpt) {
 						UY[i * NY * NZ + j * NZ + m] = irregular.v1(tpt, xpt, ypt, zpt) + irregular.v2(tpt, xpt, ypt, zpt);
 						UZ[i * NY * NZ + j * NZ + m] = irregular.w1(tpt, xpt, ypt, zpt) + irregular.w2(tpt, xpt, ypt, zpt);
 					}
-					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
-					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
-					UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);*/
+					//UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
+					//UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
+					//UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);
 				}
 			}
 		}
@@ -342,7 +343,7 @@ void Grid::initialize_surface_elevation(Irregular &irregular, double tpt) {
 	initsurf = 1;
 }
 
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
+// Function for trilinear interpolation on a cartesian evenly spaced mesh
 double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double zpt, int _nx, int _ny, int _nz, double _dx, double _dy, double _dz, double *domain) {
 	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
 	double nyp = std::min(double(_ny), std::max(0., (ypt - domain[1]) / _dy));
@@ -372,7 +373,7 @@ double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double
 }
 
 
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
+// Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain
 /*double Grid::trilinear_interpolationL(double* VAR, double xpt, double ypt, double zpt) {
 
 	double nxp = std::min(double(NXL), std::max(0., (xpt - domainsize[0]) / dxl));
@@ -400,9 +401,11 @@ double Grid::trilinear_interpolation(double* VAR, double xpt, double ypt, double
 	double C1 = C01 * (1. - yd) + C11 * yd;
 
 	return C0 * (1. - zd) + C1 * zd;
-}*/
+}
 
-/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
+
+
+// bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid
 double Grid::bilinear_interpolation(double* VAR, double xpt, double ypt, int _nx, int _ny, double _dx, double _dy, double *domain) {
 
 	double nxp = std::min(double(_nx), std::max(0., (xpt - domain[0]) / _dx));
@@ -487,7 +490,7 @@ double Grid::w_wall(double tpt, double xpt, double ypt, double zpt) {
 
 
 bool Grid::CheckTime(double tpt) {
-	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
+	// Checks to see if the time tpt is within the interval t0 to t1. If so, returns true
 	if (tpt > t1) {
 		return false;
 		std::cout << "T0: " << t0 << ", t1: " << t1 << ", tpt: " << tpt << std::endl;
@@ -508,6 +511,8 @@ bool Grid::CheckBounds(double* bounds, double x, double y, double z)
 		return false;
 	}
 }
+
+*/
 
 // -------------------------------------------------------------------------------------------------
 // ramp class function

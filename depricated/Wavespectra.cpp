@@ -6,7 +6,64 @@
 #define PI 3.1415926535897
 #endif
 
-double Wavespectra::gamma(double f, double Gamma, bool gg) {
+
+// Function for randomizing the amplitude of a wave spectrum. 
+void Wavespectra::randomize_amplitudes(double* ampl, int nampl) {
+	// Do nothing
+
+}
+
+
+// function which calculates amplitudes, frequencies, directions, etc, and applies
+// these to the Irregular class function passes as argument to the call.
+void Wavespectra::initialize_seastate(Irregular& irregular, WaveSpecData& specdata) {
+
+	/*
+	w_min 0.05
+	w_max 0.5
+	dw 0.05
+	random_seed 9947793
+	spectrum torsethaugen2004
+	hs 5.5
+	tp 8.3
+	#spreading definition
+	spread cos2s
+	s 15
+	type integrate
+	theta_min - 1.57
+	theta_max 1.57
+	dtheta 0.3491
+	
+	// start by finding the ny
+	double temp;
+	std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]        Theta [rad]" << std::endl;
+	for (int i = 0; i < irreg.nfreq; i++) {
+		getline(f, lineA);
+		// if new tag is reach. break while loop.
+		if (!lineA.compare(0, 1, "[")) {
+			std::cerr << "INPUTFILE ERROR: Not enough frequency components specified. please check to make sure that the number of lines matches the specified number of frequency components" << std::endl;
+			exit(-1);
+		}
+		std::cout << lineA << std::endl;
+		buf.str(lineA);
+		buf >> temp;
+		omega.push_back(temp);
+		buf >> temp;
+		A.push_back(temp);
+		buf >> temp;
+		k.push_back(temp);
+		buf >> temp;
+		phase.push_back(temp);
+		buf >> temp;
+		theta.push_back(temp);
+		buf.clear();
+	}
+	*/
+
+}
+
+
+double Wavespectra::gamma_spectrum(double f, double Gamma, bool gg) {
 	// -------------------------------------------------------------------------
 	// Returns a Gamma spectrum for given omega, Hs, Tp, and Gamma
 	//
@@ -33,6 +90,7 @@ double Wavespectra::gamma(double f, double Gamma, bool gg) {
 	return G_0 * A_gamma * pow(f, -N) * exp(-(N / M) * pow(f, -M)) * gamma_F;
 
 }
+
 
 void Wavespectra::torsethaugen2004(double* S, double* omega, int nfreq, double hs, double tp) {
 	// -------------------------------------------------------------------------
@@ -85,7 +143,7 @@ void Wavespectra::torsethaugen2004(double* S, double* omega, int nfreq, double h
 			double fn2 = f * Tpw2;
 			double gamma_w2 = 1;
 
-			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hw1, 2) * Tpw1 * gamma(fn1, gamma_w1, true) + (1.0 / 16) * pow(Hw2, 2) * Tpw2 * gamma(fn2, gamma_w2, false);
+			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hw1, 2) * Tpw1 * gamma_spectrum(fn1, gamma_w1, true) + (1.0 / 16) * pow(Hw2, 2) * Tpw2 * gamma_spectrum(fn2, gamma_w2, false);
 		}
 		else {
 			// SWELL DRIVEN SEA
@@ -102,7 +160,7 @@ void Wavespectra::torsethaugen2004(double* S, double* omega, int nfreq, double h
 			double fn2 = f * Tps2;
 			double gamma_s2 = 1;
 
-			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hs1, 2) * Tps1 * gamma(fn1, gamma_s1, true) + (1.0 / 16) * pow(Hs2, 2) * Tps2 * gamma(fn2, gamma_s2, false);
+			S[i] = (1. / (2. * PI)) * (1.0 / 16) * pow(Hs1, 2) * Tps1 * gamma_spectrum(fn1, gamma_s1, true) + (1.0 / 16) * pow(Hs2, 2) * Tps2 * gamma_spectrum(fn2, gamma_s2, false);
 
 		}
 	}
@@ -134,68 +192,72 @@ void Wavespectra::jonswap3(double* S, double* omega, int nfreq, double hs, doubl
 
 }
 
-void Wavespectra::spreading_uniform(double * D, int nfreq, int ndir){
+void Wavespectra::spreading_uniform(std::vector<double>& D, int nfreq, int ndir){
 	// Assign wave spreading based on specified spreading function parameters
-	D = new double[nfreq * ndir];
+	double D_temp[ndir];
 	double dsum = 0.;
 	for (int i = 0; i < ndir; i++) {
-		D[i] = 1.0;
-		dsum += D[i];
+		D_temp[i] = 1.0;
+		dsum += D_temp[i];
 	}
+	// normalize distribution function
 	for (int i = 0; i < ndir; i++) {
-		D[i] = D[i] / dsum;
+		D_temp[i] = D_temp[i] / dsum;
 	}
 	// Repeat Directional distribution nfreq times
 	for (int i = 0; i < nfreq; i++) {
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = D[j];
+			D.push_back(D_temp[j]);
 		}
 	}
 }
-void Wavespectra::spreading_cos_theta_n(double* D, int nfreq, int ndir, double s, double mtheta, double* theta) {
+void Wavespectra::spreading_cos_theta_n(std::vector<double>& D, int nfreq, int ndir, double s, double mtheta, std::vector<double>& theta) {
 	// cos(theta)^n
-	D = new double[nfreq * ndir];
 	double dsum = 0.;
+	double D_temp[ndir];
 
 	for (int i = 0; i < ndir; i++) {
-		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.))), s);
-		dsum += D[i];
+		D_temp[i] = pow(cos((theta[i] - (mtheta * PI / 180.))), s);
+		dsum += D_temp[i];
 	}
+	// normalize distribution function
 	for (int i = 0; i < ndir; i++) {
-		D[i] = D[i] / dsum;
+		D_temp[i] = D_temp[i] / dsum;
 	}
 	// Repeat Directional distribution nfreq times
 	for (int i = 0; i < nfreq; i++) {
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = D[j];
+			D.push_back(D_temp[j]);
 		}
 	}
 }
 
-void Wavespectra::spreading_cos_theta05_2s(double* D, int nfreq, int ndir, double s, double mtheta, double* theta) {
+void Wavespectra::spreading_cos_theta05_2s(std::vector<double>& D, int nfreq, int ndir, double s, double mtheta, std::vector<double>& theta) {
 	// cos(theta/2)^2s
-	D = new double[nfreq * ndir];
+	double D_temp[ndir];
 	double dsum = 0.;
 	
 	for (int i = 0; i < ndir; i++) {
-		D[i] = pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s);
-		dsum += D[i];
+		D_temp[i] = pow(cos((theta[i] - (mtheta * PI / 180.)) / 2.), 2.0 * s);
+		dsum += D_temp[i];
 	}
+	// normalize distribution function
 	for (int i = 0; i < ndir; i++) {
-		D[i] = D[i] / dsum;
+		D_temp[i] = D_temp[i] / dsum;
 	}
 	// Repeat Directional distribution nfreq times
 	for (int i = 0; i < nfreq; i++) {
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = D[j];
+			D.push_back(D_temp[j]);
 		}
 	}
 }
 
-void Wavespectra::spreading_ewans(double tp, double mtheta) {
+void Wavespectra::spreading_ewans(std::vector<double>& D, int nfreq, int ndir, double tp, double mtheta, std::vector<double>& theta) {
 	// Ewans simplified spreading function (frequency dependent spreading)
 	// EWANS, Kevin C.Observations of the directional spectrum of fetch - limited waves.Journal of Physical Oceanography, 1998, 28.3: 495 - 512.
-	double* dsum2 = new double[nfreq];
+	//double* dsum2 = new double[nfreq];
+	double dsum2[nfreq];
 	int s;
 	double fp = 1. / tp;
 
@@ -208,7 +270,7 @@ void Wavespectra::spreading_ewans(double tp, double mtheta) {
 		}
 		dsum2[i] = 0.;
 		for (int j = 0; j < ndir; j++) {
-			D[i * ndir + j] = pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s);
+			D.push_back(pow(cos((theta[j] - (mtheta * PI / 180.)) / 2.), 2. * s));
 			dsum2[i] += D[i * ndir + j];
 		}
 	}
