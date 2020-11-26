@@ -1187,6 +1187,18 @@ void sGrid::export_vtu(FILE* fp, bool last)
 	fputs("<?xml version=\"1.0\"?>\n"
 		"<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n", fp);
 	fputs("\t <UnstructuredGrid>\n", fp);
+	fprintf(fp, "\t\t <FieldData> \n");
+	if (last) {
+		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"TimeValue\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", t0 + dt, t0 + dt);
+		fprintf(fp, "\t\t\t %.3f \n", t0+dt);
+	}
+	else {
+		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"TimeValue\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", t0, t0);
+		fprintf(fp, "\t\t\t %.3f \n", t0);
+	}
+	fprintf(fp, "\t\t\t </DataArray > \n");
+	fprintf(fp, "\t\t </FieldData> \n");
+
 	fprintf(fp, "\t\t <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", nx*ny*nl, std::max((nx-1),1)* std::max((ny-1),1)* std::max((nl-1),1));
 	
 	// Loop over velocity data and store kinematics in cell vector stucture

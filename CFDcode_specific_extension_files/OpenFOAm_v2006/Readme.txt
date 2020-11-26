@@ -12,6 +12,9 @@ Installation instructions
 2. copy all files and folders in the extension_src folder to the OpenFOAM-v2006/src directory.
 3. copy a precompiled fresh version of CFDwavemaker (libCFDwavemaker_openmp.a) into the folder: OpenFOAM-v2006/src/waveModels/waveGenerationModels/derived/CFDwavemaker/ (replace the old version already located there)
 4. locate OpenFOAM-v2006/src/waveModels/Make/files and add the following two lines to the list of files.
+5. add the following lines to OpenFOAM-v2006/src/waveModels/Make/options
+	-lgfortran \ 
+   which is required since the swd library is fortran.
 
 waveGenerationModels/derived/CFDwavemaker/CFDwavemakerWaveModel.C
 waveDampToIncident/WaveDampToIncident.C
