@@ -32,6 +32,7 @@ License
 #include "polyPatch.H"
 #include "fvPatchFields.H"
 
+
 using namespace Foam::constant;
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -77,7 +78,7 @@ void Foam::waveModels::CFDwavemakerModel::setLevel
         level[paddlei] = waterDepthRef_ + tCoeff*eta;
     }*/
 }
-
+ 
 
 
 
@@ -99,8 +100,11 @@ void Foam::waveModels::CFDwavemakerModel::setVelocity
         //std::cout << "Elev: " << surface_elev << " z: " << z_[facei] << " vz: " << wave_VeloZ(x_[facei], y_[facei], z_[facei], t) << std::endl;
 
         // Set volume fraction
-        const scalar zMin0 = zMin_[facei] - zMin0_;
-        const scalar zMax0 = zMax_[facei] - zMin0_;
+        //const scalar zMin0 = zMin_[facei] - zMin0_;
+        //const scalar zMax0 = zMax_[facei] - zMin0_;
+
+        const scalar zMin0 = zMin_[facei];
+        const scalar zMax0 = zMax_[facei];
 
         if (zMax0 < surface_elev)
         {
@@ -119,13 +123,15 @@ void Foam::waveModels::CFDwavemakerModel::setVelocity
         const vector Uf = vector(wave_VeloX(x_[facei], y_[facei], z_[facei], t) ,
             wave_VeloY(x_[facei], y_[facei], z_[facei] , t),
             wave_VeloZ(x_[facei], y_[facei], z_[facei] , t));
-        //std::cout << fraction << " z: " << z_[facei] << "elev: " << level[paddlei] << std::endl;
+        //std::cout << " z: " << z_[facei] << ", elev: "  << surface_elev << ", volfrac: " << alpha_[facei] << std::endl;
+        //std::cout << "zMin0_: " << zMin0_ << ", zMin0: " << zMin0 << ", zMax0: " << zMax0 << std::endl;
         U_[facei] = alpha_[facei]*Uf*tCoeff;
 
 
 
     }
 }
+
 
 
 void Foam::waveModels::CFDwavemakerModel::setAlpha(const scalarField& level)
@@ -152,8 +158,10 @@ Foam::waveModels::CFDwavemakerModel::CFDwavemakerModel
     {
         readDict(dict);
     }
-    // load waveinput.dat file
-    int initcheck = wave_Initialize();
+    if (CFDwavemaker_is_initialized() == 0) {
+        // load waveinput.dat file
+        int initcheck = wave_Initialize();
+    }
 }
 
 // 

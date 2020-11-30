@@ -68,6 +68,7 @@ public:
 	}
 };
 
+bool CFDwmInit = false;
 
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
 
@@ -1119,18 +1120,21 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> dummystr;
 					buf >> stokes.wave_length;
 					buf.clear();
+					std::cout << "Wave length:  " << stokes.wave_length << std::endl;
 				}
 				if (!lineA.compare(0, 11, "wave_height")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> stokes.wave_height;
 					buf.clear();
+					std::cout << "Wave height:  " << stokes.wave_height << std::endl;
 				}
 				if (!lineA.compare(0, 13, "current_speed")) {
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> stokes.current;
 					buf.clear();
+					std::cout << "current speed:  " << stokes.current << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -1450,6 +1454,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			std::cerr << "INPUTFILE ERROR: Stokes wave selected, but no wave properties found in input file." << std::endl;
 			exit(-1);
 		}
+		else {
+			std::cout << "Stokes 5th wave initialized and ready to go." << std::endl;
+		}
+
 	}
 	
 
@@ -1871,6 +1879,7 @@ int wave_Initialize()
 		exit(-1);
 	}
 
+	CFDwmInit = true;
 	return 0;
 }
 
@@ -1884,6 +1893,10 @@ int wave_Cleanup()
 		delete[] PD_time, PD_ampl, PD_velo, PD_eta;
 	}*/
 	return 0;
+}
+
+int CFDwavemaker_is_initialized() {
+	return int(CFDwmInit);
 }
 
 // external functions used by COMFLOW

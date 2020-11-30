@@ -41,6 +41,7 @@ Description
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+
 namespace Foam
 {
 namespace waveModels
