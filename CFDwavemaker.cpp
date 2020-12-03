@@ -1393,6 +1393,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
 				}
+				if (!lineA.compare(0, 13, "vtk_timelabel")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_timelabel;
+					buf.clear();
+					std::cout << "time label to use in vtk specified as: " << lsgrid.vtk_timelabel << std::endl;
+				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;

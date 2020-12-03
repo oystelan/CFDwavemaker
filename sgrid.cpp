@@ -1189,11 +1189,11 @@ void sGrid::export_vtu(FILE* fp, bool last)
 	fputs("\t <UnstructuredGrid>\n", fp);
 	fprintf(fp, "\t\t <FieldData> \n");
 	if (last) {
-		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"TimeValue\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", t0 + dt, t0 + dt);
+		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"%s\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", vtk_timelabel.c_str() , t0 + dt, t0 + dt);
 		fprintf(fp, "\t\t\t %.3f \n", t0+dt);
 	}
 	else {
-		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"TimeValue\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", t0, t0);
+		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"%s\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", vtk_timelabel.c_str() , t0, t0);
 		fprintf(fp, "\t\t\t %.3f \n", t0);
 	}
 	fprintf(fp, "\t\t\t </DataArray > \n");

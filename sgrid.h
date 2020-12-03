@@ -42,6 +42,7 @@ public:
 
 	std::string vtk_directory_path = "./";
 	std::string vtk_prefix = "kinematics";
+	std::string vtk_timelabel = "TimeValue";
 	bool dump_vtk = false;
 
 	double water_depth;
