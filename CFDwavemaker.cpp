@@ -1138,7 +1138,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
-					lineA = lineP;
+					skip_getline = true;
 					break;
 				}
 			}
@@ -1558,7 +1558,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(irregular, tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -1590,6 +1590,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	case 34:
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -1616,7 +1617,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		// irregular gridded waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
-			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
@@ -1642,6 +1643,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	case 34:
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
@@ -1663,6 +1665,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		// irregular gridded waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
@@ -1687,6 +1690,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	// Swd + lsgrid
 	case 34:
 		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
@@ -1728,7 +1732,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// Linear wave theory, constant profile used above free surface
 	case 4: {
 		if (!sgrid.CheckTime(tpt)) {
-			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt); }
@@ -1755,7 +1759,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	}
 	case 34:
 		if (!sgrid.CheckTime(tpt)) {
-			//#pragma omp single
+#pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
