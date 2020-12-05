@@ -39,6 +39,7 @@ public:
 
 	bool disable_checkbounds = true;
 	bool ignore_domain = false;
+	bool init_only = false;
 
 	std::string vtk_directory_path = "./";
 	std::string vtk_prefix = "kinematics";

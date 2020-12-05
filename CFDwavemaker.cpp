@@ -1,3 +1,6 @@
+//
+// CFDwavemaker - an Open-Source wave kinematics library
+//
 // This program has the soul purpose of providing wave kinematics input to any type
 // of CFD program which can be linked up as a dynamic link library or statically.
 // The program is created and updated by the Oeystein Lande. The link library
@@ -7,8 +10,9 @@
 // dean), wave paddle theory (2D only at the moment)
 //
 //
-// Current version: v2009
-// Date: 2020-11-16
+// Current version: v214
+// Date: 2020-12-05
+// (c) Oystein Lande
 // --------------------------------------------------------------------------------
 #include <stdio.h>
 //#include <cstdlib>
@@ -177,7 +181,7 @@ int numparams(std::string str)
 //	return current_working_dir;
 //}
 
-
+// This function is depricated. will be removed in the future.
 int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Ramp& rramp ) {
 	std::string lineA;
 	std::ifstream fid;
@@ -1316,6 +1320,12 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf >> lsgrid.ignore_at_init;
 					buf.clear();
 				}
+				if (!lineA.compare(0, 9, "init_only")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.init_only;
+					buf.clear();
+				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
@@ -1809,7 +1819,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v2.1.3" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.4" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 
@@ -1878,11 +1888,11 @@ int wave_Initialize()
 	}
 
 	if (inputfile_version == 0) {
-		std::cout << "Reading old input file version2 format v.2.0.9(@v209)" << std::endl;
+		std::cout << "Reading old input file version2 format v.2.0.9(@v209). This file format is depricated and will be removed in a future version." << std::endl;
 		int i = process_inputdata_v2(res, irregular, stokes5, wavemaker, sgrid, ramp);
 	}
 	else if (inputfile_version == 1) {
-		std::cout << "Reading new input file version2 format v2.1.3 (@v213)" << std::endl;
+		std::cout << "Reading new input file version2 format v2.1.3 or newer (@v213)" << std::endl;
 		int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, ramp);
 	}
 	else {
