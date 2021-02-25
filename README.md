@@ -1,4 +1,4 @@
-# CFDwavemaker v2.1.3
+# CFDwavemaker v2.1.4
 wave kinematics package for CFD initialization of CFD domains or boundaries.
 The code supports OpenMP and has some special features for fast initialization of large domains built in.
 
@@ -27,3 +27,8 @@ Version2.1.3 highlights (since version 1)
 - The entire code have been restructured to make use of classes
 - previous stokes c code is now converted to a c++ class.
 - fixed a large number of holes and bugs in the original code
+
+Version2.1.4 release:
+- Improved performance with openmp and irregular waves
+- minor bug fixes
+- added parameter [vtk output]/timelabel and [lsgrid]/init_only.

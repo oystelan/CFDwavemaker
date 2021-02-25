@@ -53,7 +53,7 @@ class CFDwavemakerInputdata {
 public:
 	double depth;
 	double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
-	double mtheta;
+	double mtheta = 0.;
 	double swl = 0.;
 	bool bw_auto_calc = false;
 	int wavetype;
@@ -1432,6 +1432,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 	std::cout << "Input file read successfully." << std::endl;
 	std::cout << "***********************************************\n\n" << std::endl;
 
+	std::cout << "Wavetype: " << inputdata.wavetype << std::endl;
+
+
 	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
 		irregular.depth = inputdata.depth;
 		irregular.mtheta = inputdata.mtheta;
@@ -1498,6 +1501,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 		double x0_, y0_, t0_, beta_;
 
+		std::cout << inputdata.swdFileName.c_str() << std::endl;
 		// Initialize spectral wave data
 		swd = new SpectralWaveData(inputdata.swdFileName.c_str(), inputdata.x_pos, inputdata.y_pos, inputdata.tofmax, inputdata.mtheta, inputdata.rho, inputdata.nsumx, inputdata.nsumy, inputdata.impl, inputdata.ipol);
 
@@ -1524,10 +1528,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 	// swd with lsgrid
 	if (inputdata.wavetype == 34) {
-		double dt_swd_file = swd->GetReal("d");
-		if (dt_swd_file != inputdata.depth && dt_swd_file > 0) {
-			std::cout << "Warning: Specified water depth, " << inputdata.depth << "m,  not the same as used in swd file d = " << dt_swd_file << "m. Depth specified in SWD file will be used." << std::endl;
-			lsgrid.water_depth = dt_swd_file;
+		double depth_swd_file = swd->GetReal("d");
+		if (depth_swd_file != inputdata.depth && depth_swd_file > 0) {
+			std::cout << "Warning: Specified water depth, " << inputdata.depth << "m,  not the same as used in swd file d = " << depth_swd_file << "m. Depth specified in SWD file will be used." << std::endl;
+			lsgrid.water_depth = depth_swd_file;
 		}
 		else {
 			lsgrid.water_depth = inputdata.depth;
@@ -1771,7 +1775,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 		
-		std::cout << "time: " << tpt << std::endl;
+		//std::cout << "time: " << tpt << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
 	}
 	case 34:
