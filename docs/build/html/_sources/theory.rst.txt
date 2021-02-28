@@ -1,11 +1,13 @@
 Wave theories
 =============
 
+CFDwavemaker provided a range of different wave theories which may be used to waves in a numerical environment. Some are implemented as part of the code, while others are indirectly provided through the support of the swd file format which may read simulation files from codes (ex: Higher order spectral methods). An overview of the different theories and how they are organized in the library is given in :numref:`theory_overview`
+
 .. _theory_overview:
 .. figure:: images/theories_overview.png
    :alt: Theory overview
    
-   Overview of theories implemented (or to be implmented) in CFDwavemaker
+   Overview of theories implemented (or to be implemented) in CFDwavemaker
 
 Irregular wave theory
 -----------------------

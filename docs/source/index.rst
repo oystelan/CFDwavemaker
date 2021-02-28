@@ -16,11 +16,8 @@ A example snapshot of a simulation is shown below, where CFDwavemaker has been u
 
 	.. _`Basilisk`: http://basilisk.fr
 
-.. note::
-   This documentation is under construction.
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :numbered:
    :caption: Table of Contents:
 
@@ -30,6 +27,7 @@ A example snapshot of a simulation is shown below, where CFDwavemaker has been u
    installation
    inputfile_description
    inputfile_examples
+   definitions
    theory
    todolist
    license

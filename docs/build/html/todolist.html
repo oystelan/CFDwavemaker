@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>8. Todo-list &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>9. Todo-list &mdash; CFDwavemaker v2.1.4 documentation</title>
   
 
   
@@ -31,7 +31,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -39,8 +38,8 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="9. License" href="license.html" />
-    <link rel="prev" title="7. Wave Theories" href="theory.html" /> 
+    <link rel="next" title="10. License" href="license.html" />
+    <link rel="prev" title="8. Wave theories" href="theory.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -59,12 +58,16 @@
 
           
             
-            <img src="_static/logo4.png" class="logo" alt="Logo"/>
+            <img src="_static/logo3.png" class="logo" alt="Logo"/>
           
           </a>
 
           
             
+            
+              <div class="version">
+                v2.1.4
+              </div>
             
           
 
@@ -92,14 +95,19 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="about.html">1. Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="download.html">2. Download</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input File Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave Theories</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Example of usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="definitions.html">7. Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">8. Wave theories</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">9. Todo-list</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#task-completed">9.1. Task completed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ideas-rejected-or-posponed">9.2. Ideas rejected (or posponed)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">10. License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">11. References</a></li>
 </ul>
 
             
@@ -146,7 +154,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li><span class="section-number">8. </span>Todo-list</li>
+      <li><span class="section-number">9. </span>Todo-list</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -166,20 +174,33 @@
            <div itemprop="articleBody">
             
   <div class="section" id="todo-list">
-<h1><span class="section-number">8. </span>Todo-list<a class="headerlink" href="#todo-list" title="Permalink to this headline">¶</a></h1>
+<h1><span class="section-number">9. </span>Todo-list<a class="headerlink" href="#todo-list" title="Permalink to this headline">¶</a></h1>
 <p>Here is a list of planned upgrades,ideas and improvements to the library:</p>
 <ul class="simple">
-<li><p>Update manual (ongoing)</p></li>
+<li><p>Update manual (always ongoing)</p></li>
 <li><p>Implement sloping bottom (variable water depth)</p></li>
 <li><p>upgrade second order velocity profile model to a consistent second order wheeler type stretching , Ref. <a class="bibtex reference internal" href="references.html#smit2017nonlinear" id="id1">[8]</a></p></li>
-<li><p>Implement Higher order spectral method connection through the swd library <a class="reference external" href="https://github.com/SpectralWaveData/spectral_wave_data">spectral_wave_data</a> (work started)</p></li>
-<li><p>Implement grid interpolation scheme for boundaries (ongoing)</p></li>
-<li><p>update grid interpolation structure to vertical lagrangian type, which follows the wave surface, to make more efficient and accurate.</p></li>
-<li><p>Add commonly used wave spectra and directional spreading functions for easy generation without specifying manually frequency amplitudes, phase etc. (work started)</p></li>
-<li><p>preprogrammed constrained new wave. kind of a nice to have.</p></li>
 <li><p>At some point it is probably a good idea to add a Cmake file for this project.</p></li>
 <li><p>some variables in the input file should be calculated automatically based on given input values, i.e. default values should be auto.</p></li>
+<li><p>implement wind turbulence models for two-phase problems</p></li>
+<li><p>add more illustrations in the manual (figures)</p></li>
+<li><p>implement time-trace dump for specified list of points</p></li>
 </ul>
+<div class="section" id="task-completed">
+<h2><span class="section-number">9.1. </span>Task completed<a class="headerlink" href="#task-completed" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Implement Higher order spectral method connection through the swd library <a class="reference external" href="https://github.com/SpectralWaveData/spectral_wave_data">spectral_wave_data</a></p></li>
+<li><p>Implement grid interpolation scheme for boundaries</p></li>
+<li><p>update grid interpolation structure to vertical lagrangian type, which follows the wave surface, to make more efficient and accurate.</p></li>
+</ul>
+</div>
+<div class="section" id="ideas-rejected-or-posponed">
+<h2><span class="section-number">9.2. </span>Ideas rejected (or posponed)<a class="headerlink" href="#ideas-rejected-or-posponed" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Add commonly used wave spectra and directional spreading functions for easy generation without specifying manually frequency amplitudes, phase etc. (work started)</p></li>
+<li><p>preprogrammed constrained new wave. kind of a nice to have.</p></li>
+</ul>
+</div>
 </div>
 
 
@@ -190,10 +211,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="license.html" class="btn btn-neutral float-right" title="9. License" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="license.html" class="btn btn-neutral float-right" title="10. License" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="theory.html" class="btn btn-neutral float-left" title="7. Wave Theories" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="theory.html" class="btn btn-neutral float-left" title="8. Wave theories" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -203,7 +224,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2014, Øystein Lande
+        &copy; Copyright 2020
 
     </p>
   </div>

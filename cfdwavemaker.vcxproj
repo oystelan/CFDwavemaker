@@ -111,14 +111,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>C:\projects\CFDwavemaker\SpectralWaveData.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Common Files\Intel\Shared Libraries\redist\intel64_win\compiler;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>Default</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\projects\CFDwavemaker\mods;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -128,16 +128,15 @@
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Wavemaker.cpp" />
-    <ClCompile Include="Wavespectra.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="sgrid.h" />
     <ClInclude Include="Irregular.h" />
+    <ClInclude Include="SpectralWaveData_dummy.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Wavemaker.h" />
-    <ClInclude Include="Wavespectra.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="waveinput.dat" />

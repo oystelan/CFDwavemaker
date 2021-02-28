@@ -9,12 +9,16 @@ CFDwavemaker is a C++ library developed with the soule purpose of providing wave
 * initializing a CFD domain with millions of cells in a fast and efficient manner
 * work as a wave maker, prescribing kinematics at the boundaries of the CFD domain during runtime
 
+The specific focus of this code is on higher order irregular wave theories for deep and intermediate water depths. A few showcases illustrating what can be achieved using this code in combination with some state of the art CFD codes are shown below.
+
 
 Showcases
 ---------
 
 Wave Flume
 ..........
+
+*to be completed soon*
 
 
 Short crested wave example
@@ -37,3 +41,8 @@ Constructive feedback or suggestions of improvements are always welcome. If you 
 Bug reporting
 -------------
 Bug in the code you say? `let me know about it <mailto:oystelan@gmail.com>`_. 
+
+Reference to CFDwavemaker
+-------------------------
+
+An "official" reference will be provided soon.

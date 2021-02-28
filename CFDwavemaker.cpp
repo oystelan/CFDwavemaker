@@ -37,8 +37,11 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
+#if defined(_WIN32)
+#include "SpectralWaveData_dummy.h"
+#else
 #include "SpectralWaveData.h"
-
+#endif
 
 
 //#include <fftw3.h>
@@ -1826,7 +1829,7 @@ int wave_Initialize()
 	std::cout << "CFD WAVEMAKER v2.1.4" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
-
+	
 	std::filesystem::path cwd = std::filesystem::current_path();
 
 	std::cout <<"working directory: " << cwd << std::endl;

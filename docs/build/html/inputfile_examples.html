@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>6. Input file examples &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>6. Example of usage &mdash; CFDwavemaker v2.1.4 documentation</title>
   
 
   
@@ -31,7 +31,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -39,7 +38,7 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="7. Wave theories" href="theory.html" />
+    <link rel="next" title="7. Definitions" href="definitions.html" />
     <link rel="prev" title="5. Input file format" href="inputfile_description.html" /> 
 </head>
 
@@ -59,12 +58,16 @@
 
           
             
-            <img src="_static/logo4.png" class="logo" alt="Logo"/>
+            <img src="_static/logo3.png" class="logo" alt="Logo"/>
           
           </a>
 
           
             
+            
+              <div class="version">
+                v2.1.4
+              </div>
             
           
 
@@ -95,9 +98,9 @@
 <li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Input file examples</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Example of usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#irregular-wave-examples">6.1. Irregular wave examples</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#long-crested-irregular-random-waves">6.1.1. Long-crested irregular random waves</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#long-crested-irregular-focus-wave-group">6.1.1. Long-crested irregular focus wave group</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#short-crested-irregular-focused-wave">6.1.2. Short-crested irregular focused wave</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#short-crested-irregular-random-wave">6.1.3. Short-crested irregular random wave</a></li>
 </ul>
@@ -106,12 +109,17 @@
 <li class="toctree-l3"><a class="reference internal" href="#stokes-5th-order-regular-wave">6.2.1. Stokes 5th order regular wave</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#spectral-wave-data-swd-example">6.3. Spectral-Wave-Data (swd) example</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-swd-wave1">6.3.1. Example 1: SWD wave1</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a></li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="definitions.html">7. Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">8. Wave theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">9. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">10. License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">11. References</a></li>
 </ul>
 
             
@@ -158,7 +166,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li><span class="section-number">6. </span>Input file examples</li>
+      <li><span class="section-number">6. </span>Example of usage</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -177,21 +185,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="input-file-examples">
-<h1><span class="section-number">6. </span>Input file examples<a class="headerlink" href="#input-file-examples" title="Permalink to this headline">¶</a></h1>
-<p>To give the user an idea of what a complete <em>waveinput.dat</em> file looks like, a set of example inputfiles are given below. If the input description was confusing and overwhelming, these examples should hopefully make it easier to see the bigger picture.</p>
+  <div class="section" id="example-of-usage">
+<h1><span class="section-number">6. </span>Example of usage<a class="headerlink" href="#example-of-usage" title="Permalink to this headline">¶</a></h1>
+<p>To give the user an idea of what a complete <em>waveinput.dat</em> file may look like, a set of examples are given below. If the input description was confusing and overwhelming, these examples should hopefully make it easier to see the bigger picture.</p>
 <div class="section" id="irregular-wave-examples">
 <h2><span class="section-number">6.1. </span>Irregular wave examples<a class="headerlink" href="#irregular-wave-examples" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="long-crested-irregular-random-waves">
-<h3><span class="section-number">6.1.1. </span>Long-crested irregular random waves<a class="headerlink" href="#long-crested-irregular-random-waves" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="long-crested-irregular-focus-wave-group">
+<h3><span class="section-number">6.1.1. </span>Long-crested irregular focus wave group<a class="headerlink" href="#long-crested-irregular-focus-wave-group" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description:</strong></p>
-<ul class="simple">
-<li><p>Long crested (unidirectional wave group)</p></li>
-<li><p>irregular (multiple frequency components)</p></li>
-<li><p>linear wave theory (also known as Airy waves)</p></li>
-<li><p>velocity extrapolation <span class="math notranslate nohighlight">\(\exp(kz)\)</span>.</p></li>
-</ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
+<p>In this example a focused irregular wave is generated using 28 frequency components. The wave group we are about to generate is uni-directional and all phase values have been set to zero, such that the focus point will be at x=y=t=0. To move the focus point, the keyword <strong>[wave reference point]</strong> can be specified using the tags <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> to move it. In this case we set <code class="docutils literal notranslate"><span class="pre">time</span></code> = 12 sec, which implies that the max crest of 20mm will occur after 12 seconds of simulation at position x=y=0.
+<code class="docutils literal notranslate"><span class="pre">normalize</span></code> is enabled meaning that the listed amplitudes in <strong>[irregular wave components]</strong> will be normalized such that the sum(A) = 1. The amplitude of the wave at the point of focus is controlled by the parameter <code class="docutils literal notranslate"><span class="pre">amplify</span></code>. In this case the linear amplitude at point of focus will be 20mm.
+Linear wave theory (superposition) is used in this case, since the specified wave has a low steepness. For steeper waves, it is generally always recommended to use higher order theory, since linear wave theory will simply be too coarse.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v213
 # Long crested wave example
 
 [wave type]
@@ -201,13 +206,14 @@ irregular
 [general input data]
 depth 1.2
 mtheta 0.0
-swl 0.0
 normalize 1
-amplify 0.061
+amplify 0.020
 
-[ramps]
-#ramptype    enable  rampup_start rampup_end
-time_rampup     0       0.0000       0.5
+[wave reference point]
+# for focused waves this will correspond to the focus point in time and space
+time 12.0
+x 0.0
+y 0.0
 
 [irregular wave components]
 nfreq 28
@@ -249,14 +255,11 @@ ndir 1
 <div class="section" id="short-crested-irregular-focused-wave">
 <h3><span class="section-number">6.1.2. </span>Short-crested irregular focused wave<a class="headerlink" href="#short-crested-irregular-focused-wave" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description:</strong></p>
-<ul class="simple">
-<li><p>user defined wave (Separate list of frequency component and directional components specified)</p></li>
-<li><p>short-crested focused wave (direction spreading). Focus point can be adjusted by adjusting the reference point.</p></li>
-<li><p>irregular (multiple frequency components)</p></li>
-<li><p>Linear wave theory</p></li>
-<li><p>Velocity extrapolation constant above z=0</p></li>
-</ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
+<p>In this example, the focused wave presented previously is extended from long crested to short crested. The amplitude is increased to 70mm such that the wave will now be quite nonlinear. Therefore we switch to second order wave theory by specifying <strong>[second order]</strong>. A spreading function is specified using 19 directional component, with the range -pi/4 to pi/4. To speed up the computation during runtime we specify the use of <strong>[lsgrid]</strong> for interpolation of kinematics along the boundary. The boundary in this case is 4.8m upwave from the focus point at (x=y=0). Further more, since the specified focused wave is symmetric along the x-axis, it is sufficient to simulate only half the domain, using a symmertry condition along the domain border at y=0.</p>
+<p>The CFD tank for this example was initialized with water at rest (swl = 0m).
+Idealy, we would tell CFDwavemaker to only calculate wave kinematics in the yz-plane along the inflow boundary. This could be done by setting <code class="docutils literal notranslate"><span class="pre">dx</span></code> = 1 and <code class="docutils literal notranslate"><span class="pre">bounds</span></code> to -4.8 -4.8 0. 10. However many CFD solvers use one or two layers of ghost cells along the boundaries and may ask for kinematics at positions on the outside of the boundary. To account for this we deliberately set the bounds for which kinematics are calculated in the range of -5.0 to -4.8m using 4 interpolation points in the x-direction.
+Finally, to view the results that are generated by CFDwavemaker (which is generally recommended for QA purposes), we tell it to dump vtu files (using the keyword <strong>[vtk output]</strong> for every time step the interpolation grid is updated.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v213
 # Wavedata CFDwavemaker
 
 [wave type]
@@ -268,17 +271,16 @@ depth 1.2
 mtheta 0.0
 swl 0.0
 normalize 1
-amplify 0.061
+amplify 0.070
 
 [second order]
-bandwidth 0.5
-extmet 0
+bandwidth auto
 
 [wave reference point]
 # for focused waves this will correspond to the focus point in time and space
-time 0.0
+time 12.0
 x 0.0
-y 11.0
+y 0.0
 
 [ramps]
 #ramptype    enable  rampup_start rampup_end
@@ -341,28 +343,33 @@ ndir 19
         0.61087     0.048652
         0.69813     0.045853
         0.7854     0.042843
+
+[lsgrid]
+# XMIN XMAX YMIN YMAX
+bounds -5.0 -4.8 0. 10.0
+nx 4
+ny 60
+nl 15
+t0 0.0
+dt 0.1
+
+[vtk output]
+storage_path ./vtk/
+filename kin
 </pre></div>
 </div>
 </div>
 <div class="section" id="short-crested-irregular-random-wave">
 <h3><span class="section-number">6.1.3. </span>Short-crested irregular random wave<a class="headerlink" href="#short-crested-irregular-random-wave" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description:</strong></p>
-<ul class="simple">
-<li><p>user defined wave (variation 1). Direction specified for each frequency component explicitly.</p></li>
-<li><p>short-crested event wave, where focus point is default x=y=t=0. Focus point can be adjusted by adjusting the reference point.</p></li>
-<li><p>irregular wave event</p></li>
-<li><p>Second order wave theory</p></li>
-<li><p>Taylor expantion consistently to second order for velocity extrapolation above z=0</p></li>
-</ul>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
+<p>The last irregular example is a large random 3D wave event, initalized at t=0. The frequency components are set such that the sea state is periodic in x- and y-direction.
+Again a lagrangian stretched grid (<strong>[lsgrid]</strong>) is applied to speed up initialization. a resolution of dx,dy = 200 is used to define the interpolation grid in horizontal direction.
+The crest event of interest is set to occur after 50 seconds of simulation.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v213
 # Short-crested irregular wave, example
 
-[wave type]
+to[wave type]
 # WAVETYPE
-# 1. irregular
-# 2. pistonwavemaker
-# 3. spectralwave
-# 4. stokes5
 irregular
 
 [general input data]
@@ -376,15 +383,6 @@ mtheta 0.0000
 time 50.00
 x     0.00
 y     0.00
-
-[ramps]
-# ramp_type    enable       rampup_start rampup_end
-time_rampup    0            0.0000       1.0
-time_rampdown  0            0.0000         1.0
-x_rampup       0           -11.0000     -10.0
-x_rampdown     0           11.0000        12.0
-y_rampup       0         -11.0000     -10.0
-y_rampdown     0           11.0000        12.0
 
 [irregular wave components]
 nfreq 200
@@ -614,26 +612,66 @@ filename kin
 <div class="section" id="stokes-5th-order-regular-wave">
 <h3><span class="section-number">6.2.1. </span>Stokes 5th order regular wave<a class="headerlink" href="#stokes-5th-order-regular-wave" title="Permalink to this headline">¶</a></h3>
 <p><strong>Description:</strong></p>
-<p>A regular stokes 5th order wave, propagated from still water using a linear rampup from time 0.0 to time 0.5 sec.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v2009
+<p>A regular stokes 5th order wave, propagated from still water using a linear rampup from time 0.0 to time 2.0 sec.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v213
 # Wavedata CFDwavemaker2
 
-     [wave type]
-     regular
+[wave type]
+regular
 
-     [general input data]
-     depth 88.00
-     mtheta 0.0000
+[general input data]
+depth 88.00
+mtheta 0.0000
 
-     [stokes wave properties]
-     #mandatory properties for stokes wave
-     wave_length 300.
-     wave_height 20.
+[stokes wave properties]
+#mandatory properties for stokes wave
+wave_length 300.
+wave_height 20.
 
-     [ramps]
-     # ramp_type    enable       rampup_start rampup_end
-     time_rampup    1            0.0000       1.0
-     # you do not need to specify all ramps, only the once you need.
+[ramps]
+# ramp_type    enable       rampup_start rampup_end
+time_rampup    1            0.0000       2.0
+# you do not need to specify all ramps, only the once you need.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="spectral-wave-data-swd-example">
+<h2><span class="section-number">6.3. </span>Spectral-Wave-Data (swd) example<a class="headerlink" href="#spectral-wave-data-swd-example" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="example-1-swd-wave1">
+<h3><span class="section-number">6.3.1. </span>Example 1: SWD wave1<a class="headerlink" href="#example-1-swd-wave1" title="Permalink to this headline">¶</a></h3>
+<p><strong>Description:</strong></p>
+<ul class="simple">
+<li><p>Irregular long crested 5th order HOSM wave simulation</p></li>
+<li><p>propagated in from the side into still water</p></li>
+</ul>
+<p>To run this example the swd file <a class="reference external" href="http://www.hydrodynamics.no/CFDwavemaker/downloads/hosm_out.swd">hosm_out.swd</a> is required.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@v213
+# CFDwavemaker SWD example 1: irregular 5th order long crested wave
+
+[wave type]
+swd
+
+[general input data]
+depth 300.00
+mtheta 0.0000
+
+[swd wave properties]
+swdfile  hosm_out.swd
+
+[ramps]
+# ramp_type    enable       rampup_start rampup_end
+time_rampup    1            0.0000       2.0
+
+[lsgrid]
+#         XMIN   XMAX   YMIN   YMAX
+bounds  -200.00 -200.00 0.00 0.00
+nx  1
+ny  1
+nl  16
+t0  0.0
+dt  0.5
+stretch_params 0.7   1.5
 </pre></div>
 </div>
 </div>
@@ -648,7 +686,7 @@ filename kin
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="theory.html" class="btn btn-neutral float-right" title="7. Wave theories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="definitions.html" class="btn btn-neutral float-right" title="7. Definitions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="inputfile_description.html" class="btn btn-neutral float-left" title="5. Input file format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -661,7 +699,7 @@ filename kin
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2014, Øystein Lande
+        &copy; Copyright 2020
 
     </p>
   </div>

@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>7. Wave theories &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>8. Wave theories &mdash; CFDwavemaker v2.1.4 documentation</title>
   
 
   
@@ -31,7 +31,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -39,8 +38,8 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="8. Todo-list" href="todolist.html" />
-    <link rel="prev" title="6. Input file examples" href="inputfile_examples.html" /> 
+    <link rel="next" title="9. Todo-list" href="todolist.html" />
+    <link rel="prev" title="7. Definitions" href="definitions.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -59,12 +58,16 @@
 
           
             
-            <img src="_static/logo4.png" class="logo" alt="Logo"/>
+            <img src="_static/logo3.png" class="logo" alt="Logo"/>
           
           </a>
 
           
             
+            
+              <div class="version">
+                v2.1.4
+              </div>
             
           
 
@@ -95,26 +98,27 @@
 <li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">5. Input file format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input file examples</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">7. Wave theories</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-theory">7.1. Irregular wave theory</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#linear-potential-wave-theory">7.1.1. Linear potential wave theory</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#second-order-potential-wave-theory">7.1.2. Second order potential wave theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Example of usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="definitions.html">7. Definitions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">8. Wave theories</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-theory">8.1. Irregular wave theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#linear-potential-wave-theory">8.1.1. Linear potential wave theory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#second-order-potential-wave-theory">8.1.2. Second order potential wave theory</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#regular-wave-theory">7.2. Regular wave theory</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#stokes-5th-order-wave">7.2.1. Stokes 5th order wave</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#regular-wave-theory">8.2. Regular wave theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stokes-5th-order-wave">8.2.1. Stokes 5th order wave</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#wave-maker-theory">7.3. Wave maker theory</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#piston-wavemaker-theory">7.3.1. Piston wavemaker theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wave-maker-theory">8.3. Wave maker theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#piston-wavemaker-theory">8.3.1. Piston wavemaker theory</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">9. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">10. License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">11. References</a></li>
 </ul>
 
             
@@ -161,7 +165,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li><span class="section-number">7. </span>Wave theories</li>
+      <li><span class="section-number">8. </span>Wave theories</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -181,37 +185,38 @@
            <div itemprop="articleBody">
             
   <div class="section" id="wave-theories">
-<h1><span class="section-number">7. </span>Wave theories<a class="headerlink" href="#wave-theories" title="Permalink to this headline">¶</a></h1>
+<h1><span class="section-number">8. </span>Wave theories<a class="headerlink" href="#wave-theories" title="Permalink to this headline">¶</a></h1>
+<p>CFDwavemaker provided a range of different wave theories which may be used to waves in a numerical environment. Some are implemented as part of the code, while others are indirectly provided through the support of the swd file format which may read simulation files from codes (ex: Higher order spectral methods). An overview of the different theories and how they are organized in the library is given in <a class="reference internal" href="#theory-overview"><span class="std std-numref">Fig. 8.1</span></a></p>
 <div class="figure align-default" id="id7">
 <span id="theory-overview"></span><img alt="Theory overview" src="_images/theories_overview.png" />
-<p class="caption"><span class="caption-number">Fig. 7.1 </span><span class="caption-text">Overview of theories implemented (or to be implmented) in CFDwavemaker</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 8.1 </span><span class="caption-text">Overview of theories implemented (or to be implemented) in CFDwavemaker</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
 </div>
 <div class="section" id="irregular-wave-theory">
-<h2><span class="section-number">7.1. </span>Irregular wave theory<a class="headerlink" href="#irregular-wave-theory" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">8.1. </span>Irregular wave theory<a class="headerlink" href="#irregular-wave-theory" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="linear-potential-wave-theory">
-<h3><span class="section-number">7.1.1. </span>Linear potential wave theory<a class="headerlink" href="#linear-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">8.1.1. </span>Linear potential wave theory<a class="headerlink" href="#linear-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
 <p>Linear wave theory, also known as Airy waves has been widely used for more than 50 years for describing irregular waves.
 Documentation of this theory exists in a number of places and therefore this will not be further adressed here.
 Reference is made to <a class="reference external" href="https://en.wikipedia.org/wiki/Airy_wave_theory">Wikipedia</a> for a nice overview of this theory. Other sources are <a class="bibtex reference internal" href="references.html#dnvglrpc205" id="id1">[1]</a><a class="bibtex reference internal" href="references.html#faltinsen1993sea" id="id2">[2]</a></p>
 </div>
 <div class="section" id="second-order-potential-wave-theory">
-<h3><span class="section-number">7.1.2. </span>Second order potential wave theory<a class="headerlink" href="#second-order-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">8.1.2. </span>Second order potential wave theory<a class="headerlink" href="#second-order-potential-wave-theory" title="Permalink to this headline">¶</a></h3>
 <p>Second order wave theory
 Reference is made to the the classic article from Sharma and Dean 1981 ,Ref. <a class="bibtex reference internal" href="references.html#sharma1981second" id="id3">[6]</a>. The current implementation is based on the implementation given by Johannessen 1997 (Ref. <a class="bibtex reference internal" href="references.html#johannessen1997effect" id="id4">[4]</a>).</p>
 </div>
 </div>
 <div class="section" id="regular-wave-theory">
-<h2><span class="section-number">7.2. </span>Regular wave theory<a class="headerlink" href="#regular-wave-theory" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">8.2. </span>Regular wave theory<a class="headerlink" href="#regular-wave-theory" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="stokes-5th-order-wave">
-<h3><span class="section-number">7.2.1. </span>Stokes 5th order wave<a class="headerlink" href="#stokes-5th-order-wave" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">8.2.1. </span>Stokes 5th order wave<a class="headerlink" href="#stokes-5th-order-wave" title="Permalink to this headline">¶</a></h3>
 <p>The stokes 5th order wave is a classic. The current implementation is based on Skjelbreia and Hendricksons implementation ,Ref. <a class="bibtex reference internal" href="references.html#skjelbreia1960fifth" id="id5">[7]</a>. Fenton also had a nice implementation of this type of wave.</p>
 </div>
 </div>
 <div class="section" id="wave-maker-theory">
-<h2><span class="section-number">7.3. </span>Wave maker theory<a class="headerlink" href="#wave-maker-theory" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">8.3. </span>Wave maker theory<a class="headerlink" href="#wave-maker-theory" title="Permalink to this headline">¶</a></h2>
 <p>Wave maker theory is generally useful, especially if you want to replicate something which has been generated in a tank.</p>
 <div class="section" id="piston-wavemaker-theory">
-<h3><span class="section-number">7.3.1. </span>Piston wavemaker theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">8.3.1. </span>Piston wavemaker theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
 <p>Reference is made to the Kennard1949 (Ref. <a class="bibtex reference internal" href="references.html#kennard1949generation" id="id6">[5]</a>). The input is time series of horizontal paddle movement.</p>
 </div>
 </div>
@@ -225,10 +230,10 @@ Reference is made to the the classic article from Sharma and Dean 1981 ,Ref. <a 
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="todolist.html" class="btn btn-neutral float-right" title="8. Todo-list" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="todolist.html" class="btn btn-neutral float-right" title="9. Todo-list" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="inputfile_examples.html" class="btn btn-neutral float-left" title="6. Input file examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="definitions.html" class="btn btn-neutral float-left" title="7. Definitions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -238,7 +243,7 @@ Reference is made to the the classic article from Sharma and Dean 1981 ,Ref. <a 
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2014, Øystein Lande
+        &copy; Copyright 2020
 
     </p>
   </div>

@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>5. Input file format &mdash; CFDwavemaker 2.0.1 documentation</title>
+  <title>5. Input file format &mdash; CFDwavemaker v2.1.4 documentation</title>
   
 
   
@@ -31,7 +31,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -39,7 +38,7 @@
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="6. Input file examples" href="inputfile_examples.html" />
+    <link rel="next" title="6. Example of usage" href="inputfile_examples.html" />
     <link rel="prev" title="4. Installation and usage" href="installation.html" /> 
 </head>
 
@@ -59,12 +58,16 @@
 
           
             
-            <img src="_static/logo4.png" class="logo" alt="Logo"/>
+            <img src="_static/logo3.png" class="logo" alt="Logo"/>
           
           </a>
 
           
             
+            
+              <div class="version">
+                v2.1.4
+              </div>
             
           
 
@@ -95,42 +98,44 @@
 <li class="toctree-l1"><a class="reference internal" href="build_instructions.html">3. Build from source</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">4. Installation and usage</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">5. Input file format</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#wave-types">5.1. Wave types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#general-input-data">5.2. General input data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#wave-reference-point">5.3. Wave reference point</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ramps">5.4. Ramps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-specification">5.5. Irregular wave specification</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#manual-specification">5.5.1. Manual specification</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#spectral-specification">5.5.2. Spectral specification</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#second-order-wave-theory">5.5.3. Second order wave theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version">5.1. Version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wave-types">5.2. Wave types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#general-input-data">5.3. General input data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wave-reference-point">5.4. Wave reference point</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ramps">5.5. Ramps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#irregular-wave-specification">5.6. Irregular wave specification</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#manual-specification">5.6.1. Manual specification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#spectral-specification">5.6.2. Spectral specification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#second-order-wave-theory">5.6.3. Second order wave theory</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#stokes-regular-wave-specification">5.6. Stokes regular wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#wavemaker-theory-wave-specification">5.7. Wavemaker theory wave specification</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#piston-wavemaker-theory">5.7.1. Piston wavemaker theory</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#hinched-wavemaker-theory">5.7.2. Hinched wavemaker theory</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#dual-hinched-wavemaker-theory">5.7.3. Dual-hinched wavemaker theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stokes-regular-wave-specification">5.7. Stokes regular wave specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wavemaker-theory-wave-specification">5.8. Wavemaker theory wave specification</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#piston-wavemaker-theory">5.8.1. Piston wavemaker theory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hinched-wavemaker-theory">5.8.2. Hinched wavemaker theory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dual-hinched-wavemaker-theory">5.8.3. Dual-hinched wavemaker theory</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#spectral-method-wave-specification">5.8. Spectral method wave specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#grid-interpolation-schemes">5.9. Grid interpolation schemes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#lagrangian-stretched-grid-interpolation-lsgrid">5.9.1. Lagrangian Stretched grid interpolation (LSgrid)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spectral-wave-data-swd-specification">5.9. Spectral wave data (SWD) specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grid-interpolation-schemes">5.10. Grid interpolation schemes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lagrangian-stretched-grid-interpolation-lsgrid">5.10.1. Lagrangian-Stretched grid interpolation (LSgrid)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#output">5.10. Output</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#vtk">5.10.1. VTK</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#time-series">5.10.2. Time-series</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#spectral-data">5.10.3. Spectral data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output">5.11. Output</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#vtk">5.11.1. VTK</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#time-series">5.11.2. Time-series</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#spectral-data">5.11.3. Spectral data</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#tips-tricks">5.11. Tips &amp; tricks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tips-tricks">5.12. Tips &amp; tricks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Input file examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a></li>
-<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
-<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">6. Example of usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="definitions.html">7. Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">8. Wave theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">9. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">10. License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">11. References</a></li>
 </ul>
 
             
@@ -209,8 +214,20 @@
 <p>Comments are permitted in the input files using # ,which will be stripped away before reading the file.
 All tags and keywords are ALWAYS given with lower caps letters. Space is used as separator between keyword and values.</p>
 <p>All keywords available in CFDwavemaker (and what they do) are described in sections underneath.</p>
+<div class="section" id="version">
+<h2><span class="section-number">5.1. </span>Version<a class="headerlink" href="#version" title="Permalink to this headline">¶</a></h2>
+<p>CFDwavemaker has been developed over many years of iteration where new functionalities and improvements have been added along the way. The input format introduced in versiion 2.*.* is quite different from the original input fileformat. A cleanup was neccessary and therefore the support for old input files (pre v2) have been discontinued. Two versions are now supported:</p>
+<ul class="simple">
+<li><p><strong>&#64;v201</strong> which is this initial implementation</p></li>
+<li><p><strong>&#64;v213</strong> up-to-date format, as described in the section below.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please make sure to clearly specify the input file format version in the first line of the input file adding either: &#64;v213 or &#64;v201 in the first line. If this is omitted, the program will assume you are using &#64;v201.</p>
+</div>
+</div>
 <div class="section" id="wave-types">
-<h2><span class="section-number">5.1. </span>Wave types<a class="headerlink" href="#wave-types" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.2. </span>Wave types<a class="headerlink" href="#wave-types" title="Permalink to this headline">¶</a></h2>
 <p>CFDwavemaker currently support the following wave theories. Which branch of wave theory to used is controlled by the keyword <strong>[wave type]</strong></p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">irregular</span></code> - irregular wave theory (linear or second order)</p></li>
@@ -227,7 +244,7 @@ irregular
 </div>
 </div>
 <div class="section" id="general-input-data">
-<h2><span class="section-number">5.2. </span>General input data<a class="headerlink" href="#general-input-data" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.3. </span>General input data<a class="headerlink" href="#general-input-data" title="Permalink to this headline">¶</a></h2>
 <p>Some data are mandatory for all wave types. These parameters are specified under the tag <strong>[general input data]</strong>.</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -273,7 +290,7 @@ amplify  1.
 </div>
 </div>
 <div class="section" id="wave-reference-point">
-<h2><span class="section-number">5.3. </span>Wave reference point<a class="headerlink" href="#wave-reference-point" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.4. </span>Wave reference point<a class="headerlink" href="#wave-reference-point" title="Permalink to this headline">¶</a></h2>
 <p>A reference point in time and space for the wave specification is needed. This is specified using the tag <strong>[wave reference point]</strong>, as shown in the example given below. time is given in seconds, position x and y are given in meters.
 Specifying the <strong>[wave reference point]</strong> is optional. If this is not given, default values will be assumed.</p>
 <table class="colwidths-given docutils align-default">
@@ -310,7 +327,7 @@ y  0.0
 </div>
 </div>
 <div class="section" id="ramps">
-<h2><span class="section-number">5.4. </span>Ramps<a class="headerlink" href="#ramps" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.5. </span>Ramps<a class="headerlink" href="#ramps" title="Permalink to this headline">¶</a></h2>
 <p>Ramps can sometimes be useful to avoid transient behaviour for example in at startup, or when specifying wave kinematics in corners of a domain. Ramps are specified in time and space (x and y plane only) by calling the keyword <strong>[ramps]</strong> followed by the ramp input. The ramp may be omitted all together, in which case no ramp of any kind is used.</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -362,14 +379,14 @@ y_rampdown  0  11.0000  12.0
 </div>
 </div>
 <div class="section" id="irregular-wave-specification">
-<h2><span class="section-number">5.5. </span>Irregular wave specification<a class="headerlink" href="#irregular-wave-specification" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.6. </span>Irregular wave specification<a class="headerlink" href="#irregular-wave-specification" title="Permalink to this headline">¶</a></h2>
 <p>Irregular waves can be specified in several ways, but to keep it simple, we destinguish between two categories of specification:</p>
 <ol class="arabic simple">
 <li><p>Manual specification - frequency components, directional components, amplitudes, etc are specified manually. This is useful when you want complete control or need to run a simulation where the spectral components are have been calculated by another program.</p></li>
 <li><p>Spectral specification - CFDwavemaker does the job for you. <strong>Note: it should be noted that spectral specification is not yet fully implemented.</strong></p></li>
 </ol>
 <div class="section" id="manual-specification">
-<h3><span class="section-number">5.5.1. </span>Manual specification<a class="headerlink" href="#manual-specification" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.6.1. </span>Manual specification<a class="headerlink" href="#manual-specification" title="Permalink to this headline">¶</a></h3>
 <p>The tag <strong>[irregular wave components]</strong> needs to present. This tag requires the following information to follow:</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -442,7 +459,11 @@ ndir 19
 </div>
 </div>
 <div class="section" id="spectral-specification">
-<h3><span class="section-number">5.5.2. </span>Spectral specification<a class="headerlink" href="#spectral-specification" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.6.2. </span>Spectral specification<a class="headerlink" href="#spectral-specification" title="Permalink to this headline">¶</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This module has been disabled since it is not complete and tested. Please use manual specification <strong>[Manual specification]</strong> for now.</p>
+</div>
 <p>The second of initializing an irregular wave field. The tag <strong>[irregular spectral properties]</strong> needs to be specified, followed by the following data</p>
 <p>to be updated.</p>
 <p>Example 1:</p>
@@ -461,6 +482,10 @@ spread cosn
 n 4
 type random_draw
 dir_seed 1234
+event_select_criterion crestmax
+event_number 3 # selecting to run the third largest event
+event_posx 10. # m, position of where to look for maxima (x-coord)
+event_posy 12. # m, &quot;    (y-coord)
 </pre></div>
 </div>
 <p>Example 2:</p>
@@ -480,11 +505,13 @@ type integrate
 theta_min -1.57
 theta_max 1.57
 dtheta 0.3491
+event_select_criterion waveheightmax
+eventnumber 1 # selecting to run the largest wave height
 </pre></div>
 </div>
 </div>
 <div class="section" id="second-order-wave-theory">
-<h3><span class="section-number">5.5.3. </span>Second order wave theory<a class="headerlink" href="#second-order-wave-theory" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.6.3. </span>Second order wave theory<a class="headerlink" href="#second-order-wave-theory" title="Permalink to this headline">¶</a></h3>
 <p>By default, the waves which are generated uses linear wave theory. To switch on the use of second order wave theory (which you DO want todo for steep waves), the keyword <strong>[second order]</strong> must be specified, followed by some optional control parameters</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
@@ -519,7 +546,7 @@ extmet 2
 </div>
 </div>
 <div class="section" id="stokes-regular-wave-specification">
-<h2><span class="section-number">5.6. </span>Stokes regular wave specification<a class="headerlink" href="#stokes-regular-wave-specification" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.7. </span>Stokes regular wave specification<a class="headerlink" href="#stokes-regular-wave-specification" title="Permalink to this headline">¶</a></h2>
 <p>Sir George Stokes solved this nonlinear wave problem in 1847 by expanding the relevant potential flow quantities in a Taylor series around the mean (or still) surface elevation. As a result, the boundary conditions can be expressed in terms of quantities at the mean (or still) surface elevation. Stokes’s regular wave theory is of direct practical use for waves on intermediate and deep water. It is used in the design of coastal and offshore structures, in order to determine the wave kinematics (free surface elevation and flow velocities).
 Several implementations of these waves exists. The implementation in CFDwavemaker is based on Ref <a class="bibtex reference internal" href="references.html#skjelbreia1960fifth" id="id5">[7]</a> and goes up to 5th order.</p>
 <p>To specify the properties of the Stokes waves the following keyword is used: <strong>[stokes wave properties]</strong>. The properties that follows are given in the table below.</p>
@@ -561,10 +588,10 @@ current_speed 0.
 </div>
 </div>
 <div class="section" id="wavemaker-theory-wave-specification">
-<h2><span class="section-number">5.7. </span>Wavemaker theory wave specification<a class="headerlink" href="#wavemaker-theory-wave-specification" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.8. </span>Wavemaker theory wave specification<a class="headerlink" href="#wavemaker-theory-wave-specification" title="Permalink to this headline">¶</a></h2>
 <p>Wavemaker theory may sometimes be useful when validating wave propagation against model test data were a physical wave maker has been used to generate the waves.</p>
 <div class="section" id="piston-wavemaker-theory">
-<h3><span class="section-number">5.7.1. </span>Piston wavemaker theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.8.1. </span>Piston wavemaker theory<a class="headerlink" href="#piston-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
 <div class="figure align-default" id="id9">
 <span id="pistonwavemaker"></span><img alt="Example of edinbourgh designs piston wave makers" src="http://www.edesign.co.uk/wp-content/uploads/2013/02/IMGP3051.jpg" />
 <p class="caption"><span class="caption-number">Fig. 5.1 </span><span class="caption-text">Example of <a class="reference external" href="http://www4.edesign.co.uk/product/piston-wave-generators/">Edinbourgh Designs</a> piston wave maker</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
@@ -622,21 +649,22 @@ alpha_u 0.1
 </div>
 </div>
 <div class="section" id="hinched-wavemaker-theory">
-<h3><span class="section-number">5.7.2. </span>Hinched wavemaker theory<a class="headerlink" href="#hinched-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
-<p>Note yet implemented</p>
+<h3><span class="section-number">5.8.2. </span>Hinched wavemaker theory<a class="headerlink" href="#hinched-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
+<p>Implementation ongoing.</p>
 </div>
 <div class="section" id="dual-hinched-wavemaker-theory">
-<h3><span class="section-number">5.7.3. </span>Dual-hinched wavemaker theory<a class="headerlink" href="#dual-hinched-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
-<p>Also not yet implemented</p>
+<h3><span class="section-number">5.8.3. </span>Dual-hinched wavemaker theory<a class="headerlink" href="#dual-hinched-wavemaker-theory" title="Permalink to this headline">¶</a></h3>
+<p>Implementation ongoing.</p>
 </div>
 </div>
-<div class="section" id="spectral-method-wave-specification">
-<h2><span class="section-number">5.8. </span>Spectral method wave specification<a class="headerlink" href="#spectral-method-wave-specification" title="Permalink to this headline">¶</a></h2>
-<p>Support for higher order spectral methods (HOSM) is implemented through the Spectral wave data library (SWD).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>HOSM is not a part of this library. To use HOSM data as input to CFD, the simulation first have to be run in HOSM, and saved to the <a href="#id7"><span class="problematic" id="id8">**</span></a>.swd* file format. The spectral-wave-data library may in turns read this file and generate kinematics from it.</p>
-</div>
+<div class="section" id="spectral-wave-data-swd-specification">
+<h2><span class="section-number">5.9. </span>Spectral wave data (SWD) specification<a class="headerlink" href="#spectral-wave-data-swd-specification" title="Permalink to this headline">¶</a></h2>
+<p>The Spectral-Wave-Data library is an open-source library which provides an open interface for how to exchange spectral ocean wave kinematics between computer programs. This provides a very useful extension to CFDwavemaker, which facilitates external wave theories, as long as they can write the output in the .swd format. This includes wave theories such as (but of course not limited to):</p>
+<ul class="simple">
+<li><p>higher order spectral methods (HOSM) such as generated by <a class="reference external" href="https://projects.dnvgl.com/sesam/status/Wamod/Wamod.html?id=WAMOD_12-DEC-2019_2&amp;typ=new%20feature&amp;showVersion=yes">WAMOD</a></p></li>
+<li><p>Fenton-Stream waves and other regular wave theories, using the open python source code <a class="reference external" href="https://pypi.org/project/raschii/">raschii</a></p></li>
+</ul>
+<p>To read swd files in CFDwavemaker, <strong>[wave type]</strong> = swd, and the following list of parameters can be specified under the keyword <strong>[swd wave properties]</strong>:</p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
 <col style="width: 20%" />
@@ -651,22 +679,6 @@ alpha_u 0.1
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">swdfile</span></code></p></td>
 <td><p>Name of swd file. Obviously this is mandatory. a full path may be specified if the file is located in another directory than the  default run directory. (spaces in the file path is not permitted)</p></td>
 <td><p>yes</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">x0</span></code></p></td>
-<td><p>Reference position x [m]. default x0 = 0.</p></td>
-<td><p>no</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">y0</span></code></p></td>
-<td><p>Reference position y [m]. default y0 = 0.</p></td>
-<td><p>no</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">x0</span></code></p></td>
-<td><p>Reference position z [m]. default z0 = 0.</p></td>
-<td><p>no</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">beta</span></code></p></td>
-<td><p>Reference direction of wave field (in degrees). default beta = 0.</p></td>
-<td><p>no</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">nsumx</span></code></p></td>
 <td><p>Number of spectral components to apply in x direction (&lt;0: apply all)</p></td>
@@ -697,12 +709,6 @@ alpha_u 0.1
 <p>An example of the required input parameters which needs to be specified in <em>waveinput.data</em> is given below:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[swd wave properties]
 swdfile     constant/fenton_h1.2_d1_l2.swd
-# Relation between SWD and application coordinates. beta in degree. These all have default value 0.0
-# See also origin above for defining the still water position
-x0 0.0
-y0 0.0
-t0 0.0
-beta 0.0
 # Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
 nsumx -1
 nsumy -1
@@ -712,9 +718,15 @@ norder 0
 dc_bias false
 </pre></div>
 </div>
+<p><em>Some additional notes regarding the use of swd:</em></p>
+<ul class="simple">
+<li><p>Water depth specified in the swd file will overrule the specified water depth given in <strong>[general input data]</strong> (see <a class="reference internal" href="#general-input-data"><span class="std std-numref">Section 5.3</span></a>).</p></li>
+<li><p>Like irregular second order wave theory, the grid interpolation schemes presented in <a class="reference internal" href="#grid-interpolation-schemes"><span class="std std-numref">Section 5.10</span></a> are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.</p></li>
+<li><p>The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see <code class="xref std std-numref docutils literal notranslate"><span class="pre">coordinate_system:General</span> <span class="pre">input</span> <span class="pre">data</span></code>). To change reference position, see <a class="reference internal" href="#wave-reference-point"><span class="std std-numref">Section 5.4</span></a> and <code class="docutils literal notranslate"><span class="pre">swl</span></code> in <a class="reference internal" href="#general-input-data"><span class="std std-numref">Section 5.3</span></a>.</p></li>
+</ul>
 </div>
 <div class="section" id="grid-interpolation-schemes">
-<h2><span class="section-number">5.9. </span>Grid interpolation schemes<a class="headerlink" href="#grid-interpolation-schemes" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.10. </span>Grid interpolation schemes<a class="headerlink" href="#grid-interpolation-schemes" title="Permalink to this headline">¶</a></h2>
 <p>Grid interpolation is essential in order to speed up initiallization of CFD domains when using computationally expensive wave theories such as second order irregular wave theory and higher order spectral methods. The cell resolution in a CFD simulation where the kinematics components are required may be fare greater than what is needed to define the kinematics of the wave field with adequate accuracy. Using interpolation in time and space is will thus save lots of computation. In addition, defining kinematics on a grid rather than doing point by point randomly, simplifies parallelization.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -724,9 +736,23 @@ dc_bias false
 </ul>
 </div>
 <div class="section" id="lagrangian-stretched-grid-interpolation-lsgrid">
-<h3><span class="section-number">5.9.1. </span>Lagrangian Stretched grid interpolation (LSgrid)<a class="headerlink" href="#lagrangian-stretched-grid-interpolation-lsgrid" title="Permalink to this headline">¶</a></h3>
-<p>Lagrangian stretching, based on sigma transforms are used in combination with a stretching factor, dependent on distance to surface, giving high resolution in z direction at the surface, and lower at depth.
+<h3><span class="section-number">5.10.1. </span>Lagrangian-Stretched grid interpolation (LSgrid)<a class="headerlink" href="#lagrangian-stretched-grid-interpolation-lsgrid" title="Permalink to this headline">¶</a></h3>
+<p>The following statements can be said to be true for the kinematics vector field underneath an irregular sea surface:</p>
+<ul class="simple">
+<li><p>The velocity profiles are exponential</p></li>
+<li><p>The largest velocities occuring at the surface</p></li>
+<li><p>The largest spatial velocity gradients occur near the free surface</p></li>
+<li><p>Wave kinematics above the free surface is irrelevant.</p></li>
+</ul>
+<p>The last statement might be obvious, but is what you will end up storing if your interpolation mesh is static. At the same time you will need to extrapolate the kinematics above the free surface to avoid loosing energy when the mesh is used for interpolation by the CFD solver. The best alternative is thus to have a mesh that moves with the free surface and that has a high density of cells close to the surface, an coarser for increasing water depths.
+The Lagrangian-Stretched grid (in short LSgrid) is just that! A mesh structure optimized for storage of wave kinematics data and that allows for the use of simple interpolation technics.</p>
+<p>LSgrid uses sigma transforms in combination with a stretching factor, giving high resolution in z direction at the surface, and lower at depth. The upper layer of the LSgrid will always be at the free surface, and the bottom layer will always be at the sea bed, such that all points of the mesh covers the fluid only. An example snapshot of such a grid is shown in the figure below.
 This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum number of points. The time interpolation is linear. To specify the use of a lagrangian streched grid interpolation scheme, the keyword <strong>[lsgrid]</strong> is used.</p>
+<div class="figure align-default" id="id10">
+<img alt="Lagrangian stretched mesh underneath an irregular wave event." src="_images/lsgrid2.png" />
+<p class="caption"><span class="caption-number">Fig. 5.2 </span><span class="caption-text">Lagrangian stretched mesh underneath an irregular wave event.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+</div>
+<p>The following tags may be used to specify the properties of the <strong>lsgrid</strong></p>
 <table class="colwidths-given docutils align-default">
 <colgroup>
 <col style="width: 20%" />
@@ -774,6 +800,10 @@ This provides a very efficient way of describing the velocity profile underneath
 <td><p>Initializing the entire grid with second order wave theory is time consuming. If you wish to start the simulation from still water (as in a model test tank), you should set this feature to 1. The initialization of the lsgrid will then be skipped and all kinematics will be set to zero.</p></td>
 <td><p>no (default 0)</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">init_only</span></code></p></td>
+<td><p>If you are only interested in kinematics at time=`t0`, which is the case if you want to use it for initialization of the domain only, without any boundary values for time &gt; 0, then some speedup may be achieved by setting this parameter = 1. default is however <a href="#id7"><span class="problematic" id="id8">``</span></a>init_only``=0.</p></td>
+<td><p>no (default 0)</p></td>
+</tr>
 </tbody>
 </table>
 <p>An example input description is given below</p>
@@ -788,16 +818,21 @@ dt  0.5
 stretch_params 0.7   1.5
 #                 xmin     xmax   ymin   ymax
 ignore_subdomain -1398.00 602.00 -902.00 1102.00
+ignore_at_init 0
 </pre></div>
 </div>
+<p><strong>Additional notes on LSgrid:</strong></p>
+<p>For long crested simulations it is sufficient to have a resolutions ny=1, assuming wave propagates along the x-axis.  The value of ymin and ymax is then not of importances since interpolation is only done in x and z direction.</p>
+<p>VTK files can be writted as long as at least nx or ny &gt; 1. (i.e. 3D or 2D).</p>
+<p>The LSgrid functions are parallelized using openMP, hence a a significant performance boost is gain by running on multiple cores.</p>
 </div>
 </div>
 <div class="section" id="output">
-<h2><span class="section-number">5.10. </span>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.11. </span>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h2>
 <p>The primary objective of the library is to provide kinematics by calling the C extern functions provided in CFDwavemaker.h.
 It is also possible to make CFDwavemaker dump kinematics directly to file. This can be convenient for QA, or if wave kinematics is needed for other purposes.</p>
 <div class="section" id="vtk">
-<h3><span class="section-number">5.10.1. </span>VTK<a class="headerlink" href="#vtk" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.11.1. </span>VTK<a class="headerlink" href="#vtk" title="Permalink to this headline">¶</a></h3>
 <p>When using interpolation scheme, wave kinematics is stored on a grid for quick interpolation. This grid can be dumped a VTK file (.vtu) which is a well established format provided through the <a class="reference external" href="http://www.vtk.org">VTK library</a> . The files may be visualized and processed further using <a class="reference external" href="http://www.paraview.org">Paraview</a> or other software.
 To achieve this, the tag <strong>[vtk output]</strong> needs to be specified.
 Everytime the grid is updated, a new .vtu file is written for the time t = t0.</p>
@@ -820,6 +855,10 @@ Everytime the grid is updated, a new .vtu file is written for the time t = t0.</
 <td><p>prefix kinematics files. Defaults is “kinematics”. Hence files will be named kinematics0000.vtu, kinematics0001.vtu, … etc.</p></td>
 <td><p>no</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timelabel</span></code></p></td>
+<td><p>If you wish to compare the resulting output vtu files to vtu files from the CFD simulation, then it is important that the timelabel is the same in both vtu file sets. The default value is <em>TimeValue</em> which works well with OpenFOAM. For ComFLOW, set this value to <em>TIME</em>.</p></td>
+<td><p>no</p></td>
+</tr>
 </tbody>
 </table>
 <p>For now, it is not possible to choose a different time step than what is used to in <strong>[LSgrid]</strong>. This may be updated in the future.</p>
@@ -831,12 +870,12 @@ filename kinematics
 </div>
 </div>
 <div class="section" id="time-series">
-<h3><span class="section-number">5.10.2. </span>Time-series<a class="headerlink" href="#time-series" title="Permalink to this headline">¶</a></h3>
+<h3><span class="section-number">5.11.2. </span>Time-series<a class="headerlink" href="#time-series" title="Permalink to this headline">¶</a></h3>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Not yet fully implemented.</p>
 </div>
-<p>Time traces of surface elevation and kinematics may be dumped during runtime for QA purposes. Thi</p>
+<p>Time traces of surface elevation and kinematics may be dumped during runtime for QA purposes.</p>
 <p><strong>Example code:</strong></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[timeseries output]
 storage_path ./ts/
@@ -850,8 +889,8 @@ npos 3
 </div>
 </div>
 <div class="section" id="spectral-data">
-<h3><span class="section-number">5.10.3. </span>Spectral data<a class="headerlink" href="#spectral-data" title="Permalink to this headline">¶</a></h3>
-<p>Writes spectral components to file (in case irregular waves are run). Useful for QA purposes. This is always down after input file have been read, hence no additional keyword is required in the input file. Data is written to the file <em>spectral_components.dat</em>. For convenience the output format is such that it can be copied directly into a <em>waveinput.dat</em> file. (see <a class="reference internal" href="#manual-specification"><span class="std std-numref">Section 5.5.1</span></a>)</p>
+<h3><span class="section-number">5.11.3. </span>Spectral data<a class="headerlink" href="#spectral-data" title="Permalink to this headline">¶</a></h3>
+<p>Writes spectral components to file (in case irregular waves are run). Useful for QA purposes. This is always down after input file have been read, hence no additional keyword is required in the input file. Data is written to the file <em>spectral_components.dat</em>. For convenience the output format is such that it can be copied directly into a <em>waveinput.dat</em> file. (see <a class="reference internal" href="#manual-specification"><span class="std std-numref">Section 5.6.1</span></a>)</p>
 <p>The example below illustrates the format for which the spectral data is dumped.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># spectral wave data output
 # [irregular wave components]
@@ -868,7 +907,7 @@ npos 3
 </div>
 </div>
 <div class="section" id="tips-tricks">
-<h2><span class="section-number">5.11. </span>Tips &amp; tricks<a class="headerlink" href="#tips-tricks" title="Permalink to this headline">¶</a></h2>
+<h2><span class="section-number">5.12. </span>Tips &amp; tricks<a class="headerlink" href="#tips-tricks" title="Permalink to this headline">¶</a></h2>
 <p>The comment marker # is useful for turning on and off features temporarily. For instance, switching from second order to first order waves are simply done by adding a # infront of <strong>[second order]</strong>. Turning of grid interpolation is simply done by adding # infront of <strong>[lsgrid]</strong>, and all the remaining parameters assosiated to this tag will be ignored. Example:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#[lsgrid]
 #         XMIN   XMAX   YMIN   YMAX
@@ -895,7 +934,7 @@ ignore_subdomain -1398.00 602.00 -902.00 1102.00
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="inputfile_examples.html" class="btn btn-neutral float-right" title="6. Input file examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="inputfile_examples.html" class="btn btn-neutral float-right" title="6. Example of usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="installation.html" class="btn btn-neutral float-left" title="4. Installation and usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -908,7 +947,7 @@ ignore_subdomain -1398.00 602.00 -902.00 1102.00
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2014, Øystein Lande
+        &copy; Copyright 2020
 
     </p>
   </div>

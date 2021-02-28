@@ -5,6 +5,10 @@ Build from source
 Build in Linux/Unix
 -------------------
 
+.. warning:: 
+
+  These build instructions are somewhat outdated. Will be updated soon.
+
 Start by cloning the git repository into a suitable location on you computer
 
 .. code:: none

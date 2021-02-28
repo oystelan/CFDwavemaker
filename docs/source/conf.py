@@ -16,13 +16,17 @@
 
 
 # -- Project information -----------------------------------------------------
+from datetime import datetime
 
 project = 'CFDwavemaker'
-copyright = '2014, Øystein Lande'
-author = 'Øystein Lande'
+#copyright = '2014, Øystein Lande'
+copyright = str(datetime.now().year)
+
+author = 'Oystein Lande'
 
 # The full version, including alpha/beta/rc tags
-release = '2.0.1'
+release = 'v2.1.4'
+version = 'v2.1.4'
 
 
 # -- General configuration ---------------------------------------------------
@@ -53,7 +57,7 @@ autosectionlabel_prefix_document = True
 html_theme = "sphinx_rtd_theme"
 numfig = True
 
-html_logo = "images/logo4.png"
+html_logo = "images/logo3.png"
 
 html_theme_options = {
 #'canonical_url': '',

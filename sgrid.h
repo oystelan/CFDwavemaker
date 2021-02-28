@@ -6,7 +6,11 @@
 #define SGrid_H
 
 #include "Irregular.h"
+#if defined(_WIN32)
+#include "SpectralWaveData_dummy.h"
+#else
 #include "SpectralWaveData.h"
+#endif
 
 #define largeval 1.E12
 
