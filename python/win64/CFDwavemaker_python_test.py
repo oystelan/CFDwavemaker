@@ -9,9 +9,14 @@ from ctypes import*
 import matplotlib.pylab as plt
 import numpy as np
 import shutil
+import os.path
 
 # give location of dll
-mydll = cdll.CFDwavemaker
+#mydll = cdll.CFDwavemaker
+dll_name = "CFDwavemaker.dll"
+dllpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),"../../builds/win64",dll_name)
+print(dllpath)
+mydll = CDLL(dllpath)
 
 
 def tic():

@@ -1826,7 +1826,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v2.1.4" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.5" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	
