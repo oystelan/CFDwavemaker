@@ -37,9 +37,11 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "sgrid.h"
-#if defined(_WIN32)
-#include "SpectralWaveData_dummy.h"
-#else
+
+
+// for now, spectralwavedata is only supported in linux build
+
+#if defined(SWD_enable)
 #include "SpectralWaveData.h"
 #endif
 
@@ -67,6 +69,13 @@ public:
 	bool dc_bias = false;
 	std::string swdFileName;
 
+	//timeseries inputdata
+	std::string ts_path, ts_filename;
+	int ts_nprobes = 0;
+
+
+
+
 
 	CFDwavemakerInputdata() {
 	}
@@ -80,7 +89,6 @@ bool CFDwmInit = false;
 //double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
 
 CFDwavemakerInputdata inputdata;
-
 
 // Stokes 5 class
 Stokes5 stokes5;
@@ -98,24 +106,25 @@ sGrid sgrid;
 Ramp ramp;
 
 // SWD class;
+#if defined(SWD_enable)
 SpectralWaveData *swd;
+#endif
 
-//fftw_plan p;
+//string GetCurrentWorkingDir(void) {
+//	char buff[FILENAME_MAX];
+//	GetCurrentDir(buff, FILENAME_MAX);
+//	std::string current_working_dir(buff);
+//	return current_working_dir;
+//}
 
+// Some useful utilitize functions
 
-
-//#define GetCurrentDir _getcwd
-
-/*void testfft() {
-	fftw_complex *in, *out;
-
-	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 64);
-	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 64);
-
-	fftw_free(in); fftw_free(out);
-
-}*/
-
+void wait(int seconds)
+{
+	clock_t endwait;
+	endwait = clock() + seconds * CLOCKS_PER_SEC;
+	while (clock() < endwait) {}
+}
 
 /* A sorting function for vectors whihc returns the indices after sorting */
 template <typename T>
@@ -133,13 +142,6 @@ std::vector<size_t> sort_indices(const std::vector<T>& v) {
 		[&v](size_t i1, size_t i2) {return v[i1] < v[i2]; });
 
 	return idx;
-}
-
-void wait(int seconds)
-{
-	clock_t endwait;
-	endwait = clock() + seconds * CLOCKS_PER_SEC;
-	while (clock() < endwait) {}
 }
 
 // trim from start (in place)
@@ -173,16 +175,6 @@ int numparams(std::string str)
 		count++;
 	return count;
 }
-
-
-
-
-//string GetCurrentWorkingDir(void) {
-//	char buff[FILENAME_MAX];
-//	GetCurrentDir(buff, FILENAME_MAX);
-//	std::string current_working_dir(buff);
-//	return current_working_dir;
-//}
 
 // This function is depricated. will be removed in the future.
 int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Ramp& rramp ) {
@@ -1420,6 +1412,58 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 		}
+		if (!lineA.compare("[timeseries output]")) { //optional
+			std::cout << "---------------------------" << std::endl;
+			std::cout << "Timeseries output settings:" << std::endl;
+			std::cout << "---------------------------" << std::endl;
+
+			/*[timeseries output]
+			storage_path ./ts/ 
+				filename tsfile
+				npos 3
+				# x y z
+				0.0 0.0 0.0
+				3.3 5.4 - 10.
+				0.0 5.4 - 10.*/
+			if (inputdata.wavetype == 4 && inputdata.wavetype == 34) {
+				sgrid.dump_vtk = true;
+			}
+			else {
+				// add a class which handles dumping to time-series
+			}
+
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 12, "storage_path")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_directory_path;
+					buf.clear();
+					std::cout << "Directory for storage of vtk files: " << lsgrid.vtk_directory_path << std::endl;
+				}
+				if (!lineA.compare(0, 8, "filename")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_prefix;
+					buf.clear();
+					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
+				}
+				if (!lineA.compare(0, 4, "npos")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_timelabel;
+					buf.clear();
+					std::cout << "time label to use in vtk specified as: " << lsgrid.vtk_timelabel << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
 	}
 
 	// Do some checks of the specified input parameters. Some combinations are prohibited
@@ -1499,9 +1543,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 	}
 
+	
 	// swd
 	if (inputdata.wavetype >= 30 && inputdata.wavetype < 40) {
-
+#if defined(SWD_enable)
 		double x0_, y0_, t0_, beta_;
 
 		std::cout << inputdata.swdFileName.c_str() << std::endl;
@@ -1527,10 +1572,15 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		for (size_t i = 0; i < v.size(); i++)
 			std::cout << v[i] << std::endl;
 		std::cout << "************************************************************************* " << std::endl;
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+
+#endif
 	}
 
 	// swd with lsgrid
 	if (inputdata.wavetype == 34) {
+#if defined(SWD_enable)
 		double depth_swd_file = swd->GetReal("d");
 		if (depth_swd_file != inputdata.depth && depth_swd_file > 0) {
 			std::cout << "Warning: Specified water depth, " << inputdata.depth << "m,  not the same as used in swd file d = " << depth_swd_file << "m. Depth specified in SWD file will be used." << std::endl;
@@ -1550,6 +1600,9 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 			lsgrid.initialize_surface_elevation(swd, lsgrid.t0);
 			lsgrid.initialize_kinematics(swd);
 		}
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	}
 
 	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
@@ -1598,6 +1651,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		// swd
 	case 31:
 	{
+#if defined(SWD_enable)
 		// Tell the swd object current application time...
 		try {
 			swd->UpdateTime(tpt);
@@ -1609,9 +1663,14 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.x; 
+		return ramp.ramp(tpt, xpt, ypt) * U.x;
+#else
+std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+
 	}
 	case 34:
+#if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
 #pragma omp single nowait
@@ -1619,8 +1678,9 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-
-
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	default:
 		return 0.0;
 	}
@@ -1650,6 +1710,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		// swd
 	case 31:
 	{
+#if defined(SWD_enable)
 		// Tell the swd object current application time...
 		try {
 			swd->UpdateTime(tpt);
@@ -1662,15 +1723,22 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.y; 
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	}
 	// swd + lsgrid
 	case 34:
+#if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
 #pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	default:
 		return 0.0;
 	}
@@ -1698,6 +1766,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	// swd
 	case 31:
 	{
+#if defined(SWD_enable)
 		// Tell the swd object current application time...
 		try {
 			swd->UpdateTime(tpt);
@@ -1710,14 +1779,21 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.z; 
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	}
 	// Swd + lsgrid
 	case 34:
+#if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	default:
 		return 0.0;
 	}
@@ -1767,6 +1843,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		// swd
 	case 31:
 	{
+#if defined(SWD_enable)
 		// Tell the swd object current application time...
 		try {
 			swd->UpdateTime(tpt);
@@ -1777,16 +1854,22 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			// we first need to call: swd.ExceptionClear()
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
-		
 		//std::cout << "time: " << tpt << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	}
 	case 34:
+#if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	default:
 		return 0.0;
 	}

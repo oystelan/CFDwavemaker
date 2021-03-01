@@ -53,9 +53,6 @@
     <ClInclude Include="sgrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SpectralWaveData_dummy.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="waveinput.dat">

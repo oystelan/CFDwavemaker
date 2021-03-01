@@ -2,6 +2,7 @@
 #define Utils_H
 
 #include "Irregular.h"
+#include <sstream>
 
 // Ramp class contains various ramp functions
 class Ramp {
@@ -22,7 +23,6 @@ public:
 
 	double ramp(double time, double x, double y);
 };
-
 
 
 

@@ -11,7 +11,21 @@
 #endif
 
 
+// Allocation of memory to storage matrices
+void sGrid::allocate() {
+	ETA0 = new double[nx * ny];
+	ETA1 = new double[nx * ny];
 
+	IGNORE = new int[nx * ny];
+
+	UX0 = new double[nx * ny * nl];
+	UY0 = new double[nx * ny * nl];
+	UZ0 = new double[nx * ny * nl];
+
+	UX1 = new double[nx * ny * nl];
+	UY1 = new double[nx * ny * nl];
+	UZ1 = new double[nx * ny * nl];
+}
 
 // A streching function for setting variable layer thickness
 double sGrid::slayer(int layerno) {
@@ -57,68 +71,14 @@ double sGrid::tan2s(double t) {
 	return -std::atan(std::pow(-t * std::pow(std::tan(tan_a) , tan_b) , 1. / tan_b)) / tan_a;
 }
 
-/*
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_kinematics(Irregular& irregular) {
 
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
-	ds = 1. / std::max(1.,double(nl - 1));
+//----------------------------------------------------------------------------------------------------------------------------------------
 
-	double dd = omp_get_wtime();
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+// Second order theory functions
 
-#pragma omp parallel // start parallel initialization
-	{
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-			
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta0_temp = ETA0[i * ny + j] - swl;
-				double eta1_temp = ETA1[i * ny + j] - swl;
-
-				double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-				double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-				double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt0 = s2z(spt, eta0_temp, water_depth);
-					double zpt1 = s2z(spt, eta1_temp, water_depth);
-
-					UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
-					UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
-					UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
-					UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-					UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-					UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-				}
-			}
-		}
-	} // End parallel initialization
-	if (dump_vtk) {
-		write_vtk(false);
-		update_count++;
-	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
-}
-*/
+//----------------------------------------------------------------------------------------------------------------------------------------
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void sGrid::initialize_kinematics(Irregular& irregular) {
@@ -205,6 +165,264 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
+// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
+void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
+
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
+	ds = 1. / std::max(1., double(nl - 1));
+
+	double dd = omp_get_wtime();
+
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel // start parallel initialization
+	{
+#pragma omp master
+		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				if (!IGNORE[i * ny + j]) {
+					double xpt = domain[0] + dx * i;
+					double ypt = domain[2] + dy * j;
+					double eta0_temp = ETA0[i * ny + j] - swl;
+
+					double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+					double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+					double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+
+					for (int m = 0; m < nl; m++) {
+						double spt = s2tan(-1. + ds * m);
+						double zpt0 = s2z(spt, eta0_temp, water_depth);
+
+						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
+						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
+						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
+					}
+				}
+			}
+		}
+	}
+
+	if (init_only) {
+		UX1 = UX0;
+		UY1 = UY0;
+		UZ1 = UZ0;
+	}
+	else {
+#pragma omp parallel // start parallel initialization
+		{
+#pragma omp for collapse(2)
+			for (int i = 0; i < nx; i++) {
+				for (int j = 0; j < ny; j++) {
+					if (!IGNORE[i * ny + j]) {
+						double xpt = domain[0] + dx * i;
+						double ypt = domain[2] + dy * j;
+						double eta1_temp = ETA1[i * ny + j] - swl;
+
+						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+
+						for (int m = 0; m < nl; m++) {
+							double spt = s2tan(-1. + ds * m);
+							double zpt1 = s2z(spt, eta1_temp, water_depth);
+
+							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
+							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
+							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
+						}
+					}
+				}
+			}
+		}
+	}
+	// End parallel initialization
+	if (dump_vtk) {
+		write_vtk(false);
+		update_count++;
+	}
+	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
+	dd = omp_get_wtime() - dd;
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	std::cout << "Interpolation can commence..." << std::endl;
+}
+
+
+
+// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
+void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
+	std::cout << "time: " << t_target << std::endl;
+	t0 = t_target;
+
+	// Allocating memory for storage of surface elevation and velocities
+
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
+
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel
+	{
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+
+				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+				ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+
+			}
+		}
+	}
+	dd = omp_get_wtime() - dd;
+
+	std::cout << "Surface Elevation generated successfully. ";
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+}
+// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
+void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
+
+	std::cout << "time: " << t_target << std::endl;
+	t0 = t_target;
+
+	// Allocating memory for storage of surface elevation and velocities
+
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
+
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	omp_set_num_threads(omp_get_max_threads());
+
+#pragma omp parallel
+	{
+		// Main grid
+#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				if (!IGNORE[i * ny + j]) {
+					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+				}
+				else {
+					ETA0[i * ny + j] = swl;
+					ETA1[i * ny + j] = swl;
+				}
+			}
+		}
+	}
+	dd = omp_get_wtime() - dd;
+
+	std::cout << "Surface Elevation generated successfully. ";
+	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+}
+
+
+// When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
+void sGrid::update(Irregular& irregular, double t_target)
+{
+	// Start by checking bounds
+	/*
+	if (!disable_checkbounds){
+		CheckBounds();
+	}*/
+
+	// new time step
+	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
+		double new_time = dt * std::floor(t_target / dt);
+		initialize_surface_elevation(irregular, new_time);
+		initialize_kinematics(irregular);
+	}
+	else {
+		t0 += dt;
+		// Updating surface elevations
+		double dd = omp_get_wtime();
+		//omp_set_num_threads(1);
+		omp_set_num_threads(omp_get_max_threads());
+#pragma omp parallel
+		{
+			// Main grid
+#pragma omp for collapse(2)
+			for (int i = 0; i < nx; i++) {
+				for (int j = 0; j < ny; j++) {
+					double xpt = domain[0] + dx * i;
+					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
+					double ypt = domain[2] + dy * j;
+					if (!IGNORE[i * ny + j]) {
+						ETA0[i * ny + j] = ETA1[i * ny + j];
+						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+
+						double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
+						double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
+						double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
+
+						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+
+						for (int m = 0; m < nl; m++) {
+							double spt = s2tan(-1. + ds * m);
+							double zpt1 = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
+
+							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
+							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
+							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
+
+							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
+							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
+							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
+
+						}
+					}
+				}
+			}
+		}
+
+		if (dump_vtk) {
+			write_vtk(false);
+			update_count++;
+		}
+
+		dd = omp_get_wtime() - dd;
+		std::cout << "update time: " << dd << " sec" << std::endl;
+		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------
+
+
+// SWD Routines
+
+
+//----------------------------------------------------------------------------------------------------------------------------------------
+
+
+#if defined(SWD_enable)
 
 void sGrid::initialize_kinematics(SpectralWaveData *swd) {
 	// Tell the swd object current application time...
@@ -309,192 +527,7 @@ void sGrid::initialize_kinematics(SpectralWaveData *swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
-	ds = 1. / std::max(1., double(nl - 1));
-
-	double dd = omp_get_wtime();
-
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel // start parallel initialization
-	{
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
-
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta0_temp = ETA0[i * ny + j] - swl;
-
-					double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-					double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-					double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt0 = s2z(spt, eta0_temp, water_depth);
-
-						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
-						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
-						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
-					}
-				}
-			}
-		}
-	}
-
-	if (init_only) {
-		UX1 = UX0;
-		UY1 = UY0;
-		UZ1 = UZ0;
-	}
-	else {
-#pragma omp parallel // start parallel initialization
-		{
-#pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
-					if (!IGNORE[i * ny + j]) {
-						double xpt = domain[0] + dx * i;
-						double ypt = domain[2] + dy * j;
-						double eta1_temp = ETA1[i * ny + j] - swl;
-
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, eta1_temp, water_depth);
-
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-						}
-					}
-				}
-			}
-		}
-	}
-	// End parallel initialization
-	if (dump_vtk) {
-		write_vtk(false);
-		update_count++;
-	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
-}
-
-/*
-void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
-	ds = 1. / std::max(1., double(nl - 1));
-
-	double dd = omp_get_wtime();
-
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel // start parallel initialization
-	{
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
-
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {			
-			for (int j = 0; j < ny; j++) {
-				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta0_temp = ETA0[i * ny + j] - swl;
-					double eta1_temp = ETA1[i * ny + j] - swl;
-
-					double Ux0 = irregular.u1(t0, xpt, ypt, 0.0) + irregular.u2(t0, xpt, ypt, 0.0);
-					double Uy0 = irregular.v1(t0, xpt, ypt, 0.0) + irregular.v2(t0, xpt, ypt, 0.0);
-					double Uz0 = irregular.w1(t0, xpt, ypt, 0.0) + irregular.w2(t0, xpt, ypt, 0.0);
-					double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
-					double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
-					double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
-
-					double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-					double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-					double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-					double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-					double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-					double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt0 = s2z(spt, eta0_temp, water_depth);
-						double zpt1 = s2z(spt, eta1_temp, water_depth);
-
-						if (zpt0 > 0.) {
-							UX0[i * ny * nl + j * nl + m] = Ux0 + PHI0_dxdz * zpt0;
-							UY0[i * ny * nl + j * nl + m] = Uy0 + PHI0_dydz * zpt0;
-							UZ0[i * ny * nl + j * nl + m] = Uz0 + PHI0_dzdz * zpt0;
-						}
-						else {
-							UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0);
-							UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0);
-							UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0);
-						}
-						if (zpt1 > 0.) {
-							UX1[i * ny * nl + j * nl + m] = Ux1 + PHI1_dxdz * zpt1;
-							UY1[i * ny * nl + j * nl + m] = Uy1 + PHI1_dydz * zpt1;
-							UZ1[i * ny * nl + j * nl + m] = Uz1 + PHI1_dzdz * zpt1;
-						}
-						else {
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1);
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1);
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1);
-						}
-
-					}
-				}
-				else {
-					for (int m = 0; m < nl; m++) {
-						UX0[i * ny * nl + j * nl + m] = 0.;
-						UY0[i * ny * nl + j * nl + m] = 0.;
-						UZ0[i * ny * nl + j * nl + m] = 0.;
-						UX1[i * ny * nl + j * nl + m] = 0.;
-						UY1[i * ny * nl + j * nl + m] = 0.;
-						UZ1[i * ny * nl + j * nl + m] = 0.;
-					}
-				}
-			}
-		}
-	} // End parallel initialization
-	if (dump_vtk) {
-		write_vtk(false);
-		update_count++;
-	}
-
-	std::cout << "Generation of domain kinematics using irregular second order wave theory completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
-}
-*/
-
-void sGrid::initialize_kinematics_with_ignore(SpectralWaveData *swd) {
+void sGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -604,24 +637,6 @@ void sGrid::initialize_kinematics_with_ignore(SpectralWaveData *swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-
-// Allocation of memory to storage matrices
-void sGrid::allocate() {
-	ETA0 = new double[nx * ny];
-	ETA1 = new double[nx * ny];
-	
-	IGNORE = new int[nx * ny];
-
-	UX0 = new double[nx * ny * nl];
-	UY0 = new double[nx * ny * nl];
-	UZ0 = new double[nx * ny * nl];
-
-	UX1 = new double[nx * ny * nl];
-	UY1 = new double[nx * ny * nl];
-	UZ1 = new double[nx * ny * nl];
-}
-
-
 void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
 	std::cout << "time: " << t_target << std::endl;
@@ -629,8 +644,8 @@ void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target)
 
 	// Allocating memory for storage of surface elevation and velocities
 
-	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1.,double(ny - 1));
+	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
+	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -638,7 +653,7 @@ void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target)
 	bymax = domain[3];
 
 	double dd = omp_get_wtime();
-	
+
 	omp_set_num_threads(omp_get_max_threads());
 	//omp_set_num_threads(1);
 
@@ -672,7 +687,7 @@ void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target)
 
 	// Time T1
 	try {
-		swd->UpdateTime(t0+dt);
+		swd->UpdateTime(t0 + dt);
 	}
 	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
 		std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
@@ -702,92 +717,7 @@ void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target)
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
-void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-			
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-
-				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-				ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-
-			}
-		}
-	}
-	dd = omp_get_wtime() - dd;
-
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-}
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
-
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {			
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				if (!IGNORE[i * ny + j]) {
-					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-				}
-				else {
-					ETA0[i * ny + j] = swl;
-					ETA1[i * ny + j] = swl;
-				}
-			}
-		}
-	}
-	dd = omp_get_wtime() - dd;
-
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-}
-
-void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData *swd, double t_target) {
+void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
 
@@ -863,76 +793,6 @@ void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData *swd, doub
 	std::cout << "Surface Elevation generated successfully. ";
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
-// When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
-void sGrid::update(Irregular& irregular, double t_target)
-{
-	// Start by checking bounds
-	/*
-	if (!disable_checkbounds){
-		CheckBounds();
-	}*/
-	
-	// new time step
-	if ((t_target / dt - (t0+2*dt) / dt) > 0.) {
-		double new_time = dt*std::floor(t_target / dt);
-		initialize_surface_elevation(irregular, new_time);
-		initialize_kinematics(irregular);
-	}
-	else {
-		t0 += dt;
-		// Updating surface elevations
-		double dd = omp_get_wtime();
-		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
-#pragma omp parallel
-		{
-			// Main grid
-#pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
-					double xpt = domain[0] + dx * i;
-					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
-					double ypt = domain[2] + dy * j;
-					if (!IGNORE[i * ny + j]) {
-						ETA0[i * ny + j] = ETA1[i * ny + j];
-						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-
-						double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
-						double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
-						double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
-
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
-
-							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
-							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
-							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
-
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-
-						}
-					}
-				}
-			}
-		}
-		
-		if (dump_vtk) {
-			write_vtk(false);
-			update_count++;
-		}
-		
-		dd = omp_get_wtime() - dd;
-		std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
-	}
-}
 
 void sGrid::update(SpectralWaveData* swd, double t_target)
 {
@@ -971,8 +831,8 @@ if (!disable_checkbounds){
 			for (int i = 0; i < nx; i++) {
 				for (int j = 0; j < ny; j++) {
 					if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;					
+						double xpt = domain[0] + dx * i;
+						double ypt = domain[2] + dy * j;
 						ETA0[i * ny + j] = ETA1[i * ny + j];
 						ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
 
@@ -999,12 +859,15 @@ if (!disable_checkbounds){
 			write_vtk(false);
 			update_count++;
 		}
-		
+
 		dd = omp_get_wtime() - dd;
 		std::cout << "update time: " << dd << " sec" << std::endl;
 		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 	}
 }
+
+#endif
+
 
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/

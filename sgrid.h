@@ -6,9 +6,7 @@
 #define SGrid_H
 
 #include "Irregular.h"
-#if defined(_WIN32)
-#include "SpectralWaveData_dummy.h"
-#else
+#if SWD_enable
 #include "SpectralWaveData.h"
 #endif
 
@@ -68,23 +66,26 @@ public:
 	double s2tan(double s);
 	double tan2s(double t);
 
-	void initialize_kinematics(Irregular& irregular);
-	void initialize_kinematics(SpectralWaveData *swd);
-
-	void initialize_kinematics_with_ignore(Irregular& irregular);
-	void initialize_kinematics_with_ignore(SpectralWaveData *swd);
+	
+	
 	void write_vtk(bool endtime);
 	void allocate();
 
+	// Second order theory
+	void initialize_kinematics(Irregular& irregular);
+	void initialize_kinematics_with_ignore(Irregular& irregular);
 	void initialize_surface_elevation(Irregular& irregular, double t_target);
-	void initialize_surface_elevation(SpectralWaveData *swd, double t_target);
-	
 	void initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target);
-	void initialize_surface_elevation_with_ignore(SpectralWaveData *swd, double t_target);
-
-	// Update kinematics data matrices
 	void update(Irregular& irregular, double t_target);
+
+	// SWD
+#if defined(SWD_enable)
+	void initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target);
+	void initialize_surface_elevation(SpectralWaveData* swd, double t_target);
+	void initialize_kinematics_with_ignore(SpectralWaveData* swd);
+	void initialize_kinematics(SpectralWaveData* swd);
 	void update(SpectralWaveData* swd, double t_target);
+#endif
 
 	void set_ignore();
 
