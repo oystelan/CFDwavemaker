@@ -36,7 +36,7 @@
 #include "Irregular.h"
 #include "Utils.h"
 #include "Wavemaker.h"
-#include "sgrid.h"
+#include "lsgrid.h"
 
 
 // for now, spectralwavedata is only supported in linux build
@@ -100,7 +100,7 @@ Irregular irregular;
 Wavemaker wavemaker;
 
 // Grid class
-sGrid sgrid;
+lsGrid sgrid;
 
 // Ramp class
 Ramp ramp;
@@ -177,7 +177,7 @@ int numparams(std::string str)
 }
 
 // This function is depricated. will be removed in the future.
-int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Ramp& rramp ) {
+int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp ) {
 	std::string lineA;
 	std::ifstream fid;
 	std::istringstream buf;
@@ -628,7 +628,7 @@ int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 }
 
 /* main input file reader function*/
-int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, sGrid& lsgrid, Ramp& rramp) {
+int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp) {
 	std::string lineA, dummystr, lineP;
 	std::ifstream fid;
 	std::istringstream buf;

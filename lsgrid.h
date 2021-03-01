@@ -12,9 +12,9 @@
 
 #define largeval 1.E12
 
-class sGrid {
+class lsGrid {
 public:
-	sGrid() {
+	lsGrid() {
 		// Set default values
 		tan_a = 7. * PI / 18.;
 		tan_b = 1.5;
@@ -22,7 +22,7 @@ public:
 		dt = 0.5;
 		swl = 0.;
 	};
-	~sGrid() {
+	~lsGrid() {
 		if (dump_vtk) {
 			write_vtk(true);
 		}

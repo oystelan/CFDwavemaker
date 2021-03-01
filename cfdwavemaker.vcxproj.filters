@@ -30,7 +30,7 @@
     <ClCompile Include="Wavemaker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sgrid.cpp">
+    <ClCompile Include="lsgrid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -50,7 +50,7 @@
     <ClInclude Include="Wavemaker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sgrid.h">
+    <ClInclude Include="lsgrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

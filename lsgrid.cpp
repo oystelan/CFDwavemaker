@@ -1,4 +1,4 @@
-#include "sgrid.h"
+#include "lsgrid.h"
 #include "omp.h"
 #include <algorithm>
 #include <iostream>
@@ -22,7 +22,7 @@
 
 
 // Allocation of memory to storage matrices
-void sGrid::allocate() {
+void lsGrid::allocate() {
 	ETA0 = new double[nx * ny];
 	ETA1 = new double[nx * ny];
 
@@ -38,7 +38,7 @@ void sGrid::allocate() {
 }
 
 // A streching function for setting variable layer thickness
-double sGrid::slayer(int layerno) {
+double lsGrid::slayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
 	double sfac = 3.0; // fixme: this should be made dimensionless and a function of specified wave
 	double* dd = new double[nl];
@@ -54,35 +54,35 @@ double sGrid::slayer(int layerno) {
 }
 
 // A function for constant layer thickness (equal spacing as a function of z)
-double sGrid::clayer(int layerno) {
+double lsGrid::clayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
 	return 1./double(nl);
 }
 
 // Transforms normal z axis to streched sigma coordinates 
 // s defined between -1 (seabed) and 0 (free surface)
-double sGrid::z2s(double z, double wave_elev, double depth) {
+double lsGrid::z2s(double z, double wave_elev, double depth) {
 	return (z - wave_elev) / (depth + wave_elev);
 }
 
 // Transforms stretched sigma coordinate to normal z
-double sGrid::s2z(double s, double wave_elev, double depth) {
+double lsGrid::s2z(double s, double wave_elev, double depth) {
 	return wave_elev + s * (depth + wave_elev);
 }
 
-double sGrid::s2tan(double s) {
+double lsGrid::s2tan(double s) {
 	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
 	// returns tangens strethced coordintates tan, which is also defined between -1 and 0	
 	return -std::pow(std::tan(-s * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 }
 
-double sGrid::tan2s(double t) {
+double lsGrid::tan2s(double t) {
 	// The inverse of the above function s2tan. from tan stretched to normal constant spacing	
 	return -std::atan(std::pow(-t * std::pow(std::tan(tan_a) , tan_b) , 1. / tan_b)) / tan_a;
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double sGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
+double lsGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
 
 	double nxp = std::min(double(nx), std::max(0., (xpt - domain[0]) / dx));
 	double nyp = std::min(double(ny), std::max(0., (ypt - domain[2]) / dy));
@@ -171,7 +171,7 @@ T clip(const T& n, const T& lower, const T& upper) {
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double sGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
+double lsGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
 
 	float nxp_temp, nyp_temp;
 	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
@@ -265,7 +265,7 @@ double sGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, d
 }
 
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double sGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
+double lsGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
 
 	double nxp = std::min(double(nx), std::max(0., (xpt - domain[0]) / dx));
 	double nyp = std::min(double(ny), std::max(0., (ypt - domain[2]) / dy));
@@ -297,7 +297,7 @@ double sGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, dou
 
 
 /* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double sGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
+double lsGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
 
 
 
@@ -333,25 +333,25 @@ double sGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, do
 }
 
 
-double sGrid::u(double tpt, double xpt, double ypt, double zpt) {
+double lsGrid::u(double tpt, double xpt, double ypt, double zpt) {
 	return trilinear_interpolation2(UX0, UX1, tpt, xpt, ypt, zpt);
 }
 
-double sGrid::v(double tpt, double xpt, double ypt, double zpt) {
+double lsGrid::v(double tpt, double xpt, double ypt, double zpt) {
 	return trilinear_interpolation2(UY0, UY1, tpt, xpt, ypt, zpt);
 }
 
-double sGrid::w(double tpt, double xpt, double ypt, double zpt) {
+double lsGrid::w(double tpt, double xpt, double ypt, double zpt) {
 	return trilinear_interpolation2(UZ0, UZ1, tpt, xpt, ypt, zpt);
 }
 
-double sGrid::eta(double tpt, double xpt, double ypt) {
+double lsGrid::eta(double tpt, double xpt, double ypt) {
 	//update_bounds(xpt, ypt);
 	return bilinear_interpolation2(ETA0, ETA1, tpt, xpt, ypt);
 }
 
 
-bool sGrid::CheckTime(double tpt) {
+bool lsGrid::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t0 + dt) {
 		std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
@@ -363,7 +363,7 @@ bool sGrid::CheckTime(double tpt) {
 
 // function to find if given point 
 // lies inside a given rectangle or not. 
-bool sGrid::CheckBounds()
+bool lsGrid::CheckBounds()
 {
 	if (bxmin >= domain[0] && bxmax <= domain[1] && bymin >= domain[2] && bymax <= domain[3])
 		return true;
@@ -374,7 +374,7 @@ bool sGrid::CheckBounds()
 	}
 }
 
-void sGrid::update_bounds(double xpt, double ypt) {
+void lsGrid::update_bounds(double xpt, double ypt) {
 	bxmin = std::min(xpt, bxmin);
 	bxmax = std::min(xpt, bxmax);
 	bymin = std::min(ypt, bymin);
@@ -392,7 +392,7 @@ void sGrid::update_bounds(double xpt, double ypt) {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_kinematics(Irregular& irregular) {
+void lsGrid::initialize_kinematics(Irregular& irregular) {
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -477,7 +477,7 @@ void sGrid::initialize_kinematics(Irregular& irregular) {
 }
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
+void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -568,7 +568,7 @@ void sGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
-void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
+void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
 
@@ -608,7 +608,7 @@ void sGrid::initialize_surface_elevation(Irregular& irregular, double t_target) 
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
+void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
 
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
@@ -654,7 +654,7 @@ void sGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doubl
 
 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
-void sGrid::update(Irregular& irregular, double t_target)
+void lsGrid::update(Irregular& irregular, double t_target)
 {
 	// Start by checking bounds
 	/*
@@ -1191,7 +1191,7 @@ if (!disable_checkbounds){
 
 
 // when called, writes stored kinematics to file
-void sGrid::write_vtk(bool endtime) {
+void lsGrid::write_vtk(bool endtime) {
 	char buffer[256]; sprintf(buffer, "%05d", update_count);
 
 	if (dirExists(vtk_directory_path.c_str()) == 0) {
@@ -1214,7 +1214,7 @@ void sGrid::write_vtk(bool endtime) {
 }
 
 /* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
-void sGrid::export_vtu(FILE* fp, bool last)
+void lsGrid::export_vtu(FILE* fp, bool last)
 {
 	// write header
 	fputs("<?xml version=\"1.0\"?>\n"
@@ -1414,7 +1414,7 @@ void sGrid::export_vtu(FILE* fp, bool last)
 }
 
 /* Set area of domain to ignore when update kinematics data. this is useful when prescribing kinematics at the boundaries*/
-void sGrid::set_ignore()
+void lsGrid::set_ignore()
 {
 	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -1443,7 +1443,7 @@ void sGrid::set_ignore()
  *           0 if dir does not exist OR exists but not a dir,
  *          <0 if an error occurred (errno is also set)
  *****************************************************************************/
-int sGrid::dirExists(const char* const path)
+int lsGrid::dirExists(const char* const path)
 {
 	struct stat info;
 
@@ -1458,7 +1458,7 @@ int sGrid::dirExists(const char* const path)
 	return (info.st_mode & S_IFDIR) ? 1 : 0;
 }
 
-void sGrid::createDirectory(std::string sPath) {
+void lsGrid::createDirectory(std::string sPath) {
 
 	
 	int nError = 0;
