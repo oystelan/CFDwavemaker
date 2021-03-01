@@ -105,7 +105,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>C:\projects\c++\CFDwavemaker\CFDwavemaker\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AssemblyLinkResource>%(AssemblyLinkResource)</AssemblyLinkResource>
-      <AdditionalDependencies>Irregular.obj;sgrid.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Irregular.obj;lsgrid.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -124,7 +124,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AssemblyLinkResource>%(AssemblyLinkResource)</AssemblyLinkResource>
-      <AdditionalDependencies>Irregular.obj;sgrid.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Irregular.obj;lsgrid.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

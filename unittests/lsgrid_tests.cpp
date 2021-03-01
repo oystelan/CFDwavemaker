@@ -1,15 +1,15 @@
 #include "pch.h"
 
 #include "irregular.h"
-#include "sgrid.h"
+#include "lsgrid.h"
 
 
 struct LSgridTest : testing::Test {
 	Irregular* irregular;
-	sGrid* sgrid;
+	lsGrid* sgrid;
 	LSgridTest(){
 		irregular = new Irregular;
-		sgrid = new sGrid;
+		sgrid = new lsGrid;
 		
 		// Parameters
 		irregular->nfreq = 3;

@@ -52,6 +52,14 @@
 // Variables
 //int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
 
+typedef struct {
+	double x;
+	double y;
+	double z;
+} probe;
+
+
+
 
 // Storage class of input data.
 class CFDwavemakerInputdata {
@@ -70,8 +78,10 @@ public:
 	std::string swdFileName;
 
 	//timeseries inputdata
-	std::string ts_path, ts_filename;
+	std::string ts_path = "./";
+	std::string ts_filename = "probe";
 	int ts_nprobes = 0;
+	std::vector<probe> probes;
 
 
 
@@ -1412,10 +1422,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				}
 			}
 		}
+
 		if (!lineA.compare("[timeseries output]")) { //optional
-			std::cout << "---------------------------" << std::endl;
-			std::cout << "Timeseries output settings:" << std::endl;
-			std::cout << "---------------------------" << std::endl;
+			std::cout << "----------------------------" << std::endl;
+			std::cout << "Time-series output settings:" << std::endl;
+			std::cout << "----------------------------" << std::endl;
 
 			/*[timeseries output]
 			storage_path ./ts/ 
@@ -1425,12 +1436,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				0.0 0.0 0.0
 				3.3 5.4 - 10.
 				0.0 5.4 - 10.*/
-			if (inputdata.wavetype == 4 && inputdata.wavetype == 34) {
-				sgrid.dump_vtk = true;
-			}
-			else {
-				// add a class which handles dumping to time-series
-			}
 
 			while (!f.eof()) {
 				lineP = lineA;
@@ -1439,23 +1444,40 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				if (!lineA.compare(0, 12, "storage_path")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.vtk_directory_path;
+					buf >> inputdata.ts_path;
 					buf.clear();
-					std::cout << "Directory for storage of vtk files: " << lsgrid.vtk_directory_path << std::endl;
+					std::cout << "Directory for storage of timeseries files: " << inputdata.ts_path << std::endl;
 				}
 				if (!lineA.compare(0, 8, "filename")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.vtk_prefix;
+					buf >> inputdata.ts_filename;
 					buf.clear();
-					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
+					std::cout << "filename prefix: " << inputdata.ts_filename << std::endl;
 				}
 				if (!lineA.compare(0, 4, "npos")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.vtk_timelabel;
+					buf >> inputdata.ts_nprobes;
 					buf.clear();
-					std::cout << "time label to use in vtk specified as: " << lsgrid.vtk_timelabel << std::endl;
+					std::cout << "Number of probes: " << inputdata.ts_nprobes << std::endl;
+					double tempx, tempy, tempz;
+					for (int i = 0; i < inputdata.ts_nprobes; i++) {
+						getline(f, lineA);
+						// if new tag is reach. break while loop.
+						if (!lineA.compare(0, 1, "[")) {
+							std::cerr << "INPUTFILE ERROR in [timeseries output]: Not enough timeseries coordnates specified" << std::endl;
+							exit(-1);
+						}
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> tempx;
+						buf >> tempy;
+						buf >> tempz;
+						inputdata.probes.push_back({tempx, tempy, tempz});						
+						buf.clear();
+
+					}
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
