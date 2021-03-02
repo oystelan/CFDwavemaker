@@ -34,7 +34,7 @@ public:
 	};
 
 	~Irregular() {
-		std::cout << "Irregular class destroyed." << std::endl;
+		//std::cout << "Irregular class destroyed." << std::endl;
 	};
 	// bools
 	int initialized = false;

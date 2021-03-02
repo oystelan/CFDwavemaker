@@ -36,15 +36,13 @@ extern "C" {
 	// sgrid updater function
 	void wave_sgrid_update(double); // function checking timestep and updating if neccessary the sgrid kinematics
 	
+	// update probes
+	EXPORT void update_probes(double); // writes wave kinematics data to probe files for a given time step as argument.
+
 	// some helpful function in case of irregular waves
 	double wave_phase_velocity(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
 	double wave_mean_period(int); // calculate mean wave period
 	double wave_mean_length(int); // calculate mean wave length
-
-	// special functions for sloping bottom definition
-	double wave_VeloX_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sx}
-	double wave_VeloY_slope(double, double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time, sy}
-	double wave_VeloZ_slope(double, double, double, double, double ); // input variables are {xpoint,ypoint,zpoint,time, s}
 
 	double wave_water_depth(); // returns the water depth used to wave calculation
 

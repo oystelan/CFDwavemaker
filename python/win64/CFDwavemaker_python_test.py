@@ -56,6 +56,12 @@ def waveelev(mydll,t,x,y):
     aa.argtypes = [c_int,c_int,c_double,c_double,c_double]
     return aa(c_int(0),c_int(0),c_double(x),c_double(y),c_double(t))
 
+def update_probes(mydll,t):
+    aa = mydll.update_probes
+    aa.restype = c_double
+    aa.argtypes = [c_double]
+    return aa(c_double(t))
+
 def volfrac(mydll,x,y,z,t,delta):
     aa = mydll.VolumeFraction
     aa.restype = c_double
@@ -66,12 +72,12 @@ def init_dll(mydll):
     aa = mydll.Init
     aa.restype = c_int
     aa.argtypes = [POINTER(c_double),POINTER(c_double)]
-    return aa(c_double(0),c_double(0));
+    return aa(c_double(0),c_double(0))
 
 def clean_up(mydll):
     aa = mydll.Cleanup
     aa.restype = c_int
-    return aa();
+    return aa()
 
 
 # We start of by calling the init function. This will read the waveinput.dat file and perform necessary initialization
@@ -106,16 +112,18 @@ def clean_up(mydll):
 #exit()
 
 #
-t = 0.0
+time = np.arange(0, 50, 0.5)
 x = 0.
 #shutil.copy2('./waveinput3.dat','./waveinput.dat')
 tic()
 print(init_dll(mydll))
 toc()
 
+for t in time:
+    update_probes(mydll, t)
 
-wave = waveelev(mydll,t,x,0.0)
-print(wave)
+#wave = waveelev(mydll,t,x,0.0)
+print("Alle done")
 # z = np.arange(-76.4,wave,2.)
 # # wave = velocityX(mydll,t,x,0.0,-76.3)
 # # print(wave)

@@ -1,4 +1,4 @@
-@v2009
+@v213
 # Wavedata CFDwavemaker2
 
 [wave type]
@@ -17,3 +17,13 @@ wave_height 1.
 # ramp_type    enable       rampup_start rampup_end
 time_rampup    1            0.0000       1.0
 # you do not need to specify all ramps, only the once you need.
+
+
+[timeseries output]
+storage_path ./ts/ 
+filename tsfile
+npos 3
+# x y z
+0.0 0.0 0.0
+3.3 5.4 -10.
+0.0 5.4 -10.

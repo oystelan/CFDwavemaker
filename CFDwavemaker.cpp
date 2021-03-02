@@ -186,6 +186,26 @@ int numparams(std::string str)
 	return count;
 }
 
+
+void init_probes(double tpt) {
+	if (dirExists(inputdata.ts_path.c_str()) == 0) {
+		std::cout << "WARNING: Specified directory for storage of time-series files does not exist. Directory will be created at the following path:  " << inputdata.ts_path << std::endl;
+		createDirectory(inputdata.ts_path);
+	}
+
+	for (int i = 0; i < inputdata.ts_nprobes; i++) {
+		char buffer[256]; sprintf(buffer, "%05d", i);
+		std::string str(buffer);
+		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
+		//std::cout << fpath << std::endl;
+		FILE* fp = fopen(fpath.c_str(), "w");
+		// create file, append coordinates to top line
+		fprintf(fp, "# CFDwavemaker probe %d, x= %.3f , y= %.3f , z= %.3f \n", i, inputdata.probes[i].x, inputdata.probes[i].y, inputdata.probes[i].z);
+		fprintf(fp, "# %12s  %14s  %14s  %14s  %14s\n", "Time", "wave_elev", "u", "v", "w");
+		fclose(fp);
+	}
+}
+
 // This function is depricated. will be removed in the future.
 int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp ) {
 	std::string lineA;
@@ -1478,6 +1498,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 						buf.clear();
 
 					}
+					init_probes(0.);
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -1650,10 +1671,10 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	zpt = std::max(-inputdata.depth, zpt);
 
 	switch (inputdata.wavetype) {
-	// irregular waves
+		// irregular waves
 	case 1:
-		return ramp.ramp(tpt,xpt,ypt)*irregular.u(tpt, xpt, ypt, zpt);
-		
+		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
+
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
@@ -1663,11 +1684,11 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
-		
-	// stokes 5th
+
+		// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-	// wavemaker
+		// wavemaker
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
 		// swd
@@ -1687,11 +1708,12 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 		return ramp.ramp(tpt, xpt, ypt) * U.x;
 #else
-std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 
 	}
 	case 34:
+	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
@@ -1703,6 +1725,7 @@ std::cerr << "Use of swd library specified in the waveinput.dat file. Please rec
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1744,13 +1767,14 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.y; 
+		return ramp.ramp(tpt, xpt, ypt) * U.y;
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
 	// swd + lsgrid
 	case 34:
+	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
@@ -1761,6 +1785,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1785,7 +1810,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
-	// swd
+		// swd
 	case 31:
 	{
 #if defined(SWD_enable)
@@ -1800,13 +1825,14 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-		return ramp.ramp(tpt, xpt, ypt) * U.z; 
+		return ramp.ramp(tpt, xpt, ypt) * U.z;
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
 	// Swd + lsgrid
 	case 34:
+	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
@@ -1816,6 +1842,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1883,6 +1910,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 #endif
 	}
 	case 34:
+	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
@@ -1892,6 +1920,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1921,24 +1950,6 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 }
 
 
-void init_probes(double tpt) {
-	if (dirExists(inputdata.ts_path.c_str()) == 0) {
-		std::cout << "WARNING: Specified directory for storage of time-series files does not exist. Directory will be created at the following path:  " << inputdata.ts_path << std::endl;
-		createDirectory(inputdata.ts_path);
-	}
-	
-	for (int i = 0; i < inputdata.ts_nprobes; i++) {
-		char buffer[256]; sprintf(buffer, "%05d", i);
-		std::string str(buffer);
-		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
-		//std::cout << fpath << std::endl;
-		FILE* fp = fopen(fpath.c_str(), "w");
-		// create file, append coordinates to top line
-		fprintf(fp, "# CFDwavemaker probe %d, x= %.3f , y= %.3f , z= %.3f \n", i, inputdata.probes[i].x, inputdata.probes[i].y, inputdata.probes[i].z);
-		fprintf(fp, "# Time wave_elev u v w \n");
-		fclose(fp);
-	}
-}
 
 
 void update_probes(double tpt) {
@@ -1954,8 +1965,8 @@ void update_probes(double tpt) {
 		// extract surface elevation and velocities for given time
 		switch (inputdata.wavetype) {
 			// Linear wave theory, expenential profile used above free surface
-		case 1:			
-			welev =  ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
+		case 1:
+			welev = ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
 			ux = ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
 			uy = ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
 			uz = ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
@@ -1965,9 +1976,9 @@ void update_probes(double tpt) {
 				sgrid.update(irregular, tpt);
 			}
 			welev = ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt); }
-			ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-			uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
-			uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+			  ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+			  uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+			  uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 		case 11:
 			welev = ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
 			ux = ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
@@ -1978,9 +1989,9 @@ void update_probes(double tpt) {
 			ux = ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
 			uy = ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 			uz = ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
+			break;
 			// swd
-		case 31:
-		{
+		case 31: {
 #if defined(SWD_enable)
 			// Tell the swd object current application time...
 			try {
@@ -1995,14 +2006,14 @@ void update_probes(double tpt) {
 			//std::cout << "time: " << tpt << std::endl;
 			welev = ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
 			vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-			ux =  ramp.ramp(tpt, xpt, ypt) * U.x;
+			ux = ramp.ramp(tpt, xpt, ypt) * U.x;
 			uy = ramp.ramp(tpt, xpt, ypt) * U.y;
 			uz = ramp.ramp(tpt, xpt, ypt) * U.z;
 #else
-			std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+			std::cerr << "1Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 		}
-		case 34:
+		case 34: {
 #if defined(SWD_enable)
 			if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
@@ -2013,13 +2024,16 @@ void update_probes(double tpt) {
 			uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
 			uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 #else
-			std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+			std::cerr << "2Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
+		}
 		default:
+		{
 			welev = 0.0;
 			ux = 0.;
 			uy = 0.;
 			uz = 0.;
+		}
 		}
 
 		// open file and write line
@@ -2028,7 +2042,7 @@ void update_probes(double tpt) {
 		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
 		//std::cout << fpath << std::endl;
 		FILE* fp = fopen(fpath.c_str(), "a");
-		fprintf(fp, "%.4f  %.4f  %.4f  %.4f  %.4f\n", tpt, welev, ux, uy, uz);
+		fprintf(fp, "%14.4f  %14.4f  %14.4f  %14.4f  %14.4f\n", tpt, welev, ux, uy, uz);
 		// create file, do nothing.
 		fclose(fp);
 	}
