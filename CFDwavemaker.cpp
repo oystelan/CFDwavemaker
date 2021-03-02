@@ -1921,6 +1921,120 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 }
 
 
+void init_probes(double tpt) {
+	if (dirExists(inputdata.ts_path.c_str()) == 0) {
+		std::cout << "WARNING: Specified directory for storage of time-series files does not exist. Directory will be created at the following path:  " << inputdata.ts_path << std::endl;
+		createDirectory(inputdata.ts_path);
+	}
+	
+	for (int i = 0; i < inputdata.ts_nprobes; i++) {
+		char buffer[256]; sprintf(buffer, "%05d", i);
+		std::string str(buffer);
+		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
+		//std::cout << fpath << std::endl;
+		FILE* fp = fopen(fpath.c_str(), "w");
+		// create file, append coordinates to top line
+		fprintf(fp, "# CFDwavemaker probe %d, x= %.3f , y= %.3f , z= %.3f \n", i, inputdata.probes[i].x, inputdata.probes[i].y, inputdata.probes[i].z);
+		fprintf(fp, "# Time wave_elev u v w \n");
+		fclose(fp);
+	}
+}
+
+
+void update_probes(double tpt) {
+
+	// loop over probes and write
+	for (int i = 0; i < inputdata.ts_nprobes; i++) {
+		double xpt = inputdata.probes[i].x;
+		double ypt = inputdata.probes[i].y;
+		double zpt = inputdata.probes[i].z;
+
+		double welev, ux, uy, uz;
+
+		// extract surface elevation and velocities for given time
+		switch (inputdata.wavetype) {
+			// Linear wave theory, expenential profile used above free surface
+		case 1:			
+			welev =  ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
+			ux = ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
+			uy = ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
+			uz = ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
+		case 4: {
+			if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+				sgrid.update(irregular, tpt);
+			}
+			welev = ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt); }
+			ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+			uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+			uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+		case 11:
+			welev = ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
+			ux = ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+			uy = 0.;
+			uz = 0.;
+		case 21:
+			welev = ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
+			ux = ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
+			uy = ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
+			uz = ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
+			// swd
+		case 31:
+		{
+#if defined(SWD_enable)
+			// Tell the swd object current application time...
+			try {
+				swd->UpdateTime(tpt);
+			}
+			catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+				std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+				// If we will try again with a new value of t
+				// we first need to call: swd.ExceptionClear()
+				exit(EXIT_FAILURE);  // In this case we just abort.
+			}
+			//std::cout << "time: " << tpt << std::endl;
+			welev = ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
+			vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+			ux =  ramp.ramp(tpt, xpt, ypt) * U.x;
+			uy = ramp.ramp(tpt, xpt, ypt) * U.y;
+			uz = ramp.ramp(tpt, xpt, ypt) * U.z;
+#else
+			std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+		}
+		case 34:
+#if defined(SWD_enable)
+			if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+				sgrid.update(swd, tpt);
+			}
+			welev = ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
+			ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+			uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+			uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+#else
+			std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+		default:
+			welev = 0.0;
+			ux = 0.;
+			uy = 0.;
+			uz = 0.;
+		}
+
+		// open file and write line
+		char buffer[256]; sprintf(buffer, "%05d", i);
+		std::string str(buffer);
+		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
+		//std::cout << fpath << std::endl;
+		FILE* fp = fopen(fpath.c_str(), "a");
+		fprintf(fp, "%.4f  %.4f  %.4f  %.4f  %.4f\n", tpt, welev, ux, uy, uz);
+		// create file, do nothing.
+		fclose(fp);
+	}
+
+}
+
 
 
 //EXPORT int Init(double& tmin_in, double& tmax_in)

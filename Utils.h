@@ -22,8 +22,11 @@ public:
 	bool ramp_init_y_down = false;
 
 	double ramp(double time, double x, double y);
+	
 };
 
+int dirExists(const char* const path);
 
+void createDirectory(std::string sPath);
 
 #endif

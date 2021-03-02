@@ -2,6 +2,9 @@
 #include "Utils.h"
 #include <algorithm>
 #include <cmath>
+#if defined(_WIN32)
+#include < direct.h >
+#endif
 
 // -------------------------------------------------------------------------------------------------
 // ramp class function
@@ -51,5 +54,45 @@ double Ramp::ramp(double t, double x, double y) {
 	}
 	else {
 		return 1.0;
+	}
+}
+
+
+/******************************************************************************
+ * Checks to see if a directory exists. Note: This method only checks the
+ * existence of the full path AND if path leaf is a dir.
+ *
+ * @return  >0 if dir exists AND is a dir,
+ *           0 if dir does not exist OR exists but not a dir,
+ *          <0 if an error occurred (errno is also set)
+ *****************************************************************************/
+int dirExists(const char* const path)
+{
+	struct stat info;
+
+	int statRC = stat(path, &info);
+	if (statRC != 0)
+	{
+		if (errno == ENOENT) { return 0; } // something along the path does not exist
+		if (errno == ENOTDIR) { return 0; } // something in path prefix is not a dir
+		return -1;
+	}
+
+	return (info.st_mode & S_IFDIR) ? 1 : 0;
+}
+
+void createDirectory(std::string sPath) {
+
+
+	int nError = 0;
+#if defined(_WIN32)
+
+	nError = _mkdir(sPath.c_str()); // can be used on Windows
+#else
+	mode_t nMode = 0733; // UNIX style permissions
+	nError = mkdir(sPath.c_str(), nMode); // can be used on non-Windows
+#endif
+	if (nError != 0) {
+		// handle your error here
 	}
 }

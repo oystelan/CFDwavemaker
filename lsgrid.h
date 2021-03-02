@@ -89,10 +89,6 @@ public:
 
 	void set_ignore();
 
-	int dirExists(const char* const path);
-
-	void createDirectory(std::string sPath);
-
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
 	double trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
