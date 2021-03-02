@@ -112,7 +112,7 @@ def clean_up(mydll):
 #exit()
 
 #
-time = np.arange(0, 50, 0.5)
+time = np.arange(0, 10., 0.06)
 x = 0.
 #shutil.copy2('./waveinput3.dat','./waveinput.dat')
 tic()
@@ -120,9 +120,8 @@ print(init_dll(mydll))
 toc()
 
 for t in time:
-    update_probes(mydll, t)
-
-#wave = waveelev(mydll,t,x,0.0)
+    #update_probes(mydll, t)
+    wave = waveelev(mydll,t,x,0.0)
 print("Alle done")
 # z = np.arange(-76.4,wave,2.)
 # # wave = velocityX(mydll,t,x,0.0,-76.3)

@@ -119,12 +119,14 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CFDwavemaker.cpp" />
     <ClCompile Include="lsgrid.cpp" />
     <ClCompile Include="Irregular.cpp" />
+    <ClCompile Include="probes.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Wavemaker.cpp" />
@@ -133,6 +135,7 @@
     <ClInclude Include="CFDwavemaker.h" />
     <ClInclude Include="lsgrid.h" />
     <ClInclude Include="Irregular.h" />
+    <ClInclude Include="probes.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Wavemaker.h" />

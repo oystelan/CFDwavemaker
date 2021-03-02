@@ -37,6 +37,7 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "lsgrid.h"
+#include "probes.h"
 
 
 // for now, spectralwavedata is only supported in linux build
@@ -51,12 +52,6 @@
 
 // Variables
 //int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
-
-typedef struct {
-	double x;
-	double y;
-	double z;
-} probe;
 
 
 
@@ -76,16 +71,6 @@ public:
 	double nsumx = -1, nsumy = -1, impl = 0, ipol = 0, norder = 0;
 	bool dc_bias = false;
 	std::string swdFileName;
-
-	//timeseries inputdata
-	std::string ts_path = "./";
-	std::string ts_filename = "probe";
-	int ts_nprobes = 0;
-	std::vector<probe> probes;
-
-
-
-
 
 	CFDwavemakerInputdata() {
 	}
@@ -114,6 +99,9 @@ lsGrid sgrid;
 
 // Ramp class
 Ramp ramp;
+
+// probes class
+Probes probes;
 
 // SWD class;
 #if defined(SWD_enable)
@@ -186,25 +174,6 @@ int numparams(std::string str)
 	return count;
 }
 
-
-void init_probes(double tpt) {
-	if (dirExists(inputdata.ts_path.c_str()) == 0) {
-		std::cout << "WARNING: Specified directory for storage of time-series files does not exist. Directory will be created at the following path:  " << inputdata.ts_path << std::endl;
-		createDirectory(inputdata.ts_path);
-	}
-
-	for (int i = 0; i < inputdata.ts_nprobes; i++) {
-		char buffer[256]; sprintf(buffer, "%05d", i);
-		std::string str(buffer);
-		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
-		//std::cout << fpath << std::endl;
-		FILE* fp = fopen(fpath.c_str(), "w");
-		// create file, append coordinates to top line
-		fprintf(fp, "# CFDwavemaker probe %d, x= %.3f , y= %.3f , z= %.3f \n", i, inputdata.probes[i].x, inputdata.probes[i].y, inputdata.probes[i].z);
-		fprintf(fp, "# %12s  %14s  %14s  %14s  %14s\n", "Time", "wave_elev", "u", "v", "w");
-		fclose(fp);
-	}
-}
 
 // This function is depricated. will be removed in the future.
 int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp ) {
@@ -1464,25 +1433,37 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				if (!lineA.compare(0, 12, "storage_path")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> inputdata.ts_path;
+					buf >> probes.ts_path;
 					buf.clear();
-					std::cout << "Directory for storage of timeseries files: " << inputdata.ts_path << std::endl;
+					std::cout << "Directory for storage of timeseries files: " << probes.ts_path << std::endl;
 				}
 				if (!lineA.compare(0, 8, "filename")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> inputdata.ts_filename;
+					buf >> probes.ts_filename;
 					buf.clear();
-					std::cout << "filename prefix: " << inputdata.ts_filename << std::endl;
+					std::cout << "filename prefix: " << probes.ts_filename << std::endl;
+				}
+				if (!lineA.compare(0, 2, "t0")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.t0;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "dt")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.dt;
+					buf.clear();
 				}
 				if (!lineA.compare(0, 4, "npos")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> inputdata.ts_nprobes;
+					buf >> probes.ts_nprobes;
 					buf.clear();
-					std::cout << "Number of probes: " << inputdata.ts_nprobes << std::endl;
+					std::cout << "Number of probes: " << probes.ts_nprobes << std::endl;
 					double tempx, tempy, tempz;
-					for (int i = 0; i < inputdata.ts_nprobes; i++) {
+					for (int i = 0; i < probes.ts_nprobes; i++) {
 						getline(f, lineA);
 						// if new tag is reach. break while loop.
 						if (!lineA.compare(0, 1, "[")) {
@@ -1494,11 +1475,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 						buf >> tempx;
 						buf >> tempy;
 						buf >> tempz;
-						inputdata.probes.push_back({tempx, tempy, tempz});						
+						probes.coords.push_back({tempx, tempy, tempz});						
 						buf.clear();
 
 					}
-					init_probes(0.);
+					probes.init_probes();
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
@@ -1674,7 +1655,6 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		// irregular waves
 	case 1:
 		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
-
 		// irregular LSgrid waves
 	case 4:
 		if (!sgrid.CheckTime(tpt)) {
@@ -1684,13 +1664,15 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
-
+		
 		// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
+		
 		// wavemaker
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+		
 		// swd
 	case 31:
 	{
@@ -1875,21 +1857,27 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	switch (inputdata.wavetype) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		//return waveelev(tpt, xpt, ypt);
+	{
+		update_probes(tpt);
 		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
-		//return irregular.eta(tpt, xpt, ypt);
-		// Linear wave theory, constant profile used above free surface
+	}
 	case 4: {
+		update_probes(tpt);
 		if (!sgrid.CheckTime(tpt)) {
 #pragma omp single nowait
 			sgrid.update(irregular, tpt);
 		}
-		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt); }
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);}
 	case 11:
+	{
+		update_probes(tpt);
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
+	}
 	case 21:
+	{
+		update_probes(tpt);
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
-		// swd
+	}
 	case 31:
 	{
 #if defined(SWD_enable)
@@ -1907,6 +1895,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+		exit(-1);
 #endif
 	}
 	case 34:
@@ -1953,100 +1942,55 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 
 
 void update_probes(double tpt) {
-
-	// loop over probes and write
-	for (int i = 0; i < inputdata.ts_nprobes; i++) {
-		double xpt = inputdata.probes[i].x;
-		double ypt = inputdata.probes[i].y;
-		double zpt = inputdata.probes[i].z;
-
-		double welev, ux, uy, uz;
-
-		// extract surface elevation and velocities for given time
-		switch (inputdata.wavetype) {
-			// Linear wave theory, expenential profile used above free surface
-		case 1:
-			welev = ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
-			ux = ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
-			uy = ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
-			uz = ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
-		case 4: {
-			if (!sgrid.CheckTime(tpt)) {
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1: {
+		if (probes.checkTime(tpt)) {
 #pragma omp single nowait
-				sgrid.update(irregular, tpt);
-			}
-			welev = ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt); }
-			  ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-			  uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
-			  uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
-		case 11:
-			welev = ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
-			ux = ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
-			uy = 0.;
-			uz = 0.;
-		case 21:
-			welev = ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
-			ux = ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-			uy = ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
-			uz = ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
-			break;
-			// swd
-		case 31: {
-#if defined(SWD_enable)
-			// Tell the swd object current application time...
-			try {
-				swd->UpdateTime(tpt);
-			}
-			catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-				std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
-				// If we will try again with a new value of t
-				// we first need to call: swd.ExceptionClear()
-				exit(EXIT_FAILURE);  // In this case we just abort.
-			}
-			//std::cout << "time: " << tpt << std::endl;
-			welev = ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
-			vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-			ux = ramp.ramp(tpt, xpt, ypt) * U.x;
-			uy = ramp.ramp(tpt, xpt, ypt) * U.y;
-			uz = ramp.ramp(tpt, xpt, ypt) * U.z;
-#else
-			std::cerr << "1Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
-#endif
+			probes.write(tpt, irregular, ramp);
 		}
-		case 34: {
-#if defined(SWD_enable)
-			if (!sgrid.CheckTime(tpt)) {
-#pragma omp single nowait
-				sgrid.update(swd, tpt);
-			}
-			welev = ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
-			ux = ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-			uy = ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
-			uz = ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
-#else
-			std::cerr << "2Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
-#endif
-		}
-		default:
-		{
-			welev = 0.0;
-			ux = 0.;
-			uy = 0.;
-			uz = 0.;
-		}
-		}
-
-		// open file and write line
-		char buffer[256]; sprintf(buffer, "%05d", i);
-		std::string str(buffer);
-		std::string fpath = (inputdata.ts_path + inputdata.ts_filename + buffer + ".dat");
-		//std::cout << fpath << std::endl;
-		FILE* fp = fopen(fpath.c_str(), "a");
-		fprintf(fp, "%14.4f  %14.4f  %14.4f  %14.4f  %14.4f\n", tpt, welev, ux, uy, uz);
-		// create file, do nothing.
-		fclose(fp);
+		break;
 	}
-
+	case 4: {
+#pragma omp single nowait
+		if (probes.checkTime(tpt)) {
+			probes.write(tpt, sgrid, irregular, ramp);
+		}
+		break;
+	}
+	case 11: {
+		if (probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, wavemaker, ramp);
+		}
+		break;
+	}
+	case 21: {
+		if (probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, stokes5, ramp);
+		}
+		break;
+	}
+#if defined(SWD_enable)
+	case 31:
+	{
+		if (!probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, swd, ramp);
+		}
+		break;
+	}
+	case 34:
+	{
+		if (!probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, lsgrid, swd, ramp);
+		}
+		break;
+	}
+#endif	
+	}
 }
 
 
