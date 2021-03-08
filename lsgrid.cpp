@@ -733,7 +733,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 #if defined(SWD_enable)
 
-void sGrid::initialize_kinematics(SpectralWaveData *swd) {
+void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -836,7 +836,7 @@ void sGrid::initialize_kinematics(SpectralWaveData *swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-void sGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
+void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -946,7 +946,7 @@ void sGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
+void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
@@ -1026,7 +1026,7 @@ void sGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target)
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
-void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
+void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
 
@@ -1103,7 +1103,7 @@ void sGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, doub
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
-void sGrid::update(SpectralWaveData* swd, double t_target)
+void lsGrid::update(SpectralWaveData* swd, double t_target)
 {
 	// Start by checking bounds
 /*
