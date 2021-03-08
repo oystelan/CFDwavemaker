@@ -1,7 +1,9 @@
 #ifndef Stokes5_H
 #define Stokes5_H
 
+#ifndef PI
 #define PI 3.14159265358979323846
+#endif
 #define G 9.81
 
 class Stokes5 {
