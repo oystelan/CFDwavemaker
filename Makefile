@@ -15,9 +15,9 @@ TARGETS_STATIC_OMP_SWD:= $(addsuffix _swd_openmp.a, $(TARGETS))
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
 OBJ    := Stokes5.o Irregular.o Utils.o Wavemaker.o lsgrid.o probes.o $(MAINS)
-OBJ_HOSM := SpectralWaveData.o
-DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Utils.h Wavemaker.h lsgrid.h probes.h 
-DEPS_HOSM := spectral_wave_data.h SpectralWaveData.h
+OBJ_SWD := SpectralWaveData.o $(OBJ)
+#DEPS   := CFDwavemaker.h Stokes5.h Irregular.h Utils.h Wavemaker.h lsgrid.h probes.h 
+#DEPS_HOSM := spectral_wave_data.h SpectralWaveData.h
 
 .PHONY: all clean openmp openmp_swd
 
@@ -42,7 +42,7 @@ static: $(TARGETS_STATIC) $(TARGETS_STATIC_OMP)
 $(OBJ): %.o : %.cpp
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS)
 
-$(OBJ_HOSM): %.o : %.cpp
+$(OBJ_SWD): %.o : %.cpp
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS)
 
 # build serial
@@ -68,12 +68,12 @@ $(TARGETS_STATIC_OMP): $(OBJ)
 
 # Build CFDwavemaker with openmp and including SWD library
 $(TARGETS_SHARED_OMP_SWD): EXTRA_FLAGS = -fopenmp -DSWD_enable=1
-$(TARGETS_SHARED_OMP_SWD): $(OBJ) $(OBJ_SWD) *f90.o
+$(TARGETS_SHARED_OMP_SWD): $(OBJ_SWD) *f90.o
 	$(CC) $(CCFLAGS) -shared -fopenmp -fPIC -o $(BUILD_DIR)lib$@ $^ $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_STATIC_OMP_SWD): EXTRA_FLAGS = -fopenmp -DSWD_enable=1
-$(TARGETS_STATIC_OMP_SWD): $(OBJ) $(OBJ_SWD) *f90.o
+$(TARGETS_STATIC_OMP_SWD): $(OBJ_SWD) *f90.o
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
 
