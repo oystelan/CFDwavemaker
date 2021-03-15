@@ -10,7 +10,9 @@ clear;
 
 
 % % A program to test 1D grid refinement.
-L=5.0;xc=1.0; A=2
+L=5.0;
+xc=1.0;
+A=2
 s=[0:0.1:1];n=size(s);
 % % Alternative 1
 % for i=1:n(2),
@@ -43,14 +45,14 @@ x = cumsum(x)
 %     
 %     return dd[layerno]/ddsum;
 
-% % Alternative 2 NICE
-% a_end = 0.01;
-% a_potens = 1;
-% for i=1:n(2),   
-%     x(i)= 1-(tand((1-s(i))*a_end)^a_potens)/(tand(a_end)^a_potens);
-%     % and the inverse
-%     s2(i) = atan(((1- x(i))*(tan(a_end*pi/180)^a_potens))^(1/a_potens))/(a_end*pi/180);
-% end
+% Alternative 2 NICE
+a_end = 0.01;
+a_potens = 1;
+for i=1:n(2),   
+    x(i)= 1-(tand((1-s(i))*a_end)^a_potens)/(tand(a_end)^a_potens);
+    % and the inverse
+    s(i) = atan(((1- x(i))*(tan(a_end*pi/180)^a_potens))^(1/a_potens))/(a_end*pi/180);
+end
 
 
 
