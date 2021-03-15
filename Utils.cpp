@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include <algorithm>
 #include <cmath>
+#include <sys/stat.h>
 #if defined(_WIN32)
 #include < direct.h >
 #endif

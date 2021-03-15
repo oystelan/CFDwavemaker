@@ -1985,7 +1985,7 @@ void update_probes(double tpt) {
 	{
 		if (!probes.checkTime(tpt)) {
 #pragma omp single nowait
-			probes.write(tpt, lsgrid, swd, ramp);
+			probes.write(tpt, sgrid, swd, ramp);
 		}
 		break;
 	}
