@@ -36,6 +36,9 @@
     <ClCompile Include="probes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VTKreader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CFDwavemaker.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="probes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VTKreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -9,7 +9,7 @@ val = exp(0.1*z);
 subplot(1,2,1)
 plot(val,z)
 
-nl = 7;
+nl = 15;
 
 s = -1:1/(nl-1):0;
 
@@ -17,6 +17,8 @@ s = -1:1/(nl-1):0;
 
 a = 7*pi/18;
 b = 1.0;
+
+
 for i=1:nl,   
     s_mark(i)= (-(tan(((-s(i))*a))^b)/(tan(a)^b));
 end

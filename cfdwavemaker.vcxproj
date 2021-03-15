@@ -129,6 +129,7 @@
     <ClCompile Include="probes.cpp" />
     <ClCompile Include="Stokes5.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="VTKreader.cpp" />
     <ClCompile Include="Wavemaker.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +139,7 @@
     <ClInclude Include="probes.h" />
     <ClInclude Include="Stokes5.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="VTKreader.h" />
     <ClInclude Include="Wavemaker.h" />
   </ItemGroup>
   <ItemGroup>
