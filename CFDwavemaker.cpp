@@ -39,11 +39,14 @@
 #include "lsgrid.h"
 #include "probes.h"
 
-
 // for now, spectralwavedata is only supported in linux build
 
 #if defined(SWD_enable)
 #include "SpectralWaveData.h"
+#endif
+
+#if defined(VTK_enable)
+#include "VTKreader.h"
 #endif
 
 
@@ -106,6 +109,12 @@ Probes probes;
 // SWD class;
 #if defined(SWD_enable)
 SpectralWaveData *swd;
+#endif
+
+#define VTK_enable 1
+
+#if defined(VTK_enable)
+VTKreader vtkreader;
 #endif
 
 //string GetCurrentWorkingDir(void) {
@@ -677,6 +686,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				inputdata.wavetype = 31;
 				std::cout << "Spectral wave data (swd) specified" << std::endl;
 			}
+			else if (!lineA.compare("vtk")) {
+				inputdata.wavetype = 41;
+				std::cout << "Special branch VTK file interpolation" << std::endl;
+			}
 			
 			else {
 				std::cerr << "INPUTFILE ERROR: Unknown wave type specified. Valid alternatives are:" << std::endl;
@@ -684,6 +697,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				std::cerr << "regular" << std::endl;
 				std::cerr << "wavemaker" << std::endl;
 				std::cerr << "swd" << std::endl;
+				std::cerr << "vtk" << std::endl;
 				
 				exit(-1);
 			}
@@ -1368,7 +1382,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 		}
 		
-
 		if (!lineA.compare("[vtk output]")) { //optional
 			std::cout << "--------------------" << std::endl;
 			std::cout << "VTK output settings:" << std::endl;
@@ -1480,6 +1493,37 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 					}
 					probes.init_probes();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+
+		if (!lineA.compare("[vtk input]")) {
+			std::cout << "----------------------------" << std::endl;
+			std::cout << "VTK interpolation from file:" << std::endl;
+			std::cout << "----------------------------" << std::endl;
+
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 12, "storage_path")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.vtkfilepath;
+					buf.clear();
+					std::cout << "Directory where vtk files are stored: " << vtkreader.vtkfilepath << std::endl;
+				}
+				if (!lineA.compare(0, 8, "filename")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.vtk_prefix;
+					buf.clear();
+					std::cout << "filename prefix: " << vtkreader.vtk_prefix << std::endl;
 				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
