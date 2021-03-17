@@ -46,7 +46,7 @@ public:
 
 	int runOptionSwitch = 0;
 	vector<string>* filevec;
-	string vtkfilepath, vtk_prefix, chF, chV, chP;
+	string vtkfilepath, vtk_prefix, Uname;
 
 	vector<string>* listdir(const char* dirname, const char* suffix, int& IERR);
 	void loadInit(string path, const char* fname);

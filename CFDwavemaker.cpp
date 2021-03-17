@@ -111,8 +111,6 @@ Probes probes;
 SpectralWaveData *swd;
 #endif
 
-#define VTK_enable 1
-
 #if defined(VTK_enable)
 VTKreader vtkreader;
 #endif
@@ -1503,6 +1501,8 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		}
 
 		if (!lineA.compare("[vtk input]")) {
+
+#if defined(VTK_enable)
 			std::cout << "----------------------------" << std::endl;
 			std::cout << "VTK interpolation from file:" << std::endl;
 			std::cout << "----------------------------" << std::endl;
@@ -1525,12 +1525,24 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 					std::cout << "filename prefix: " << vtkreader.vtk_prefix << std::endl;
 				}
+				if (!lineA.compare(0, 19, "name_velocity_field")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.Uname;
+					buf.clear();
+					std::cout << "Name of velocity scalar field: " << vtkreader.Uname << std::endl;
+				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
 					break;
 				}
 			}
+#else
+			std::cerr << "VTK interpolation not supported in current compiled version of CFDwavemaker. Recompile width flag -DVTK_enable=1." << std::endl;
+			exit(-1);
+#endif
+			
 		}
 	}
 

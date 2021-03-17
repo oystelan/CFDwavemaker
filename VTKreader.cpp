@@ -92,10 +92,7 @@ void VTKreader::loadNext(string path, const char* fname) {
 	for (vtkIdType i = 0; i < numberOfPointArrays; i++)
 	{
 
-		if (strcmp(dataset1->GetPointData()->GetArrayName(i), chF.c_str()) == 0) {
-			vfraq_field_located = 1;
-		}
-		else if (strcmp(dataset1->GetPointData()->GetArrayName(i), chV.c_str()) == 0) {
+		if (strcmp(dataset1->GetPointData()->GetArrayName(i), Uname.c_str()) == 0) {
 			velo_field_located = 1;
 		}
 	}
