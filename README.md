@@ -14,6 +14,7 @@ Supported wave theories:
 
 outputs: 
 - surface elevation at any position (x,y)
+<<<<<<< HEAD
 - velocity components (ux, uy, uz)
 
 Special:
@@ -32,3 +33,9 @@ Version2.1.4 release:
 - Improved performance with openmp and irregular waves
 - minor bug fixes
 - added parameter [vtk output]/timelabel and [lsgrid]/init_only.
+=======
+- velocity components
+
+The master branch is the old version of CFDwavemaker (v1)
+A new version is under development under branch "version2".
+>>>>>>> origin/master
