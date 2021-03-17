@@ -16,10 +16,13 @@
 #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
+
+
 // Functions available in CFDwavemaker.cpp
 #ifdef __cplusplus
 extern "C" {
 #endif
+	int CFDwavemaker_is_initialized();
 	// standard callable functions for static linking
 	int wave_Initialize(); //function needs to be called at startup (reading wave input file)
 	int wave_Cleanup(); // Needs to be called before program end to clear variables stored in memory
@@ -29,7 +32,19 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
+
+	// sgrid updater function
+	void wave_sgrid_update(double); // function checking timestep and updating if neccessary the sgrid kinematics
 	
+	// update probes
+	EXPORT void update_probes(double); // writes wave kinematics data to probe files for a given time step as argument.
+
+	// some helpful function in case of irregular waves
+	double wave_phase_velocity(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
+	double wave_mean_period(int); // calculate mean wave period
+	double wave_mean_length(int); // calculate mean wave length
+
+	double wave_water_depth(); // returns the water depth used to wave calculation
 
 	// external functions used by COMFLOW
 	EXPORT double VelocityX(int, int, int, double, double, double, double);

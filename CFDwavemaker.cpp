@@ -1,5 +1,8 @@
+//
+// CFDwavemaker - an Open-Source wave kinematics library
+//
 // This program has the soul purpose of providing wave kinematics input to any type
-// of CFD program which can be linked up a dynamic link library.
+// of CFD program which can be linked up as a dynamic link library or statically.
 // The program is created and updated by the Oeystein Lande. The link library
 // compiles on both linux and windows. The following wave theory/types are currently
 // supported:
@@ -7,89 +10,112 @@
 // dean), wave paddle theory (2D only at the moment)
 //
 //
-// Current version: v1.0
-// Date: 2017-09-30
+// Current version: v214
+// Date: 2020-12-05
+// (c) Oystein Lande
 // --------------------------------------------------------------------------------
 #include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
+//#include <cstdlib>
+//#include <stdlib.h>
 #include <fstream>
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <algorithm>
 #include <limits>
-#include <cfloat>
 #include <ctime>
-#include "CFDwavemaker.h"
-#include "omp.h"
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort, std::stable_sort
+#include <filesystem>
+
+//#include <direct.h> // windows only function
+#//include <cctype>
+//#include <locale>
+#include "CFDwavemaker.h" 
+#include "Stokes5.h"
+#include "Irregular.h"
+#include "Utils.h"
+#include "Wavemaker.h"
+#include "lsgrid.h"
+#include "probes.h"
+
+
+// for now, spectralwavedata is only supported in linux build
+
+#if defined(SWD_enable)
+#include "SpectralWaveData.h"
+#endif
+
 
 //#include <fftw3.h>
 
-extern "C" {
-#include "Stokes5.h"
-}
 
-using namespace std;
+// Variables
+//int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
 
 
 
-#define PI 3.1415926535897
-#define G 9.81
-#define RHO 1025.0
-//fftw_plan p;
 
-//double dw = 2.0*PI/ 64.0;
-double *w;
-double *Ampspec;
-double *k;
-double *thetaA;
-double *D;
-double *phas;
-double *dsum2;
-double *PD_time;
-double *PD_ampl;
-double *PD_velo;
-double *PD_eta;
-double *domainsize;
-double *index;
+// Storage class of input data.
+class CFDwavemakerInputdata {
+public:
+	double depth;
+	double x_pos, y_pos, tofmax, current_speed, wave_length, wave_height;
+	double mtheta = 0.;
+	double swl = 0.;
+	bool bw_auto_calc = false;
+	int wavetype;
+	bool property_read = false;
+	double rho = 1025.;
+	// SWD parameters
+	double nsumx = -1, nsumy = -1, impl = 0, ipol = 0, norder = 0;
+	bool dc_bias = false;
+	std::string swdFileName;
 
-double *UX;
-double *UY;
-double *UZ;
-double *UXL;
-double *UYL;
-double *UZL;
-double *ETA;
-
-Stokes5 wave; // declare wave
-
-double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
-double fp, alpha_z, alpha_u, ramp_time, x_pos, y_pos, current_speed, wave_length, wave_height;
-int nfreq, ndir, wavetype, extmet, pertmet, meth, bandwidth, n_timesteps, rampswitch, normalizeA, spreadfunc;
-int NX, NY, NZ, NXL, NYL, NZL;
-int initialized;
-int initsurf = 0;
-int initkin = 0;
-double dx, dy, dz, dxl, dyl, dzl;
-
-/*void testfft() {
-	fftw_complex *in, *out;
-
-	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 64);
-	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 64);
-
-	fftw_free(in); fftw_free(out);
-
-}*/
-
-double sum(double ll[], int nsum) {
-	double ss = 0.0;
-	for (int i = 0; i < nsum; i++) {
-		ss += ll[i];
+	CFDwavemakerInputdata() {
 	}
-	return ss;
-}
+
+	~CFDwavemakerInputdata() {
+	}
+};
+
+bool CFDwmInit = false;
+
+//double ampl, depth, s, mtheta, tofmax, fpoint[2], trampdata[3], xrampdata[3], yrampdata[3];
+
+CFDwavemakerInputdata inputdata;
+
+// Stokes 5 class
+Stokes5 stokes5;
+
+// Irregular class
+Irregular irregular;
+
+// Wavemaker theory class
+Wavemaker wavemaker;
+
+// Grid class
+lsGrid sgrid;
+
+// Ramp class
+Ramp ramp;
+
+// probes class
+Probes probes;
+
+// SWD class;
+#if defined(SWD_enable)
+SpectralWaveData *swd;
+#endif
+
+//string GetCurrentWorkingDir(void) {
+//	char buff[FILENAME_MAX];
+//	GetCurrentDir(buff, FILENAME_MAX);
+//	std::string current_working_dir(buff);
+//	return current_working_dir;
+//}
+
+// Some useful utilitize functions
 
 void wait(int seconds)
 {
@@ -98,1550 +124,1590 @@ void wait(int seconds)
 	while (clock() < endwait) {}
 }
 
+/* A sorting function for vectors whihc returns the indices after sorting */
+template <typename T>
+std::vector<size_t> sort_indices(const std::vector<T>& v) {
 
-int check_license()
-{
+	// initialize original index locations
+	std::vector<size_t> idx(v.size());
+	iota(idx.begin(), idx.end(), 0);
 
-	int licensecheck = 1;
-  // Date for program to stop working
-  int expyear = 2020;
-  int expmonth = 12;
-  int expday = 31;
+	// sort indexes based on comparing values in v
+	// using std::stable_sort instead of std::sort
+	// to avoid unnecessary index re-orderings
+	// when v contains elements of equal values 
+	stable_sort(idx.begin(), idx.end(),
+		[&v](size_t i1, size_t i2) {return v[i1] < v[i2]; });
 
-  time_t t = time(0);   // get time now
-
-	#if defined(_MSC_VER)
-
-      struct tm now;
-
-      localtime_s(&now, &t);
-
-
-
-    	cout << (now.tm_year + 1900) << '-'
-    		<< (now.tm_mon + 1) << '-'
-    		<< now.tm_mday
-    		<< endl;
-    	if ((now.tm_year + 1900) > expyear) {
-    		licensecheck = 0;
-    	}
-    	else if ((now.tm_year + 1900) == expyear) {
-    		if ((now.tm_mon + 1) > expmonth) {
-    			licensecheck = 0;
-    		}
-    	}
-    	else if ((now.tm_year + 1900) == expyear) {
-    		if ((now.tm_mon + 1) == expmonth) {
-    			if (now.tm_mday > expday) {
-    				licensecheck = 0;
-    			}
-    		}
-    	}
-  #else
-      struct tm * now;
-      //time(&t)
-      now = localtime(&t);
-
-    	cout << (now->tm_year + 1900) << '-'
-    		<< (now->tm_mon + 1) << '-'
-    		<< now->tm_mday
-    		<< endl;
-    	if ((now->tm_year + 1900) > expyear) {
-    		licensecheck = 0;
-    	}
-    	else if ((now->tm_year + 1900) == expyear) {
-    		if ((now->tm_mon + 1) > expmonth) {
-    			licensecheck = 0;
-    		}
-    	}
-    	else if ((now->tm_year + 1900) == expyear) {
-    		if ((now->tm_mon + 1) == expmonth) {
-    			if (now->tm_mday > expday) {
-    				licensecheck = 0;
-    			}
-    		}
-    	}
-
-  #endif
-	return licensecheck;
+	return idx;
 }
 
-int read_inputdata()
+// trim from start (in place)
+static inline void ltrim(std::string& s) {
+	s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) {
+		return !isspace(ch);
+		}));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string& s) {
+	s.erase(find_if(s.rbegin(), s.rend(), [](int ch) {
+		return !isspace(ch);
+		}).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string& s) {
+	ltrim(s);
+	rtrim(s);
+}
+
+int numparams(std::string str)
 {
-	string lineA;
-	ifstream fid;
-	string res;
+	// breaking input into word using string stream 
+	std::stringstream s(str); // Used for breaking words 
+	std::string word; // to store individual words 
 
-	// READ INPUT FILE AND REMOVE COMMENT LINES
+	int count = 0;
+	while (s >> word)
+		count++;
+	return count;
+}
 
-	
-	fid.open("./waveinput.dat");
 
-	// check one step up in the folder tree (this is used in the latest comflow version)
-	if (fid.fail()){
-		fid.open("../waveinput.dat");
-	}
-	// Error check
-	if (fid.fail()) {
-		cerr << "Could not open file (is it really there?) " << endl;
-		return -1;
-		exit(1);
-	}
-	else {
-		cout << "Reading data from file: waveinput.dat..." << endl;
-	}
-	while (fid.good()) {
-		getline(fid, lineA);
-		//cout << lineA << endl;
-		lineA.erase(find(lineA.begin(), lineA.end(), '#'), lineA.end());
-		if (lineA.length() > 0) {
-			res += lineA + "\n";
+// This function is depricated. will be removed in the future.
+int process_inputdata_v2(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp ) {
+	std::string lineA;
+	std::ifstream fid;
+	std::istringstream buf;
+	std::istringstream f(res);
 
-		}
-	}
-	fid.close();
-	//cout << res << endl;
-	istringstream f(res);
-	getline(f, lineA);
-
-	wavetype = stoi(lineA);
-	//cout << "The following wave type was chosen: " << wavetype << endl;
-
-	istringstream buf;
-
-	// ----------------------------------------------------------------------------------------------
-	// WAVE TYPE 1 data read
-	// The traditional method of specification (integrates both frequency and directions)
-	// ----------------------------------------------------------------------------------------------
-	if (wavetype == 1) {
-
-		cout << endl<< "WaveType: 1" << endl;
-		cout << "Description: Irregular wave field with multiple directional components " << endl;
-		cout << "-----------------------------------------------------------------------" << endl;
-	
-		// read Line 1
-		//
+	//get and write data lines
+	while (!f.eof()) {
 		getline(f, lineA);
-		buf.str(lineA);
-		buf >> ampl;
-		buf >> normalizeA;
-		buf >> depth;
-		buf >> mtheta;
-		buf >> ramp_time;
-		buf.clear();
-
-		if (ramp_time > 0) {
-			rampswitch = 1;
-		}
-		else {
-			rampswitch = 0;
-		}
-
-		
-		// read line 2
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> extmet;
-		buf >> pertmet;
-		buf >> bandwidth;
-		buf.clear();
-
-
-
-		// read Line 3 % Phase adjustements: time of max, x-focuspoint, y-focuspoint
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> tofmax;
-		buf >> fpoint[0];
-		buf >> fpoint[1];
-		buf.clear();
-
-
-
-		// read Line 5 % values for x ramp
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> xrampdata[0];
-		buf >> xrampdata[1];
-		buf >> xrampdata[2];
-		buf.clear();
-
-		// read Line 6 % values for y ramp
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> yrampdata[0];
-		buf >> yrampdata[1];
-		buf >> yrampdata[2];
-		buf.clear();
-
-		// read spreading function data
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> spreadfunc;
-		buf >> s;
-		buf.clear();
-
-		// read number of frequencies and directions
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> nfreq;
-		buf >> ndir;
-		buf.clear();
-
-		// Read frequency data (omega, Sw and K)
-		double *w_temp = new double[nfreq];
-		double *Sw = new double[nfreq];
-		double *k_temp = new double[nfreq];
-		double *phas_temp = new double[nfreq];
-		for (int i = 0; i < nfreq; i++) {
+		trim(lineA);
+		std::cout << lineA << std::endl;
+		// Convension for numbering:
+		// irregular wave theory variants: 1-10
+		// wavemaker theory variants: 11-20
+		// Regular wave theories: 21-30
+		// HOSM and other: 31-40
+		if (!lineA.compare("[wave type]")) {
 			getline(f, lineA);
+			trim(lineA);
+			std::cout << lineA << std::endl;
+			// check if valid wave type is given
+			if (!lineA.compare("irregular") || !lineA.compare("1")) {
+				inputdata.wavetype = 1;
+				std::cout << "Irregular perturbation wave theory specified" << std::endl;
+			}
+			else if (!lineA.compare("pistonwavemaker")) {
+				inputdata.wavetype = 11;
+				std::cout << "Piston wave maker theory specified" << std::endl;
+			}
+			else if (!lineA.compare("spectral wave")) {
+				inputdata.wavetype = 31;
+				std::cout << "spectral wave (HOSM) specified" << std::endl;
+			}
+			else if (!lineA.compare("stokes5")) {
+				inputdata.wavetype = 21;
+				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
+			}
+			else {
+				std::cout << "Unknown wave type specified. Valid alternatives are:" << std::endl;
+				std::cout << "irregular" << std::endl;
+				std::cout << "pistonwavemaker" << std::endl;
+				std::cout << "spectral wave" << std::endl;
+				std::cout << "stokes5" << std::endl;
+				//exit(1);
+			}
+		}
+		if (!lineA.compare("[general input data]")) { //mandatory
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
 			buf.str(lineA);
-			buf >> w_temp[i];
-			buf >> Sw[i];
-			buf >> k_temp[i];
-			buf >> phas_temp[i];
+			buf >> inputdata.depth;
+			buf >> inputdata.mtheta;
+			buf.clear();
+		}
+		if (!lineA.compare("[normalize]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> irreg.ampl;
+			buf >> irreg.normalize;
+			buf.clear();
+			
+		}
+		if (!lineA.compare("[perturbation method]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> irreg.extrapolation_met;
+			buf >> irreg.order;
+			buf >> irreg.dw_bandwidth;
+			buf.clear();
+		}
+		if (!lineA.compare("[wave reference point]")) { //optional
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> inputdata.tofmax;
+			buf >> inputdata.x_pos;
+			buf >> inputdata.y_pos;
+			buf.clear();
+		}
+		if (!lineA.compare("[ramps]")) { //optional
+			rramp.ramp_init = true;
+			// read time ramp data
+			
+			// read time rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_time_up;
+			buf >> rramp.time_rampup_start;
+			buf >> rramp.time_rampup_end;;
+			buf.clear();
+			// read time rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_time_down;
+			buf >> rramp.time_rampdown_start;
+			buf >> rramp.time_rampdown_end;;
+			buf.clear();
+			// read x-direction rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_x_up;
+			buf >> rramp.x_rampup_start;
+			buf >> rramp.x_rampup_end;;
+			buf.clear();
+			// read x-direction rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_x_down;
+			buf >> rramp.x_rampdown_start;
+			buf >> rramp.x_rampdown_end;;
+			buf.clear();
+			// read y-direction rampup
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_y_up;
+			buf >> rramp.y_rampup_start;
+			buf >> rramp.y_rampup_end;;
+			buf.clear();
+			// read y-direction rampdown
+			getline(f, lineA);
+			std::cout << lineA << std::endl;
+			buf.str(lineA);
+			buf >> rramp.ramp_init_y_down;
+			buf >> rramp.y_rampdown_start;
+			buf >> rramp.y_rampdown_end;;
+			buf.clear();
+			
+		}
+		// Wave properties: this is where the wave type specific data is given
+		if (!lineA.compare("[wave properties]")) {
+			if (inputdata.wavetype == 1) {
+				// In case of irregular wave is specified
+				getline(f, lineA);
+				trim(lineA);
+				std::cout << lineA << std::endl;
+				// User defined wave. List of frequency components given
+				// frequency, spectral ampl, wave number, phase, direction (rad)
+				if (!lineA.compare("userdefined1")) {
+					std::cout << "Irregular seas, one directional component for each frequency specified" << std::endl;
+					// read number wave components
+					getline(f, lineA);
+					std::cout << "Number of frequency components: " << lineA << std::endl;
+					buf.str(lineA);
+					buf >> irreg.nfreq;
+					buf.clear();
+					irreg.ndir = 1;
+
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
+
+
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]     theta[rad]" << std::endl;
+					double temp;
+					for (int i = 0; i < irreg.nfreq; i++) {
+						getline(f, lineA);
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> temp;
+						omega.push_back(temp);
+						buf >> temp;
+						A.push_back(temp);
+						buf >> temp;
+						k.push_back(temp);
+						buf >> temp;
+						phase.push_back(temp);
+						buf >> temp;
+						theta.push_back(temp);
+						buf.clear();
+					}
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
+					//exit(0);
+
+				}
+				// The traditional way of specifing frequency and direction as separate components S(f,theta) = S(f)*D(theta)
+				else if (!lineA.compare("userdefined")) {
+					std::cout << "Irregular seas, directional spreading defined separately" << std::endl;
+					// read number of frequencies and directions
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> irreg.nfreq;
+					buf >> irreg.ndir;
+					buf.clear();
+					std::cout << "Number of frequency components: " << irreg.nfreq << std::endl;
+					std::cout << "Number of directional components: " << irreg.ndir << std::endl;
+
+					// Read frequency data (omega, Sw and K)
+					double* omega_temp = new double[irreg.nfreq];
+					double* Ampspec_temp = new double[irreg.nfreq];
+					double* k_temp = new double[irreg.nfreq];
+					double* phas_temp = new double[irreg.nfreq];
+					std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]" << std::endl;
+					for (int i = 0; i < irreg.nfreq; i++) {
+						getline(f, lineA);
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> omega_temp[i];
+						buf >> Ampspec_temp[i];
+						buf >> k_temp[i];
+						buf >> phas_temp[i];
+						buf.clear();
+					}
+
+					// Read directional data
+					double* theta_temp = new double[irreg.ndir];
+					double* D_ampl_temp = new double[irreg.ndir];
+					std::cout << "# Theta [rad] D(theta)" << std::endl;
+					for (int i = 0; i < irreg.ndir; i++) {
+						getline(f, lineA);
+						buf.str(lineA);
+						buf >> theta_temp[i];
+						buf >> D_ampl_temp[i];
+						buf.clear();
+					}
+
+					// Create some temporary vectors for storage of spectral data
+					std::vector<double> omega;
+					std::vector<double> A;
+					std::vector<double> k;
+					std::vector<double> theta;
+					std::vector<double> phase;
+
+					for (int i = 0; i < irreg.nfreq; i++) {
+						for (int j = 0; j < irreg.ndir; j++) {
+							omega.push_back(omega_temp[i]);
+							k.push_back(k_temp[i]);
+							A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+							phase.push_back(phas_temp[i]);
+							theta.push_back(theta_temp[j]);
+
+						}
+					}
+					delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_ampl_temp;
+
+					// Sort vectors as a function of omega (ascending)
+					for (auto i : sort_indices(omega)) {
+						std::cout << omega[i] << std::endl;
+						irreg.omega.push_back(omega[i]);
+						irreg.A.push_back(A[i]);
+						irreg.k.push_back(k[i]);
+						irreg.phase.push_back(phase[i]);
+						irreg.theta.push_back(theta[i]);
+					}
+				}
+
+				
+			}
+			else if (inputdata.wavetype == 11) {
+				// Wavemaker theory (piston)
+				// read alpha values
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wmaker.alpha_z;
+				buf >> wmaker.alpha_u;
+				buf.clear();
+
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wmaker.n_timesteps;
+				//n_timesteps = stoi(lineA);
+				std::cout << "Number of timesteps: " << inputdata.wavetype << std::endl;
+
+				// declare some vectors to store piston data
+				wmaker.PD_time = new double[wmaker.n_timesteps];
+				wmaker.PD_ampl = new double[wmaker.n_timesteps];
+				wmaker.PD_velo = new double[wmaker.n_timesteps];
+				wmaker.PD_eta = new double[wmaker.n_timesteps];
+
+				for (int i = 0; i < wmaker.n_timesteps; i++) {
+					getline(f, lineA);
+					buf.str(lineA);
+					buf >> wmaker.PD_time[i];
+					buf >> wmaker.PD_ampl[i];
+					buf >> wmaker.PD_velo[i];
+					buf >> wmaker.PD_eta[i];
+					buf.clear();
+				}
+			}
+			else if (inputdata.wavetype == 21) {
+				// read Line 2
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> stokes.wave_length; // wave length
+				buf >> stokes.wave_height;  // Wave height
+				buf.clear();
+
+			}
+			else {
+				std::cout << "Unknown wavetype specified" << std::endl;
+			}
+		}
+
+		if (!lineA.compare("[current speed]")) { //optional
+			if (inputdata.wavetype == 21){ // Stokes 5th
+				getline(f, lineA);
+				std::cout << lineA << std::endl;
+				std::cout << "Current speed in m/s. Assumed inline with wave propagation direction." << std::endl;
+				buf.str(lineA);
+				buf >> stokes.current;
+				buf.clear();
+			}
+			else {
+				std::cout << "Current not supported for selected wave type. Parameter ignored." << std::endl;
+			}
+		}
+		if (!lineA.compare("[still water level]")) { //optional
+			getline(f, lineA);
+			std::cout << "still water level: " << lineA << "m" << std::endl;
+			
+			buf.str(lineA);
+			buf >> inputdata.swl;
 			buf.clear();
 		}
 
-
-		// Read directions
-		double *theta_temp = new double[ndir];
-		for (int i = 0; i < ndir; i++) {
+		if (!lineA.compare("[lsgrid]")) {
+			// Lagrangian streched grid
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> theta_temp[i];
+			buf >> lsgrid.domain[0];
+			buf >> lsgrid.domain[1];
+			buf >> lsgrid.domain[2];
+			buf >> lsgrid.domain[3];
+			std::cout << "LS grid domain bounds: " << std::endl << lineA << std::endl;
+
 			buf.clear();
-		}
-
-		// Normalize amplitude spectrum if Normalize is switched on
-		double *Ampspec_temp = new double[nfreq];
-		if (normalizeA) {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec_temp[i] = ampl*Sw[i] / sum(Sw, nfreq);
-			}
-		}
-		else {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec_temp[i] = ampl*Sw[i];
-			}
-		}
-		delete[] Sw;
-
-
-		// Assign wave spreading based on specified spreading function parameters
-		D = new double[nfreq*ndir];
-		double dsum = 0.;
-		dsum2 = new double[nfreq];
-		if (spreadfunc == 0) { // Uniform-distribution
-			for (int i = 0; i < ndir; i++) {
-				D[i] = 1.0;
-				dsum += D[i];
-			}
-			for (int i = 0; i < ndir; i++) {
-				D[i] = D[i] / dsum;
-			}
-			// Repeat Directional distribution nfreq times
-			for (int i = 0; i < nfreq; i++) {
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = D[j];
-				}
-			}
-		}
-		else if (spreadfunc == 1) { // cos(theta)^s
-			for (int i = 0; i < ndir; i++) {
-				D[i] = pow(cos((theta_temp[i] - (mtheta*PI / 180.))), s);
-				dsum += D[i];
-			}
-			for (int i = 0; i < ndir; i++) {
-				D[i] = D[i] / dsum;
-			}
-			// Repeat Directional distribution nfreq times
-			for (int i = 0; i < nfreq; i++) {
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = D[j];
-				}
-			}
-		}
-		else if (spreadfunc == 2) { // cos(theta/2)^2s
-			for (int i = 0; i < ndir; i++) {
-				D[i] = pow(cos((theta_temp[i] - (mtheta*PI / 180.)) / 2.), 2.0*s);
-				dsum += D[i];
-			}
-			for (int i = 0; i < ndir; i++) {
-				D[i] = D[i] / dsum;
-			}
-			// Repeat Directional distribution nfreq times
-			for (int i = 0; i < nfreq; i++) {
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = D[j];
-				}
-			}
-		}
-		else if (spreadfunc == 3) { // Ewans simplified spreading function (frequency dependent spreading)
-			for (int i = 0; i < nfreq; i++) {
-				if (((w[i] / (2.*PI)) / fp) < 1.) {
-					s = 15.5*pow((w[i] / (2.*PI)) / fp, 9.47);
-				}
-				else {
-					s = 13.1*pow((w[i] / (2.*PI)) / fp, -1.94);
-				}
-				dsum2[i] = 0.;
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = pow(cos((theta_temp[j] - (mtheta*PI / 180.)) / 2.), 2.*s);
-					dsum2[i] += D[i*ndir + j];
-				}
-			}
-			for (int i = 0; i < nfreq; i++) {
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = D[i*ndir + j] / dsum2[i];
-				}
-			}
-		}
-		else if (spreadfunc == 4) { //johannessen cos(theta/2)^s special case (johannessen 1997)
-			for (int i = 0; i < ndir; i++) {
-				D[i] = pow(cos((theta_temp[i] - (mtheta*PI / 180.)) / 2.), s);
-				dsum += D[i];
-			}
-			for (int i = 0; i < ndir; i++) {
-				D[i] = D[i] / dsum;
-			}
-			// Repeat Directional distribution nfreq times
-			for (int i = 0; i < nfreq; i++) {
-				for (int j = 0; j < ndir; j++) {
-					D[i*ndir + j] = D[j];
-				}
-			}
-		}
-
-		// Restack frequency and direction dimentions into 1 dimentional arrays
-		w = new double[nfreq*ndir];
-		k = new double[nfreq*ndir];
-		phas = new double[nfreq*ndir];
-		Ampspec = new double[nfreq*ndir];
-		thetaA = new double[nfreq*ndir];
-
-		for (int i = 0; i < nfreq; i++) {
-			for (int j = 0; j < ndir; j++) {
-				w[i*ndir + j] = w_temp[i];
-				k[i*ndir + j] = k_temp[i];
-				Ampspec[i*ndir + j] = Ampspec_temp[i];
-				phas[i*ndir + j] = phas_temp[i];
-				thetaA[i*ndir + j] = theta_temp[j];
-
-			}
-		}
-		delete[] Ampspec_temp, w_temp, phas_temp, k_temp, theta_temp;
-		cout << "Read input wave file completed." << endl;
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// WAVE TYPE 2 data read (One directional component pr. frequency)
-	// ------------------------------------------------------------------------------------------------------------------
-
-	else if (wavetype == 2) {
-
-		cout << endl<< "WaveType: 2" << endl;
-		cout << "Description: Irregular wave field with single directional component pr frequency " << endl;
-		cout << "---------------------------------------------------------------------------------" << endl;
-		// read Line 1
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> ampl;
-		buf >> normalizeA;
-		buf >> depth;
-		buf >> mtheta;
-		buf >> ramp_time;
-		buf.clear();
-		if (ramp_time > 0) {
-			rampswitch = 1;
-		}
-		else {
-			rampswitch = 0;
-		}
-
-		// read Line 2
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> extmet;
-		buf >> pertmet;
-		buf >> bandwidth;
-		buf.clear();
-
-
-		// read Line 3
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> tofmax;
-		buf >> fpoint[0];
-		buf >> fpoint[1];
-		buf.clear();
-
-		// read Line 4
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> xrampdata[0];
-		buf >> xrampdata[1];
-		buf >> xrampdata[2];
-		buf.clear();
-
-		// read Line 5
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> yrampdata[0];
-		buf >> yrampdata[1];
-		buf >> yrampdata[2];
-		buf.clear();
-
-		// read number wave components
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> nfreq;
-		buf.clear();
-		ndir = 1;
-
-
-
-		// Read frequency data (omega, ampltude, wavenumber, phase (rad), direction (rad))
-		w = new double[nfreq];
-		double *Sw = new double[nfreq];
-		k = new double[nfreq];
-		phas = new double[nfreq];
-		thetaA = new double[nfreq];
-		D = new double[nfreq];
-		for (int i = 0; i < nfreq; i++) {
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> w[i];
-			buf >> Sw[i];
-			buf >> k[i];
-			buf >> phas[i];
-			buf >> thetaA[i];
+			buf >> lsgrid.nx;
+			buf >> lsgrid.ny;
+			if (numparams(lineA) == 3) {
+				buf >> lsgrid.nl;
+			}
+			std::cout << "Grid resolution: " << std::endl;
+			std::cout << "nx: " << lsgrid.nx << std::endl;
+			std::cout << "ny: " << lsgrid.ny << std::endl;
+			std::cout << "nl: " << lsgrid.nl << std::endl;
+
+			// allocate memory
+			lsgrid.allocate();
+
 			buf.clear();
-			D[i] = 1.0;
-		}
-
-		// Normalize amplitude spectrum if Normalize is switched on
-		Ampspec = new double[nfreq];
-		if (normalizeA) {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec[i] = ampl*Sw[i] / sum(Sw, nfreq);
-			}
-		}
-		else {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec[i] = ampl*Sw[i];
-			}
-		}
-		delete[] Sw;
-
-		cout << "Wave type 2 read successfully." << endl;
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// WAVE TYPE 3 data read (One directional component pr. frequency)
-	// ------------------------------------------------------------------------------------------------------------------
-	// Description: same wave type as 2, but optimized for initializing a large basin, which requires some additional
-	// parameters
-
-
-	else if (wavetype == 3) {
-
-		cout << endl << "WaveType: 3" << endl;
-		cout << "Description: Irregular wave field with single directional component pr frequency " << endl;
-		cout << "---------------------------------------------------------------------------------" << endl;
-		// read Line 1
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> ampl;
-		buf >> normalizeA;
-		buf >> depth;
-		buf >> mtheta;
-		buf >> ramp_time;
-		buf.clear();
-		if (ramp_time > 0) {
-			rampswitch = 1;
-		}
-		else {
-			rampswitch = 0;
-		}
-
-		// read Line 2
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> extmet;
-		buf >> pertmet;
-		buf >> bandwidth;
-		buf.clear();
-
-
-		// read Line 3
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> tofmax;
-		buf >> fpoint[0];
-		buf >> fpoint[1];
-		buf.clear();
-
-		// read Line 4 Spatial ramp in x direction
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> xrampdata[0];
-		buf >> xrampdata[1];
-		buf >> xrampdata[2];
-		buf.clear();
-
-		// read Line 5 Spatial ramp in y direction
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> yrampdata[0];
-		buf >> yrampdata[1];
-		buf >> yrampdata[2];
-		buf.clear();
-
-		// read Line 6 Domain size
-		domainsize = new double[7];
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> domainsize[0];
-		buf >> domainsize[1];
-		buf >> domainsize[2];
-		buf >> domainsize[3];
-		buf >> domainsize[4];
-		buf >> domainsize[5];
-		buf >> domainsize[6];
-		buf.clear();
-
-		// read Line 7
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> NX;
-		buf >> NY;
-		buf >> NZ;
-		buf.clear();
-
-		// read Line 8
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> NXL;
-		buf >> NYL;
-		buf >> NZL;
-		buf.clear();
-
-		// read number wave components
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> nfreq;
-		buf.clear();
-		ndir = 1;
-
-
-
-		// Read frequency data (omega, ampltude, wavenumber, phase (rad), direction (rad))
-		w = new double[nfreq];
-		double *Sw = new double[nfreq];
-		k = new double[nfreq];
-		phas = new double[nfreq];
-		thetaA = new double[nfreq];
-		D = new double[nfreq];
-		for (int i = 0; i < nfreq; i++) {
 			getline(f, lineA);
 			buf.str(lineA);
-			buf >> w[i];
-			buf >> Sw[i];
-			buf >> k[i];
-			buf >> phas[i];
-			buf >> thetaA[i];
+			buf >> lsgrid.t0;
+			buf >> lsgrid.dt;
+			std::cout << "time init: " << lsgrid.t0 << std::endl;
+			std::cout << "dt: " << lsgrid.dt << std::endl;		
+
 			buf.clear();
-			D[i] = 1.0;
-		}
-
-		// Normalize amplitude spectrum if Normalize is switched on
-		Ampspec = new double[nfreq];
-		if (normalizeA) {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec[i] = ampl*Sw[i] / sum(Sw, nfreq);
-			}
-		}
-		else {
-			for (int i = 0; i < nfreq; i++) {
-				Ampspec[i] = ampl*Sw[i];
-			}
-		}
-		delete[] Sw;
-
-		cout << "Wave type 3 read successfully." << endl;
-	}
-
-
-	// ---------------------------------------------------------------------
-	// PISTON TYPE WAVE MAKER
-	// ---------------------------------------------------------------------
-	else if (wavetype == 4) {
-		cout << endl<< "WaveType: 4" << endl;
-		cout << "Description: Piston Type wave maker theory. Uses piston flap signal to calculate kinematics" << endl;
-		cout << "---------------------------------------" << endl;
-		// read alpha values
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> alpha_z;
-		buf >> alpha_u;
-		buf.clear();
-
-		getline(f, lineA);
-    buf.str(lineA);
-		buf >> n_timesteps;
-		//n_timesteps = stoi(lineA);
-		cout << "Number of timesteps: " << wavetype << endl;
-
-		// declare some vectors to store piston data
-		PD_time = new double[n_timesteps];
-		PD_ampl = new double[n_timesteps];
-		PD_velo = new double[n_timesteps];
-		PD_eta = new double[n_timesteps];
-
-		for (int i = 0; i < n_timesteps; i++) {
 			getline(f, lineA);
-			buf.str(lineA);
-			buf >> PD_time[i];
-			buf >> PD_ampl[i];
-			buf >> PD_velo[i];
-			buf >> PD_eta[i];
+			trim(lineA);
+			if (!lineA.compare("stretch_params")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.tan_a;
+				buf >> lsgrid.tan_b;
+				std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
+			}
+				
 			buf.clear();
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare("ignore_subdomain")) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.ignore_at_init;
+				if (lsgrid.ignore_at_init) {
+					std::cout << "Warning: only boundaries will be initialized size ignore_at_init=" << lineA << std::endl;
+				}
+				buf.clear();
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> lsgrid.domain_ignore[0];
+				buf >> lsgrid.domain_ignore[1];
+				buf >> lsgrid.domain_ignore[2];
+				buf >> lsgrid.domain_ignore[3];
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl << lineA << std::endl;
+			}
+			buf.clear();
+
+			if (inputdata.wavetype == 1)
+				inputdata.wavetype = 4;
+			else {
+				std::cerr << "LS grid may only be used with irregular waves" << std::endl;
+				exit(-1);
+			}
+
 		}
+	}
+	std::cout << "Input file read successfully." << std::endl;
+
+	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
+		irregular.depth = inputdata.depth;
+		irregular.mtheta = inputdata.mtheta;
+		irregular.tofmax = inputdata.tofmax;
+		irregular.fpoint[0] = inputdata.x_pos;
+		irregular.fpoint[1] = inputdata.y_pos;
+		irregular.swl = inputdata.swl;
+		irregular.normalize_data();
+		irregular.calculate_bwindices();
 
 	}
-
-	// ----------------------------------------------------------------
-	// WAVE TYPE 5 - Stokes 5th order
-	// ----------------------------------------------------------------
-	else if (wavetype == 5) {
-		cout << endl<< "WaveType: 5" << endl;
-		cout << "Description: Stokes 5th order wave " << endl;
-		cout << "---------------------------------------" << endl;
-		// read Line 1
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> wave_length;
-		buf >> wave_height;
-		buf >> depth;
-		buf >> current_speed;
-		buf >> mtheta;
-		buf >> ramp_time;
-		buf.clear();
-		if (ramp_time > 0) {
-			rampswitch = 1;
-		}
-		else {
-			rampswitch = 0;
-		}
-
-		// read Line 2
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> x_pos; // initial position of max
-		buf >> y_pos; // position of still water level
-		buf.clear();
-
-		// read Line 4
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> xrampdata[0];
-		buf >> xrampdata[1];
-		buf >> xrampdata[2];
-		buf.clear();
-
-		// read Line 5
-		getline(f, lineA);
-		buf.str(lineA);
-		buf >> yrampdata[0];
-		buf >> yrampdata[1];
-		buf >> yrampdata[2];
-		buf.clear();
-
-
+	else if (inputdata.wavetype == 21) {
+		stokes.depth = inputdata.depth;
+		stokes.theta = inputdata.mtheta;
+		stokes.x0 = inputdata.x_pos;
+		stokes.y0 = inputdata.y_pos;
+		stokes.t0 = inputdata.tofmax;
+		stokes.z0 = inputdata.swl;
 		// set the properties of the wave
-		set_stokes5_properties(&wave, wave_length, wave_height, current_speed, depth, G, x_pos, y_pos);
+		stokes.set_stokes5_properties(inputdata.wave_length, inputdata.wave_height);
 	}
 
-	// Define which combination of methods to be used
+	if (inputdata.wavetype == 4) {
+		lsgrid.water_depth = inputdata.depth;
+		lsgrid.set_ignore();
 
-	if (wavetype < 3) {
-		// linear waves, expenential above swl
-		if (extmet == 0 && pertmet == 0) {
-			meth = 1;
-			cout << "Linear Theory used. Exponential profile continued above the free surface" << endl;
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(irreg);
 		}
-		// linear waves, constant value above swl
-		else if (extmet == 1 && pertmet == 0) {
-			meth = 2;
-			cout << "Linear Theory used. Constant value (z=0) continued above the free surface" << endl;
+		else {
+			lsgrid.initialize_surface_elevation(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics(irreg);
 		}
-		// Second order solutions - Exponential
-		else if (extmet == 0 && pertmet == 2) {
-			meth = 3;
-			cout << "Second order Theory used. Exponential profile continued above the free surface (unaccurate). Recommend using extmet==2" << endl;
+	}
+
+	return 0;
+
+}
+
+/* main input file reader function*/
+int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp) {
+	std::string lineA, dummystr, lineP;
+	std::ifstream fid;
+	std::istringstream buf;
+	std::istringstream f(res);
+	bool skip_getline = false;
+
+	std::cout << std::boolalpha; // display booleans as true or false when printed (instead of 0 or 1)
+
+	//get and write data lines
+	while (!f.eof()) {
+		if (skip_getline) {
+			skip_getline = false;
+		}
+		else {
+			getline(f, lineA);
+			trim(lineA);
+		}
+		
+		//std::cout << lineA << std::endl;
+
+		// Convension for numbering:
+		// irregular wave theory variants: 1-10
+		// wavemaker theory variants: 11-20
+		// Regular wave theories: 21-30
+		// HOSM and other: 31-40
+		if (!lineA.compare("[wave type]")) {
+			std::cout << "----------" << std::endl;
+			std::cout << "Wave type:" << std::endl;
+			std::cout << "----------" << std::endl;
+			getline(f, lineA);
+			trim(lineA);
+			//std::cout << lineA << std::endl;
+			// check if valid wave type is given
+			if (!lineA.compare("irregular") || !lineA.compare("1")) {
+				inputdata.wavetype = 1;
+				std::cout << "Irregular perturbation wave theory specified" << std::endl;
+			}
+			else if (!lineA.compare("wavemaker")) {
+				inputdata.wavetype = 11;
+				std::cout << "Wave maker theory specified" << std::endl;
+			}
+			else if (!lineA.compare("regular")) {
+				inputdata.wavetype = 21;
+				std::cout << "Regular 5th order Stokes wave specified" << std::endl;
+			}
+			else if (!lineA.compare("swd")) {
+				inputdata.wavetype = 31;
+				std::cout << "Spectral wave data (swd) specified" << std::endl;
+			}
+			
+			else {
+				std::cerr << "INPUTFILE ERROR: Unknown wave type specified. Valid alternatives are:" << std::endl;
+				std::cerr << "irregular" << std::endl;
+				std::cerr << "regular" << std::endl;
+				std::cerr << "wavemaker" << std::endl;
+				std::cerr << "swd" << std::endl;
+				
+				exit(-1);
+			}
 		}
 
-		// Second order solutions - Constant above Z
-		else if (extmet == 1 && pertmet == 2) {
-			meth = 4;
-			cout << "Second order Theory used. Constant value (z=0) continued above the free surface. Recommend using extmet==2" << endl;
+		if (!lineA.compare("[general input data]")) { //mandatory
+			std::cout << "-------------------" << std::endl;
+			std::cout << "General input data:" << std::endl;
+			std::cout << "-------------------" << std::endl;
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 5, "depth")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.depth;
+					buf.clear();
+					std::cout << "Water depth: " << inputdata.depth << "m" << std::endl;
+				}
+				if (!lineA.compare(0, 6, "mtheta")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.mtheta;
+					buf.clear();
+					std::cout << "Mean wave direction: " << inputdata.mtheta << "degrees" << std::endl;
+				}
+				if (!lineA.compare(0, 9, "normalize")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.normalize;
+					buf.clear();
+					std::cout << "Normalize wave amplitudes by spectral zeroth moment: " << irreg.normalize << std::endl;
+				}
+				if (!lineA.compare(0, 7, "amplify")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.ampl;
+					buf.clear();
+					std::cout << "Amplify (gain): " << irreg.ampl << "m" << std::endl;
+				}
+				if (!lineA.compare(0, 3, "swl")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.swl;
+					buf.clear();
+					std::cout << "Still water line set to: " << inputdata.swl << "m" << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+			
+		}
+		
+		if (!lineA.compare("[second order]")) { //optional
+			
+			std::cout << "Second order irregular waves Specified." << std::endl;
+
+			if (inputdata.wavetype > 10) {
+				std::cerr << "INPUTFILE ERROR: This tag is only available for irregular waves." << std::endl;
+				exit(-1);
+			}		
+			irreg.order = 2;
+
+			while (!f.eof()) {
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 6, "extval")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.extrapolation_met;
+					buf.clear();
+					std::cout << "Second order velocity extrapolation method for z > swl: " << irreg.extrapolation_met << std::endl;
+				}
+				if (!lineA.compare(0, 9, "bandwidth")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> dummystr;
+					
+					if (!dummystr.compare(0, 3, "off")) {
+						// Do nothing. default value is already a very high number
+						std::cout << "Bandwidth: off" << std::endl;
+					}
+					else if (!dummystr.compare(0, 3, "auto")) {
+						// Compute a decent bandwidth value. todo: make a function which does this
+						std::cout << "Bandwidth: auto" << std::endl;
+						inputdata.bw_auto_calc = true;
+					}
+					else { // assumes that a value is given
+						irreg.dw_bandwidth = atof(dummystr.c_str());
+						std::cout << "Bandwidth: " << irreg.dw_bandwidth << " rad/s" << std::endl;
+					}
+
+					buf.clear();
+				}			
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+
+		if (!lineA.compare("[wave reference point]")) { //optional
+			std::cout << "---------------------" << std::endl;
+			std::cout << "Wave reference point:" << std::endl;
+			std::cout << "---------------------" << std::endl;
+			while (!f.eof()) {
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 4, "time")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.tofmax;
+					buf.clear();
+					std::cout << "t0: " << inputdata.tofmax << " sec" <<std::endl;
+				}
+				if (!lineA.compare(0, 1, "x")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.x_pos;
+					buf.clear();
+					std::cout << "x0: " << inputdata.x_pos << " m" << std::endl;
+				}
+				if (!lineA.compare(0, 1, "y")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.y_pos;
+					buf.clear();
+					std::cout << "y0: " << inputdata.y_pos << " m" << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+
+		if (!lineA.compare("[ramps]")) { //optional
+			std::cout << "------" << std::endl;
+			std::cout << "Ramps:" << std::endl;
+			std::cout << "------" << std::endl;
+			rramp.ramp_init = true;
+			// read time ramp data
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 11, "time_rampup")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_time_up;
+					buf >> rramp.time_rampup_start;
+					buf >> rramp.time_rampup_end;
+					buf.clear();
+					std::cout << "time-rampup: " << rramp.ramp_init_time_up << ", starttime: " << rramp.time_rampup_start  << " sec, endtime: " << rramp.time_rampup_end << " sec." << std::endl;
+				}
+				if (!lineA.compare(0, 13, "time_rampdown")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_time_down;
+					buf >> rramp.time_rampdown_start;
+					buf >> rramp.time_rampdown_end;
+					buf.clear();
+					std::cout << "time-rampdown: " << rramp.ramp_init_time_down << ", starttime: " << rramp.time_rampdown_start << " sec, endtime: " << rramp.time_rampdown_end << " sec." << std::endl;
+				}
+				if (!lineA.compare(0, 8, "x_rampup")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_x_up;
+					buf >> rramp.x_rampup_start;
+					buf >> rramp.x_rampup_end;
+					buf.clear();
+					std::cout << "x-rampup: " << rramp.ramp_init_x_up << ", startpos: " << rramp.x_rampup_start << " m, endpos: " << rramp.x_rampup_end << " m." << std::endl;
+				}
+				if (!lineA.compare(0, 10, "x_rampdown")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_x_down;
+					buf >> rramp.x_rampdown_start;
+					buf >> rramp.x_rampdown_end;
+					buf.clear();
+					std::cout << "x-rampdown: " << rramp.ramp_init_x_down << ", startpos: " << rramp.x_rampdown_start << " m, endpos: " << rramp.x_rampdown_end << " m." << std::endl;
+				}
+				if (!lineA.compare(0, 8, "y_rampup")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_y_up;
+					buf >> rramp.y_rampup_start;
+					buf >> rramp.y_rampup_end;
+					buf.clear();
+					std::cout << "y-rampup: " << rramp.ramp_init_y_up << ", startpos: " << rramp.y_rampup_start << " m, endpos: " << rramp.y_rampup_end << " m." << std::endl;
+				}
+				if (!lineA.compare(0, 10, "y_rampdown")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> rramp.ramp_init_y_down;
+					buf >> rramp.y_rampdown_start;
+					buf >> rramp.y_rampdown_end;
+					buf.clear();
+					std::cout << "y-rampdown: " << rramp.ramp_init_y_down << ", startpos: " << rramp.y_rampdown_start << " m, endpos: " << rramp.y_rampdown_end << " m." << std::endl;
+				}
+				
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+		// Wave properties: irregular wave components (manual)
+		if (!lineA.compare("[irregular wave components]")) {
+			std::cout << "--------------------------" << std::endl;
+			std::cout << "Irregular Wave components:" << std::endl;
+			std::cout << "--------------------------" << std::endl;
+
+			if (inputdata.wavetype != 1) {
+				std::cerr << "INPUTFILE ERROR: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
+				exit(-1);
+			}
+			if (irreg.initialized) {
+				std::cerr << "INPUTFILE ERROR: Irregular wave already initialized. please check input file" << std::endl;
+				exit(-1);
+			}
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare(0, 5, "nfreq")) {
+				buf.str(lineA);
+				buf >> dummystr;
+				buf >> irreg.nfreq;
+				buf.clear();
+			}
+			else {
+				std::cerr << "INPUTFILE ERROR: parameter nfreq missing or not specified correctly" << std::endl;
+				exit(-1);
+			}
+			getline(f, lineA);
+			trim(lineA);
+			if (!lineA.compare(0, 4, "ndir")) {
+				buf.str(lineA);
+				buf >> dummystr;
+				buf >> irreg.ndir;
+				buf.clear();
+			}
+			else {
+				std::cerr << "INPUTFILE ERROR: parameter ndir missing or not specified correctly" << std::endl;
+				exit(-1);
+			}
+			// if ndir = 0. a single direction is read for each frequency.
+			if (irreg.ndir == 0) {
+				std::cout << "Irregular seas, one directional component for each frequency specified" << std::endl;
+				std::cout << "Number of frequency components: " << irreg.nfreq << std::endl;
+				irreg.ndir = 1;
+
+				// Create some temporary vectors for storage of spectral data
+				std::vector<double> omega;
+				std::vector<double> A;
+				std::vector<double> k;
+				std::vector<double> theta;
+				std::vector<double> phase;
+
+				double temp;
+				std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]        Theta [rad]" << std::endl;
+				for (int i = 0; i < irreg.nfreq; i++) {
+					getline(f, lineA);
+					// if new tag is reach. break while loop.
+					if (!lineA.compare(0, 1, "[")) {
+						std::cerr << "INPUTFILE ERROR: Not enough frequency components specified. please check to make sure that the number of lines matches the specified number of frequency components" << std::endl;
+						exit(-1);
+					}
+					std::cout << lineA << std::endl;
+					buf.str(lineA);
+					buf >> temp;
+					omega.push_back(temp);
+					buf >> temp;
+					A.push_back(temp);
+					buf >> temp;
+					k.push_back(temp);
+					buf >> temp;
+					phase.push_back(temp);
+					buf >> temp;
+					theta.push_back(temp);
+					buf.clear();
+				}
+
+				// Sort vectors as a function of omega (ascending)
+				for (auto i : sort_indices(omega)) {
+					//std::cout << omega[i] << std::endl;
+					irreg.omega.push_back(omega[i]);
+					irreg.A.push_back(A[i]);
+					irreg.k.push_back(k[i]);
+					irreg.phase.push_back(phase[i]);
+					irreg.theta.push_back(theta[i]);
+				}
+				irreg.initialized = true;
+
+			}
+			// A spreading function is used
+			else {
+				std::cout << "Irregular seas, directional spreading defined separately" << std::endl;
+				std::cout << "Number of frequency components: " << irreg.nfreq << std::endl;
+				std::cout << "Number of directional components: " << irreg.ndir << std::endl;
+				// Read frequency data (omega, Sw and K)
+				double* omega_temp = new double[irreg.nfreq];
+				double* Ampspec_temp = new double[irreg.nfreq];
+				double* k_temp = new double[irreg.nfreq];
+				double* phas_temp = new double[irreg.nfreq];
+				std::cout << "# OMEGA[rad / s]    A[m]           K             Phase[rad]" << std::endl;
+				for (int i = 0; i < irreg.nfreq; i++) {
+					getline(f, lineA);
+					std::cout << lineA << std::endl;
+					buf.str(lineA);
+					buf >> omega_temp[i];
+					buf >> Ampspec_temp[i];
+					buf >> k_temp[i];
+					buf >> phas_temp[i];
+					buf.clear();
+				}
+				// Read directional data
+				double* theta_temp = new double[irreg.ndir];
+				double* D_ampl_temp = new double[irreg.ndir];
+				std::cout << "# Theta [rad] D(theta)" << std::endl;
+				for (int i = 0; i < irreg.ndir; i++) {
+					getline(f, lineA);
+					if (!lineA.compare(0, 1, "[")) {
+						std::cerr << "INPUTFILE ERROR: too few directional components.." << std::endl;
+						exit(-1);
+					}
+					buf.str(lineA);
+					buf >> theta_temp[i];
+					buf >> D_ampl_temp[i];
+					buf.clear();
+				}
+
+				// Create some temporary vectors for storage of spectral data
+				std::vector<double> omega;
+				std::vector<double> A;
+				std::vector<double> k;
+				std::vector<double> theta;
+				std::vector<double> phase;
+
+				for (int i = 0; i < irreg.nfreq; i++) {
+					for (int j = 0; j < irreg.ndir; j++) {
+						omega.push_back(omega_temp[i]);
+						k.push_back(k_temp[i]);
+						A.push_back(Ampspec_temp[i] * D_ampl_temp[j]);
+						phase.push_back(phas_temp[i]);
+						theta.push_back(theta_temp[j]);
+
+					}
+				}
+				delete[] Ampspec_temp, omega_temp, phas_temp, k_temp, theta_temp, D_ampl_temp;
+
+				// Sort vectors as a function of omega (ascending)
+				for (auto i : sort_indices(omega)) {
+					//std::cout << omega[i] << std::endl;
+					irreg.omega.push_back(omega[i]);
+					irreg.A.push_back(A[i]);
+					irreg.k.push_back(k[i]);
+					irreg.phase.push_back(phase[i]);
+					irreg.theta.push_back(theta[i]);
+				}
+				irreg.initialized = true;
+			}
+			inputdata.property_read = true;
+		}
+
+		// Wave properties: piston wave maker
+		if (!lineA.compare("[pistonwavemaker wave properties]")) {
+			if (inputdata.wavetype != 11) {
+				std::cerr << "piston wave maker properties does not match the specified wave type. Check inputfile" << std::endl;
+				exit(-1);
+			}
+			if (wmaker.initialized) {
+				std::cerr << "INPUTFILE ERROR: Pistonwavemaker already initialized. please check input file" << std::endl;
+				exit(-1);
+			}
+			// Wavemaker theory (piston)
+			// read alpha values
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> wmaker.alpha_z;
+			buf >> wmaker.alpha_u;
+			buf.clear();
+
+			getline(f, lineA);
+			buf.str(lineA);
+			buf >> wmaker.n_timesteps;
+			//n_timesteps = stoi(lineA);
+			std::cout << "Number of timesteps: " << inputdata.wavetype << std::endl;
+
+			// declare some vectors to store piston data
+			wmaker.PD_time = new double[wmaker.n_timesteps];
+			wmaker.PD_ampl = new double[wmaker.n_timesteps];
+			wmaker.PD_velo = new double[wmaker.n_timesteps];
+			wmaker.PD_eta = new double[wmaker.n_timesteps];
+
+			for (int i = 0; i < wmaker.n_timesteps; i++) {
+				getline(f, lineA);
+				buf.str(lineA);
+				buf >> wmaker.PD_time[i];
+				buf >> wmaker.PD_ampl[i];
+				buf >> wmaker.PD_velo[i];
+				buf >> wmaker.PD_eta[i];
+				buf.clear();
+			}
+
+			inputdata.property_read = true;
+			wmaker.initialized = true;
+		}
+		
+		// Wave properties: Stokes wave properties
+		if (!lineA.compare("[stokes wave properties]")) {
+			if (inputdata.wavetype != 21) {
+				std::cerr << "INPUTFILE ERROR: Stokes wave properties does not match the specified wave type. Check inputfile" << std::endl;
+				exit(-1);
+			}
+			if (stokes.initialized) {
+				std::cerr << "INPUTFILE ERROR: Stokes 5th wave already initialized. please check input file" << std::endl;
+				exit(-1);
+			}
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 11, "wave_length")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> stokes.wave_length;
+					buf.clear();
+					std::cout << "Wave length:  " << stokes.wave_length << std::endl;
+				}
+				if (!lineA.compare(0, 11, "wave_height")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> stokes.wave_height;
+					buf.clear();
+					std::cout << "Wave height:  " << stokes.wave_height << std::endl;
+				}
+				if (!lineA.compare(0, 13, "current_speed")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> stokes.current;
+					buf.clear();
+					std::cout << "current speed:  " << stokes.current << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+			inputdata.property_read = true;
+			stokes.initialized = true;
+		}
+
+		if (!lineA.compare("[swd wave properties]")) { //optional
+			std::cout << "-------------------------------------" << std::endl;
+			std::cout << "Spectral wave data:" << std::endl;
+			std::cout << "-------------------------------------" << std::endl;
+			if (inputdata.wavetype != 31) {
+				std::cerr << "INPUTFILE ERROR: please set [wave type] = swd when using keyword [swd wave properties]." << std::endl;
+				exit(-1);
+			}
+			
+			while (!f.eof()) {
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 7, "swdfile")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.swdFileName;
+					buf.clear();
+					std::cout << "Swd file specified:  " << inputdata.swdFileName << std::endl;
+				}
+				if (!lineA.compare(0, 3, "rho")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.rho;
+					buf.clear();
+					std::cout << "rho:  " << inputdata.rho << " kg/m^3." << std::endl;
+				}
+				if (!lineA.compare(0, 5, "nsumx")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.nsumx;
+					buf.clear();
+					std::cout << "nsumx:  " << inputdata.nsumx << std::endl;
+				}
+				if (!lineA.compare(0, 5, "nsumy")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.nsumy;
+					buf.clear();
+					std::cout << "nsumy:  " << inputdata.nsumy << std::endl;
+				}
+				if (!lineA.compare(0, 4, "impl")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.impl;
+					buf.clear();
+					std::cout << "impl:  " << inputdata.impl << std::endl;
+				}
+				if (!lineA.compare(0, 4, "ipol")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.ipol;
+					buf.clear();
+					std::cout << "ipol:  " << inputdata.ipol << std::endl;
+				}
+				if (!lineA.compare(0, 6, "norder")) {
+					//  - Dict input data									
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> inputdata.norder;
+					buf.clear();
+					std::cout << "norder:  " << inputdata.norder << std::endl;
+				}
+				if (!lineA.compare(0, 9, "dc_bias")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> dummystr;
+
+					if (!dummystr.compare(0, 5, "false")) {
+						// Do nothing. default value is already a very high number
+						inputdata.dc_bias = false;
+					}
+					else if (!dummystr.compare(0, 4, "true")) {
+						// Compute a decent bandwidth value. todo: make a function which does this						
+						inputdata.dc_bias = true;
+					}
+					else { // assumes that a value is given
+						inputdata.dc_bias = atof(dummystr.c_str());
+					}
+					std::cout << "dc_bias:   " << inputdata.dc_bias << std::endl;
+
+					buf.clear();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+			
+		}
+
+
+		if (!lineA.compare("[lsgrid]")) {
+			std::cout << "-----------------------------------" << std::endl;
+			std::cout << "Lagrangian Stretched grid (lsgrid):" << std::endl;
+			std::cout << "-----------------------------------" << std::endl;			
+			
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				std::cout << lineA << std::endl;
+				trim(lineA);
+				if (!lineA.compare(0, 6, "bounds")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.domain[0];
+					buf >> lsgrid.domain[1];
+					buf >> lsgrid.domain[2];
+					buf >> lsgrid.domain[3];
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "nx")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.nx;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "ny")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.ny;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "nl")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.nl;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "t0")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.t0;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "dt")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.dt;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 14, "stretch_params")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.tan_a;
+					buf >> lsgrid.tan_b;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 16, "ignore_subdomain")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.domain_ignore[0];
+					buf >> lsgrid.domain_ignore[1];
+					buf >> lsgrid.domain_ignore[2];
+					buf >> lsgrid.domain_ignore[3];
+					buf.clear();
+					lsgrid.ignore_domain = true;
+				}
+				if (!lineA.compare(0, 14, "ignore_at_init")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.ignore_at_init;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 9, "init_only")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.init_only;
+					buf.clear();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+				
+			}
+
+			// allocate memory
+			
+
+			std::cout << "LS grid domain bounds: " << std::endl;
+			std::cout << "\tXMIN: " << lsgrid.domain[0] << std::endl;
+			std::cout << "\tXMAX: " << lsgrid.domain[1] << std::endl;
+			std::cout << "\tYMIN: " << lsgrid.domain[2] << std::endl;
+			std::cout << "\tYMAX: " << lsgrid.domain[3] << std::endl;
+			std::cout << "Grid resolution: " << std::endl;
+			std::cout << "nx: " << lsgrid.nx << std::endl;
+			std::cout << "ny: " << lsgrid.ny << std::endl;
+			std::cout << "nl: " << lsgrid.nl << std::endl;
+			std::cout << "time init: " << lsgrid.t0 << std::endl;
+			std::cout << "dt: " << lsgrid.dt << std::endl;
+			std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
+			if (lsgrid.ignore_domain) {
+				std::cout << "The following subdomain will be ignored after intialization: " << std::endl;
+				std::cout << "\tXMIN: " << lsgrid.domain_ignore[0] << std::endl;
+				std::cout << "\tXMAX: " << lsgrid.domain_ignore[1] << std::endl;
+				std::cout << "\tYMIN: " << lsgrid.domain_ignore[2] << std::endl;
+				std::cout << "\tYMAX: " << lsgrid.domain_ignore[3] << std::endl;
+			}
+			std::cout << "Ignore subdomain at t_init: " << lsgrid.ignore_at_init << std::endl;
+
+			if (inputdata.wavetype == 1) {
+				inputdata.wavetype = 4;
+				std::cout << "LS grid + irregular = True." << std::endl;
+			}
+			else if (inputdata.wavetype == 31){
+				inputdata.wavetype = 34;
+				std::cout << "LS grid + swd = True." << std::endl;
+			}
+			else {
+				std::cerr << "INPUTFILE ERROR: LS grid may currently only be used with irregular second order wave theory and spectral wave method" << std::endl;
+				exit(-1);
+			}
+			lsgrid.allocate();
 
 		}
-		// Second order solutions + Taylor expansion
-		else if (extmet == 2 && pertmet == 2) {
-			meth = 5;
-			cout << "Second order Theory used. Velocities extrapolated using Taylor expansion above free surface" << endl;
+		
 
+		if (!lineA.compare("[vtk output]")) { //optional
+			std::cout << "--------------------" << std::endl;
+			std::cout << "VTK output settings:" << std::endl;
+			std::cout << "--------------------" << std::endl;
+			if (inputdata.wavetype != 4 && inputdata.wavetype != 34)  {
+				std::cout << "InputError: VTK output only works in combination with LSgrid at the moment." << std::endl;
+				exit(-1);
+			}
+			sgrid.dump_vtk = true;
+
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 12, "storage_path")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_directory_path;
+					buf.clear();
+					std::cout << "Directory for storage of vtk files: " << lsgrid.vtk_directory_path << std::endl;
+				}
+				if (!lineA.compare(0, 8, "filename")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_prefix;
+					buf.clear();
+					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
+				}
+				if (!lineA.compare(0, 13, "vtk_timelabel")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> lsgrid.vtk_timelabel;
+					buf.clear();
+					std::cout << "time label to use in vtk specified as: " << lsgrid.vtk_timelabel << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+
+		if (!lineA.compare("[timeseries output]")) { //optional
+			std::cout << "----------------------------" << std::endl;
+			std::cout << "Time-series output settings:" << std::endl;
+			std::cout << "----------------------------" << std::endl;
+
+			/*[timeseries output]
+			storage_path ./ts/ 
+				filename tsfile
+				npos 3
+				# x y z
+				0.0 0.0 0.0
+				3.3 5.4 - 10.
+				0.0 5.4 - 10.*/
+
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 12, "storage_path")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.ts_path;
+					buf.clear();
+					std::cout << "Directory for storage of timeseries files: " << probes.ts_path << std::endl;
+				}
+				if (!lineA.compare(0, 8, "filename")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.ts_filename;
+					buf.clear();
+					std::cout << "filename prefix: " << probes.ts_filename << std::endl;
+				}
+				if (!lineA.compare(0, 2, "t0")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.t0;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 2, "dt")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.dt;
+					buf.clear();
+				}
+				if (!lineA.compare(0, 4, "npos")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> probes.ts_nprobes;
+					buf.clear();
+					std::cout << "Number of probes: " << probes.ts_nprobes << std::endl;
+					double tempx, tempy, tempz;
+					for (int i = 0; i < probes.ts_nprobes; i++) {
+						getline(f, lineA);
+						// if new tag is reach. break while loop.
+						if (!lineA.compare(0, 1, "[")) {
+							std::cerr << "INPUTFILE ERROR in [timeseries output]: Not enough timeseries coordnates specified" << std::endl;
+							exit(-1);
+						}
+						std::cout << lineA << std::endl;
+						buf.str(lineA);
+						buf >> tempx;
+						buf >> tempy;
+						buf >> tempz;
+						probes.coords.push_back({tempx, tempy, tempz});						
+						buf.clear();
+
+					}
+					probes.init_probes();
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+		}
+	}
+
+	// Do some checks of the specified input parameters. Some combinations are prohibited
+
+	if (inputdata.wavetype == 4 && irregular.order != 2) {
+		std::cerr << "LSgrid interpolation uses strictly second order theory. Doesnt make sence to use grid interpolation for linear theory since this is very fast anyway. Either add the tag [second order] to the input file, or remore [lsgrid]." << std::endl;
+		exit(-1);
+
+	}
+
+
+	std::cout << "\n-----------------------------------------------" << std::endl;
+	std::cout << "Input file read successfully." << std::endl;
+	std::cout << "***********************************************\n\n" << std::endl;
+
+	std::cout << "Wavetype: " << inputdata.wavetype << std::endl;
+
+
+	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
+		irregular.depth = inputdata.depth;
+		irregular.mtheta = inputdata.mtheta;
+		irregular.tofmax = inputdata.tofmax;
+		irregular.fpoint[0] = inputdata.x_pos;
+		irregular.fpoint[1] = inputdata.y_pos;
+		irregular.swl = inputdata.swl;
+		if (inputdata.bw_auto_calc) {
+			irreg.dw_bandwidth = irregular.bandwidth_estimator();
+			std::cout << "BW_autocalc: Bandwidth parameter set to " << irreg.dw_bandwidth << " rad/s." << std::endl;		
+		}
+		irregular.normalize_data();
+		irregular.calculate_bwindices();
+		irregular.dumpSpectralComponents();
+
+		if (!inputdata.property_read) {
+			std::cerr << "INPUTFILE ERROR: Irregular wave selected, but no wave components/wave properties found in input file." << std::endl;
+			exit(-1);
+		}
+	}
+	else if (inputdata.wavetype == 11) {
+		if (!inputdata.property_read) {
+			std::cerr << "INPUTFILE ERROR: Wave maker selected, but no wavemaker property data found in input file." << std::endl;
+			exit(-1);
+		}
+	}
+	else if (inputdata.wavetype == 21) {
+		stokes.depth = inputdata.depth;
+		stokes.theta = inputdata.mtheta;
+		stokes.x0 = inputdata.x_pos;
+		stokes.y0 = inputdata.y_pos;
+		stokes.t0 = inputdata.tofmax;
+		stokes.z0 = inputdata.swl;
+		// set the properties of the wave
+		stokes.set_stokes5_properties(stokes.wave_length, stokes.wave_height);
+		if (!inputdata.property_read) {
+			std::cerr << "INPUTFILE ERROR: Stokes wave selected, but no wave properties found in input file." << std::endl;
+			exit(-1);
+		}
+		else {
+			std::cout << "Stokes 5th wave initialized and ready to go." << std::endl;
 		}
 
 	}
-	// Special case where surface elevation and velocities are stored to a coarse grid and waves are
-	else if (wavetype == 3) {
-		meth = 8;
+	
+
+	if (inputdata.wavetype == 4) {
+		lsgrid.water_depth = inputdata.depth;
+		lsgrid.swl = inputdata.swl;
+		lsgrid.set_ignore();
+
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(irreg);
+		}
+		else {
+			lsgrid.initialize_surface_elevation(irreg, lsgrid.t0);
+			lsgrid.initialize_kinematics(irreg);
+		}
 	}
-	// Wave piston special case
-	else if (wavetype == 4){
-		meth = 6;
+
+	
+	// swd
+	if (inputdata.wavetype >= 30 && inputdata.wavetype < 40) {
+#if defined(SWD_enable)
+		double x0_, y0_, t0_, beta_;
+
+		std::cout << inputdata.swdFileName.c_str() << std::endl;
+		// Initialize spectral wave data
+		swd = new SpectralWaveData(inputdata.swdFileName.c_str(), inputdata.x_pos, inputdata.y_pos, inputdata.tofmax, inputdata.mtheta, inputdata.rho, inputdata.nsumx, inputdata.nsumy, inputdata.impl, inputdata.ipol);
+
+		std::string cid = swd->GetChr("cid");
+
+		std::vector<std::string> v;
+
+		std::stringstream ss(cid);
+
+		while (ss.good()) {
+			std::string substr;
+			getline(ss, substr, ',');
+			v.push_back(substr);
+		}
+
+
+		std::cout << "************************************************************************* " << std::endl;
+		std::cout << "The following info is stored in the specified swd file " << inputdata.swdFileName << std::endl;
+		std::cout << "************************************************************************* " << std::endl;
+		for (size_t i = 0; i < v.size(); i++)
+			std::cout << v[i] << std::endl;
+		std::cout << "************************************************************************* " << std::endl;
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+
+#endif
 	}
-	// Stokes 5th wave
-	else if (wavetype == 5) {
-		meth = 7;
+
+	// swd with lsgrid
+	if (inputdata.wavetype == 34) {
+#if defined(SWD_enable)
+		double depth_swd_file = swd->GetReal("d");
+		if (depth_swd_file != inputdata.depth && depth_swd_file > 0) {
+			std::cout << "Warning: Specified water depth, " << inputdata.depth << "m,  not the same as used in swd file d = " << depth_swd_file << "m. Depth specified in SWD file will be used." << std::endl;
+			lsgrid.water_depth = depth_swd_file;
+		}
+		else {
+			lsgrid.water_depth = inputdata.depth;
+		}
+
+		lsgrid.swl = inputdata.swl;
+		lsgrid.set_ignore();
+		if (lsgrid.ignore_at_init) {
+			lsgrid.initialize_surface_elevation_with_ignore(swd, lsgrid.t0);
+			lsgrid.initialize_kinematics_with_ignore(swd);
+		}
+		else {
+			lsgrid.initialize_surface_elevation(swd, lsgrid.t0);
+			lsgrid.initialize_kinematics(swd);
+		}
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
 	}
-	else {
-		cerr << "What the? Illigal combination of methods!!! " << endl;
-	}
+
+	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
+
 	return 0;
 }
 
 
-
-//Define some useful functions
-/* Rampfunction */
-// NB: Not yet implemented inverse ramp
-static double ramp(double x,double xsign, double xstart, double xend) {
-
-	if (xsign > 0.){
-		if (x <= xstart) {
-			return 1.0;
-		}
-		else if (x >= xend) {
-			return 0.0;
-		}
-		else {
-			return 1. - ((x - xstart) / (xend - xstart));
-		}
-	}
-	else {
-		return 1.0;
-	}
+double wave_water_depth() {
+	return inputdata.depth;
 }
 
+/*
+----------------------------------------------------------------------
+Wave kinematics functions
+----------------------------------------------------------------------
+*/
 
-//Define some useful functions
-/* Rampfunction */
-// NB: Not yet implemented inverse ramp
-static double timeramp(double t, double tsign, double tstart, double tend) {
-
-	if (tsign > 0.) {
-		if (t <= tstart) {
-			return 0.0;
-		}
-		else if (t >= tend) {
-			return 1.0;
-		}
-		else {
-			return ((t - tstart) / (tend - tstart));
-		}
-	}
-	else {
-		return 1.0;
-	}
-}
-
-
-// Linear interpolation function
-
-int findNearestNeighbourIndex(double value, double *x, int len)
-{
-	double dist;
-	int idx;
-	int i;
-	idx = -1;
-	dist = DBL_MAX;
-	for (i = 0; i < len; i++) {
-		double newDist = value - x[i];
-		if (newDist >= 0 && newDist < dist) {
-			dist = newDist;
-			idx = i;
-		}
-	}
-	return idx;
-}
-double interp1(double *x, int x_tam, double *y, double xx)
-{
-	double dx, dy, slope, intercept, yy;
-	int indiceEnVector;
-
-
-	indiceEnVector = findNearestNeighbourIndex(xx, x, x_tam);
-	if (indiceEnVector != -1) {
-		dx = x[indiceEnVector + 1] - x[indiceEnVector];
-		dy = y[indiceEnVector + 1] - y[indiceEnVector];
-		slope = dy / dx;
-		intercept = y[indiceEnVector] - x[indiceEnVector] * slope;
-		yy = slope * xx + intercept;
-	}
-	else
-		yy = DBL_MAX;
-
-	return yy;
-}
-
-
-//--------------------------------------------------------------------
-// -------------------------------------------------------------------
-//
-//  WAVEFUNCTIONS
-//
-//
-
-
-
-/* wave elevation for a sinus wave */
-double waveelev(double t, double xx, double yy) {
-
-	double welev = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-
-		phi = w[i] * tofmax+phas[i];
-		welev += Ampspec[i] * D[i] *cos(k[i] * (cos(thetaA[i]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-
-		//welev += A*cos(w[i] * t - k[i] * (cos(thetaA[i])*(xx - fpoint[0]) + sin(thetaA[i])*(yy - fpoint[1])) + phi);
-	}
-
-
-	return welev;
-
-}
-
-
-double waveelev_2order(double t, double xx, double yy) {
-
-
-
-	//double eta1_t = 0;
-	double eta2_t = 0;
-
-	for (int i = 0; i < nfreq-1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adiusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-				}
-				double alpha_nm_minus = (((w[ci] / w[cm]) + (w[cm] / w[ci])) + (G*G / (w[ci] * w[cm]))*
-					((D_nm_minus - k[ci] * k[cm] * (gamma_nm + tanh(k[ci] * depth)*tanh(k[cm] * depth))) / (w[ci] * w[cm])));
-				double alpha_nm_plus = (((w[ci] / w[cm]) + (w[cm] / w[ci])) + (G*G / (w[ci] * w[cm]))*
-					((D_nm_plus - k[ci] * k[cm] * (gamma_nm - tanh(k[ci] * depth)*tanh(k[cm] * depth))) / (w[ci] * w[cm])));
-
-				double phi_m = k[cm] * (cos(thetaA[cm]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				eta2_t += ((Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm])/(2.*G)) * (alpha_nm_minus*cos(phi_i - phi_m) + alpha_nm_plus*cos(phi_i + phi_m));
-
-
-
-			}
-		}
-	}
-
-	return eta2_t;
-
-}
-
-
-/* Second order horizontal velocity U for a sinus wave */
-double uu_2order(double t, double xx, double yy, double zz) {
-
-
-
-	//double eta1_t = 0;
-	double usum2 = 0;
-
-	for (int i = 0; i < nfreq - 1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adiusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-
-
-				double beta_nm_minus = D_nm_minus / (2 * k[ci] * k[cm] * (w[ci] - w[cm]));
-				double beta_nm_plus = D_nm_plus / (2 * k[ci] * k[cm] * (w[ci] + w[cm]));
-
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-					beta_nm_minus = 0.;
-				}
-
-				double phi_m = k[cm] * (cos(thetaA[cm]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				usum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm]) *
-					(beta_nm_minus*cos(phi_i - phi_m)*(k[ci]*cos(thetaA[ci]+ (mtheta*PI / 180.))-k[cm]*cos(thetaA[cm]+ (mtheta*PI / 180.)))*(cosh(k_nm_minus*(zz+depth))/cosh(k_nm_minus*depth)) +
-					beta_nm_plus*cos(phi_i + phi_m)*(k[ci] * cos(thetaA[ci]+ (mtheta*PI / 180.)) + k[cm] * cos(thetaA[cm]+ (mtheta*PI / 180.)))*(cosh(k_nm_plus*(zz + depth)) / cosh(k_nm_plus*depth)));
-
-
-
-			}
-		}
-	}
-	return usum2;
-}
-
-
-/* Second order horizontal velocity V for a sinus wave */
-double vv_2order(double t, double xx, double yy, double zz) {
-
-
-
-	//double eta1_t = 0;
-	double vsum2 = 0;
-
-	for (int i = 0; i < nfreq - 1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adiusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-
-
-				double beta_nm_minus = D_nm_minus / (2 * k[ci] * k[cm] * (w[ci] - w[cm]));
-				double beta_nm_plus = D_nm_plus / (2 * k[ci] * k[cm] * (w[ci] + w[cm]));
-
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-					beta_nm_minus = 0.;
-				}
-				double phi_m = k[cm] * (cos(thetaA[cm]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				vsum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm]) *
-					(beta_nm_minus*cos(phi_i - phi_m)*(k[ci] * sin(thetaA[ci]+ (mtheta*PI / 180.)) - k[cm] * sin(thetaA[cm]+ (mtheta*PI / 180.)))*(cosh(k_nm_minus*(zz + depth)) / cosh(k_nm_minus*depth)) +
-					beta_nm_plus*cos(phi_i + phi_m)*(k[ci] * sin(thetaA[ci]+ (mtheta*PI / 180.)) + k[cm] * sin(thetaA[cm]+ (mtheta*PI / 180.)))*(cosh(k_nm_plus*(zz + depth)) / cosh(k_nm_plus*depth)));
-
-
-
-			}
-		}
-	}
-	return vsum2;
-}
-
-
-
-/* Second order vertical velocity component W for a sinus wave */
-double ww_2order(double t, double xx, double yy, double zz) {
-
-	//double eta1_t = 0;
-	double wsum2 = 0;
-
-	for (int i = 0; i < nfreq - 1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adjusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-
-				double beta_nm_minus = D_nm_minus / (2 * k[ci] * k[cm] * (w[ci] - w[cm]));
-				double beta_nm_plus = D_nm_plus / (2 * k[ci] * k[cm] * (w[ci] + w[cm]));
-
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-					beta_nm_minus = 0.;
-				}
-
-				double phi_m = k[cm] * (cos(thetaA[cm]+ (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm]+ (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				wsum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm]) *
-					(beta_nm_minus*k_nm_minus*sin(phi_i - phi_m)*(sinh(k_nm_minus*(zz + depth)) / cosh(k_nm_minus*depth)) +
-					beta_nm_plus*k_nm_plus*sin(phi_i + phi_m)*(sinh(k_nm_plus*(zz + depth)) / cosh(k_nm_plus*depth)));
-
-
-
-			}
-		}
-	}
-	return wsum2;
-}
-
-/* Second order component of velocity potential 
-Warning: Unsure if this is finished...should be checked thoroughly at some point*/
-double phi_pot_2order(double t, double xx, double yy, double zz) {
-	//double eta1_t = 0;
-	double phisum2 = 0;
-
-	for (int i = 0; i < nfreq - 1; i++) {
-		for (int j = 0; j < ndir; j++) {
-			// Second order
-			int ci = i*ndir + j;
-			double phi_i = k[ci] * (cos(thetaA[ci] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[ci] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[ci] * t + w[ci] * tofmax + phas[ci];
-			double Rn = k[ci] * tanh(k[ci] * depth);
-			//cout << "Rn: " << Rn << endl;
-
-			//// Adiusting Bandwidth for 2 order cut-off
-			//if (i + 1 + f_bw<nfreqs) {
-			//	p = i + 1 + f_bw;
-			//}
-			//else { p = nfreqs; }
-			for (int m = i + 1; m < min(nfreq, i + bandwidth); m++) {
-				int cm = m*ndir + j;
-				double gamma_nm = cos(thetaA[ci] - thetaA[cm]);
-				double k_nm_plus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] + (2.*k[ci] * k[cm] * gamma_nm));
-				double k_nm_minus = sqrt(k[ci] * k[ci] + k[cm] * k[cm] - (2.*k[ci] * k[cm] * gamma_nm));
-
-				double Rm = k[cm] * tanh(k[cm] * depth);
-
-
-				double D_nm_plus = (sqrt(Rn) + sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) + sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) + sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm - Rn*Rm) /
-					(pow(sqrt(Rn) + sqrt(Rm), 2.) - k_nm_plus*tanh(k_nm_plus*depth));
-				double D_nm_minus = (sqrt(Rn) - sqrt(Rm))*(sqrt(Rm)*(k[ci] * k[ci] - Rn*Rn) - sqrt(Rn)*(k[cm] * k[cm] - Rm*Rm)) + 2.*pow(sqrt(Rn) - sqrt(Rm), 2.)*(k[ci] * k[cm] * gamma_nm + Rn*Rm) /
-					(pow(sqrt(Rn) - sqrt(Rm), 2.) - k_nm_minus*tanh(k_nm_minus*depth));
-
-
-				double beta_nm_minus = D_nm_minus / (2 * k[ci] * k[cm] * (w[ci] - w[cm]));
-				double beta_nm_plus = D_nm_plus / (2 * k[ci] * k[cm] * (w[ci] + w[cm]));
-
-				// Catch NaN when two equal frequency components interact
-				if (w[ci] == w[cm]) {
-					D_nm_minus = 0.;
-					beta_nm_minus = 0.;
-				}
-
-				double phi_m = k[cm] * (cos(thetaA[cm] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[cm] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[cm] * t + w[cm] * tofmax + phas[cm];
-
-				phisum2 += (Ampspec[ci] * D[ci] * Ampspec[cm] * D[cm] * w[ci] * w[cm]) *
-					(beta_nm_minus*cos(phi_i - phi_m)*(k[ci] * cos(thetaA[ci] + (mtheta*PI / 180.)) - k[cm] * cos(thetaA[cm] + (mtheta*PI / 180.)))*(cosh(k_nm_minus*(zz + depth)) / cosh(k_nm_minus*depth)) +
-						beta_nm_plus*cos(phi_i + phi_m)*(k[ci] * cos(thetaA[ci] + (mtheta*PI / 180.)) + k[cm] * cos(thetaA[cm] + (mtheta*PI / 180.)))*(cosh(k_nm_plus*(zz + depth)) / cosh(k_nm_plus*depth)));
-
-
-
-			}
-		}
-	}
-	return phisum2;
-}
-
-// First order velocity potential
-double phi_pot(double t, double xx, double yy, double zz) {
-
-	double phisum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		phisum += Ampspec[i] * D[i] * (w[i] / k[i]) * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return phisum;
-
-}
-
-double uu(double t, double xx, double yy, double zz) {
-
-	double usum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		usum += cos(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return usum;
-
-}
-
-
-/* horizontal velocity U for a sinus wave */
-double vv(double t, double xx, double yy, double zz) {
-
-	double vsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		vsum += sin(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * (cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return vsum;
-
-}
-
-
-/* vertical velocity for a sinus wave */
-double ww(double t, double xx, double yy, double zz) {
-
-	double wsum = 0.0;
-	double phi;
-
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-
-		phi = w[i] * tofmax + phas[i];
-		wsum += D[i] * Ampspec[i] * w[i] * (sinh(k[i] * (zz + depth)) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return wsum;
-
-}
-
-double pp(double t, double xx, double yy, double zz) {
-
-	double psum = 0.0;
-	double phi;
-
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		psum += Ampspec[i] * D[i] * RHO * G * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth))*cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-
-	return psum;
-
-}
-
-/* vertical velocity gradient at z=0 for velocity component U */
-double phi_dxdz(double t, double xx, double yy) {
-
-	double usum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		usum += cos(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] * cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return usum;
-
-}
-
-
-
-/* vertical velocity gradient at z=0 for velocity component V */
-double phi_dydz(double t, double xx, double yy) {
-
-	double vsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-		phi = w[i] * tofmax + phas[i];
-		vsum += sin(thetaA[i] + (mtheta*PI / 180.))* Ampspec[i] * D[i] * w[i] * k[i] *cos(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return vsum;
-
-}
-
-
-/* vertical velocity gradient at z=0 for velocity component W */
-double phi_dzdz(double t, double xx, double yy) {
-
-	double wsum = 0.0;
-	double phi;
-
-	for (int i = 0; i< ndir*nfreq; i++) {
-
-		phi = w[i] * tofmax + phas[i];
-		wsum += D[i] * Ampspec[i] * w[i] * k[i] * (cosh(k[i] * depth) / sinh(k[i] * depth))*sin(k[i] * (cos(thetaA[i] + (mtheta*PI / 180.))*(xx - fpoint[0]) + sin(thetaA[i] + (mtheta*PI / 180.))*(yy - fpoint[1])) - w[i] * t + phi);
-	}
-	return wsum;
-
-}
-
-
-/* Horizontal velocity taken directly from the timeseries*/
-double u_piston(double t) {
-	double ux = interp1(PD_time, n_timesteps, PD_velo, t);
-
-	return ux+alpha_u*ux;
-}
-
-/* Wave elevation taken directly from piston timeseries*/
-double wave_elev_piston(double t) {
-	return alpha_z*interp1(PD_time, n_timesteps, PD_eta, t);
-}
-
-
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void initialize_kinematics(double tpt) {
-	// Allocating memory for storage of surface elevation and velocities
-	UX = new double[NX*NY*NZ];
-	UY = new double[NX*NY*NZ];
-	UZ = new double[NX*NY*NZ];
-
-	UXL = new double[NXL*NYL*NZL];
-	UYL = new double[NXL*NYL*NZL];
-	UZL = new double[NXL*NYL*NZL];
-
-	cout << "Memory allocation successful for storage of kinematics." << endl;
-
-	dx = (domainsize[1] - domainsize[0]) / double(NX-1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY-1);
-	dz = (domainsize[6] - domainsize[5]) / double(NZ-1);
-	
-	double dd = omp_get_wtime();
-
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-	#pragma omp parallel // start parallell initialization
-	{
-		#pragma omp master
-		cout << "Number of available threads: " << omp_get_num_threads() << endl;
-
-		double xpt, ypt, zpt;
-		double eta_temp;
-
-		// Main grid
-		#pragma omp for
-		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx*i;
-			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy*j;
-				eta_temp = waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt);
-
-				double Ux0 = uu(tpt, xpt, ypt, 0.0) + uu_2order(tpt, xpt, ypt, 0.0);
-				double Uy0 = vv(tpt, xpt, ypt, 0.0) + vv_2order(tpt, xpt, ypt, 0.0);
-				double Uz0 = ww(tpt, xpt, ypt, 0.0) + ww_2order(tpt, xpt, ypt, 0.0);
-
-				double PHI_dxdz = phi_dxdz(tpt, xpt, ypt);
-				double PHI_dydz = phi_dydz(tpt, xpt, ypt);
-				double PHI_dzdz = phi_dzdz(tpt, xpt, ypt);
-
-				for (int m = 0; m < NZ; m++) {
-					zpt = domainsize[5] + dz*m;
-					if (zpt > (eta_temp + dz)) {
-						UX[i*NY*NZ + j*NZ + m] = 0.0;
-						UY[i*NY*NZ + j*NZ + m] = 0.0;
-						UZ[i*NY*NZ + j*NZ + m] = 0.0;
-					}
-					else if (zpt > 0.) {
-						UX[i*NY*NZ + j*NZ + m] = Ux0 + PHI_dxdz*zpt;
-						UY[i*NY*NZ + j*NZ + m] = Uy0 + PHI_dydz*zpt;
-						UZ[i*NY*NZ + j*NZ + m] = Uz0 + PHI_dzdz*zpt;
-					}
-					else {
-						UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt);
-						UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt);
-						UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt);
-					}
-					/*UX[i*NY*NZ + j*NZ + m] = uu(tpt, xpt, ypt, zpt);
-					UY[i*NY*NZ + j*NZ + m] = vv(tpt, xpt, ypt, zpt);
-					UZ[i*NY*NZ + j*NZ + m] = ww(tpt, xpt, ypt, zpt);*/
-				}
-			}
-		}
-	} // End parallel initialization
-
-	cout << "Generation of upper domain kinematics data completed. ";
-	dd = omp_get_wtime() - dd;
-	cout << "Initialization time: " << dd << " seconds." << endl;
-
-	dd = omp_get_wtime();
-	#pragma omp parallel // start parallel initialization
-	{
-		double xpt, ypt, zpt;
-		// Secondary grid (coarse res at depth)
-		dxl = (domainsize[1] - domainsize[0]) / double(NXL - 1);
-		dyl = (domainsize[3] - domainsize[2]) / double(NYL - 1);
-		dzl = (domainsize[5] - domainsize[4]) / double(NZL - 1);
-		#pragma omp for
-		for (int i = 0; i < NXL; i++) {
-			xpt = domainsize[0] + dxl*i;
-			for (int j = 0; j < NYL; j++) {
-				ypt = domainsize[2] + dyl*j;
-				for (int m = 0; m < NZL; m++) {
-					zpt = domainsize[4] + dzl*m;
-					UXL[i*NYL*NZL + j*NZL + m] = uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt);
-					UYL[i*NYL*NZL + j*NZL + m] = vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt);
-					UZL[i*NYL*NZL + j*NZL + m] = ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt);
-				}
-			}
-		}
-	} // End parallel
-	cout << "Generation of lower domain kinematics data completed. ";
-	dd = omp_get_wtime() - dd;
-	cout << "Initialization time: " << dd << " seconds." << endl;
-	cout << "Interpolation can commence..." << endl;
-	initkin = 1;
-}
-
-
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void initialize_surface_elevation(double tpt) {
-
-	// Allocating memory for storage of surface elevation and velocities
-	ETA = new double[NX*NY];
-
-	cout << "Memory allocation successful for Surface elevation storage." << endl;
-
-	dx = (domainsize[1] - domainsize[0]) / double(NX - 1);
-	dy = (domainsize[3] - domainsize[2]) / double(NY - 1);
-	
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-	#pragma omp parallel
-	{
-		double xpt, ypt;
-		// Main grid
-		#pragma omp for
-		for (int i = 0; i < NX; i++) {
-			xpt = domainsize[0] + dx*i;
-			for (int j = 0; j < NY; j++) {
-				ypt = domainsize[2] + dy*j;
-				ETA[i*NY + j] = waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt);
-			}
-		}
-	}
-	dd = omp_get_wtime()-dd;
-
-	cout << "Surface Elevation generated successfully. ";
-	cout << "Initialization time: " << dd << " seconds." << endl;
-	initsurf = 1;
-}
-
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double trilinear_interpolation(double *VAR, double xpt, double ypt, double zpt) {
-	double nxp = min(double(NX), max(0., (xpt - domainsize[0]) / dx));
-	double nyp = min(double(NY), max(0., (ypt - domainsize[2]) / dy));
-	double nzp = min(double(NZ), max(0., (zpt - domainsize[5]) / dz));
-
-	double C000 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + floor(nzp))];
-	double C001 = VAR[int(floor(nxp)*NY*NZ + floor(nyp)*NZ + ceil(nzp))];
-	double C010 = VAR[int(floor(nxp)*NY*NZ + ceil(nyp)*NZ + floor(nzp))];
-	double C011 = VAR[int(floor(nxp)*NY*NZ + ceil(nyp)*NZ + ceil(nzp))];
-	double C100 = VAR[int(ceil(nxp)*NY*NZ + floor(nyp)*NZ + floor(nzp))];
-	double C101 = VAR[int(ceil(nxp)*NY*NZ + floor(nyp)*NZ + ceil(nzp))];
-	double C110 = VAR[int(ceil(nxp)*NY*NZ + ceil(nyp)*NZ + floor(nzp))];
-	double C111 = VAR[int(ceil(nxp)*NY*NZ + ceil(nyp)*NZ + ceil(nzp))];
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-	double zd = nzp - floor(nzp);
-
-	double C00 = C000*(1. - xd) + C100*xd;
-	double C01 = C001*(1. - xd) + C101*xd;
-	double C10 = C010*(1. - xd) + C110*xd;
-	double C11 = C011*(1. - xd) + C111*xd;
-
-	double C0 = C00*(1. - yd) + C10*yd;
-	double C1 = C01*(1. - yd) + C11*yd;
-
-	return C0*(1. - zd) + C1*zd;
-}
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh on the lower part of the domain*/
-double trilinear_interpolationL(double *VAR, double xpt, double ypt, double zpt) {
-	
-	double nxp = min(double(NXL),max(0.,(xpt - domainsize[0]) / dxl));
-	double nyp = min(double(NYL), max(0., (ypt - domainsize[2]) / dyl));
-	double nzp = min(double(NZL), max(0., (zpt - domainsize[4]) / dzl));
-
-	double C000 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + floor(nzp))];
-	double C001 = VAR[int(floor(nxp)*NYL*NZL + floor(nyp)*NZL + ceil(nzp))];
-	double C010 = VAR[int(floor(nxp)*NYL*NZL + ceil(nyp)*NZL + floor(nzp))];
-	double C011 = VAR[int(floor(nxp)*NYL*NZL + ceil(nyp)*NZL + ceil(nzp))];
-	double C100 = VAR[int(ceil(nxp)*NYL*NZL + floor(nyp)*NZL + floor(nzp))];
-	double C101 = VAR[int(ceil(nxp)*NYL*NZL + floor(nyp)*NZL + ceil(nzp))];
-	double C110 = VAR[int(ceil(nxp)*NYL*NZL + ceil(nyp)*NZL + floor(nzp))];
-	double C111 = VAR[int(ceil(nxp)*NYL*NZL + ceil(nyp)*NZL + ceil(nzp))];
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-	double zd = nzp - floor(nzp);
-
-	double C00 = C000*(1. - xd) + C100*xd;
-	double C01 = C001*(1. - xd) + C101*xd;
-	double C10 = C010*(1. - xd) + C110*xd;
-	double C11 = C011*(1. - xd) + C111*xd;
-
-	double C0 = C00*(1. - yd) + C10*yd;
-	double C1 = C01*(1. - yd) + C11*yd;
-
-	return C0*(1. - zd) + C1*zd;
-}
-
-/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double bilinear_interpolation(double *VAR, double xpt, double ypt) {
-	
-	double nxp = min(double(NX), max(0.,(xpt - domainsize[0]) / dx));
-	double nyp = min(double(NY), max(0.,(ypt - domainsize[2]) / dy));
-
-	double C00 = VAR[int(floor(nxp)*NY + floor(nyp))];
-	double C01 = VAR[int(floor(nxp)*NY + ceil(nyp))];
-	double C10 = VAR[int(ceil(nxp)*NY + floor(nyp))];
-	double C11 = VAR[int(ceil(nxp)*NY + ceil(nyp))];
-	
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-
-	double C0 = C00*(1. - xd) + C10*xd;
-	double C1 = C01*(1. - xd) + C11*xd;
-
-	return C0*(1. - yd) + C1*yd;
-}
-
-
-
-//extern "C" {
-
-// For comflow 3.9 pointer are sent. For later releases, the entire variables are sent
-
-//EXPORT double VelocityX(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 {
 
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
-	double z;
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (meth) {
-	// Linear wave theory, expenential profile used above free surface
+	switch (inputdata.wavetype) {
+		// irregular waves
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, zpt)*timeramp(tpt,rampswitch,0.,ramp_time);
-	// Linear wave theory, constant profile used above free surface
-	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*uu(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-	// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, zpt) + uu_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	// Second order wave theory, constant profile used above free surface
+		return ramp.ramp(tpt, xpt, ypt) * irregular.u(tpt, xpt, ypt, zpt);
+		// irregular LSgrid waves
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = min(0., zpt);
-		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
 		}
-		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((uu(tpt, xpt, ypt, z) + uu_2order(tpt, xpt, ypt, z)) + phi_dxdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+
+		
+		// stokes 5th
+	case 21:
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
+		
+		// wavemaker
+	case 11:
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
+		
+		// swd
+	case 31:
+	{
+#if defined(SWD_enable)
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
 		}
-	case 6:
-		return u_piston(tpt);
-	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_u(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
-		if (initkin == 0) {
-			cout << "Generating kinematics for interpolation:" << endl;
-			initialize_kinematics(0.0);
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
-		/*
-		// Check if coordinates are within bounding box
-		if (xpt < domainsize[0] || xpt > domainsize[1]) {
-			cerr << "xpt: " << xpt << " out of bounds! Please extend interpolation box boundaries in x-direction" << endl;
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.x;
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+
+	}
+	case 34:
+	{
+#if defined(SWD_enable)
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrid.update(swd, tpt);
 		}
-		else if (ypt < domainsize[2] || ypt > domainsize[3]) {
-			cerr << "ypt: " << ypt << " out of bounds! Please extend interpolation box boundaries in y-direction" << endl;
-		}
-		else if (zpt < domainsize[4] || zpt > domainsize[6]) {
-			cerr << "zpt: " << zpt << " out of bounds! Please extend interpolation box boundaries in z-direction" << endl;
-		}
-		*/
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UXL, xpt, ypt, zpt);
-		}
-		else {
-			return trilinear_interpolation(UX, xpt, ypt, zpt);
-		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1649,183 +1715,201 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 
 }
 
-//
-//EXPORT double VelocityY(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
+
 double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
-	double z;
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+	switch (inputdata.wavetype) {
+		// irregular waves
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
-	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*vv(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, zpt) + vv_2order(tpt, xpt, ypt, zpt) )*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
+		return ramp.ramp(tpt, xpt, ypt) * irregular.v(tpt, xpt, ypt, zpt);
+		// irregular gridded waves
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * ( vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z) )*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = min(0., zpt);
-		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
 		}
-		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((vv(tpt, xpt, ypt, z) + vv_2order(tpt, xpt, ypt, z)) + phi_dydz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+	case 21:
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
+		// swd
+	case 31:
+	{
+#if defined(SWD_enable)
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
 		}
-	case 6:
-		return 0.0;
-	case 7:
-		return 0.0; // todo: implement directionality of stokes5th wave
-	case 8:
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UYL, xpt, ypt, zpt);
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
-		else {
-			return trilinear_interpolation(UY, xpt, ypt, zpt);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.y;
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
+	// swd + lsgrid
+	case 34:
+	{
+#if defined(SWD_enable)
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrid.update(swd, tpt);
 		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
 }
 
 
-
-//
-//EXPORT double VelocityZ(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
-	double z;
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+	switch (inputdata.wavetype) {
+		// irregular waves
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
-	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*ww(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
+		return ramp.ramp(tpt, xpt, ypt) * irregular.w(tpt, xpt, ypt, zpt);
+		// irregular gridded waves
 	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = min(0., zpt);
-		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
 		}
-		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z)) + phi_dzdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+	case 21:
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
+		// swd
+	case 31:
+	{
+#if defined(SWD_enable)
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
 		}
-	case 6:
-		return 0.0;
-	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_v(&wave, tpt, xpt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
-		if (zpt < domainsize[5]) {
-			return trilinear_interpolationL(UZL, xpt, ypt, zpt);
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
-		else {
-			return trilinear_interpolation(UZ, xpt, ypt, zpt);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+		return ramp.ramp(tpt, xpt, ypt) * U.z;
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
+	// Swd + lsgrid
+	case 34:
+	{
+#if defined(SWD_enable)
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(swd, tpt);
 		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
 }
 
-//
+// todo: not fully functional, but not really used either.... should be updated at some point
 double wave_DynPres(double xpt, double ypt, double zpt, double tpt)
-//EXPORT double DynamicPressure(int& ii, int& jj, int& kk, double& xpt, double& ypt, double& zpt, double& tpt)
 {
 	// Quickfix 07022018 To avoid issues with values below mudline
-	zpt = max(-depth, zpt);
-	double z;
+	zpt = std::max(-inputdata.depth, zpt);
 
-	switch (meth) {
-		// Linear wave theory, expenential profile used above free surface
+	switch (inputdata.wavetype) {
+		// irregular waves
 	case 1:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
-
+		return ramp.ramp(tpt, xpt, ypt) * irregular.dp(tpt, xpt, ypt, zpt);
+		// irregular gridded waves
 	case 2:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*pp(tpt, xpt, ypt, z)*timeramp(tpt, rampswitch, 0., ramp_time);
-	/*
-		// Second order wave theory, exponential profile used above free surface
+		return 0.;
 	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, zpt) + ww_2order(tpt, xpt, ypt, zpt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		z = min(0., zpt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*(ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		z = min(0., zpt);
-		if (zpt <= 0) {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z))*timeramp(tpt, rampswitch, 0., ramp_time);
-		}
-		else {
-			return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) *
-				((ww(tpt, xpt, ypt, z) + ww_2order(tpt, xpt, ypt, z)) + phi_dzdz(tpt, xpt, ypt)*zpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		}
-	case 6:
-		return 0.0;
-		*/
+		return 0.;
+
 	default:
-		//cout << "WARNING: HIGHER ORDER PRESSURE CALCULATION NOT YET SUPPORTED." << endl;
 		return 0.0;
 	}
 }
 
 //
-//EXPORT double SurfaceElevation(int& ii, int& jj, double& xpt, double& ypt, double& tpt)
 double wave_SurfElev(double xpt, double ypt, double tpt)
 {
-
-	switch (meth) {
+	switch (inputdata.wavetype) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		//return waveelev(tpt, xpt, ypt);
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Linear wave theory, constant profile used above free surface
-	case 2:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*waveelev(tpt, xpt, ypt)*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, exponential profile used above free surface
-	case 3:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-		// Second order wave theory, constant profile used above free surface
-	case 4:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 5:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2])) * (waveelev(tpt, xpt, ypt) + waveelev_2order(tpt, xpt, ypt))*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 6:
-		return wave_elev_piston(tpt);
-	case 7:
-		return min(ramp(xpt, xrampdata[0], xrampdata[1], xrampdata[2]), ramp(ypt, yrampdata[0], yrampdata[1], yrampdata[2]))*Stokes5_eta(&wave, tpt, xpt)*timeramp(tpt, rampswitch, 0., ramp_time);
-	case 8:
-		if (initsurf == 0) {
-			cout << "Initializing surface elevation storage:" << endl;
-			initialize_surface_elevation(0.0);
-			return bilinear_interpolation(ETA, xpt, ypt);
+	{
+		update_probes(tpt);
+		return ramp.ramp(tpt, xpt, ypt) * irregular.eta(tpt, xpt, ypt);
+	}
+	case 4: {
+		update_probes(tpt);
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
 		}
-		else {
-			//cout << "asking for surface elevation..." << endl;
-			//cout << xpt << " " << ypt << " " << tpt << endl;
-			return bilinear_interpolation(ETA, xpt, ypt);
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);}
+	case 11:
+	{
+		update_probes(tpt);
+		return ramp.ramp(tpt, xpt, ypt) * wavemaker.wave_elev_piston(tpt);
+	}
+	case 21:
+	{
+		update_probes(tpt);
+		return ramp.ramp(tpt, xpt, ypt) * stokes5.eta(tpt, xpt, ypt);
+	}
+	case 31:
+	{
+#if defined(SWD_enable)
+		// Tell the swd object current application time...
+		try {
+			swd->UpdateTime(tpt);
 		}
+		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			// If we will try again with a new value of t
+			// we first need to call: swd.ExceptionClear()
+			exit(EXIT_FAILURE);  // In this case we just abort.
+		}
+		//std::cout << "time: " << tpt << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * swd->Elev(xpt, ypt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+		exit(-1);
+#endif
+	}
+	case 34:
+	{
+#if defined(SWD_enable)
+		if (!sgrid.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrid.update(swd, tpt);
+		}
+		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
+#else
+		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1857,62 +1941,168 @@ double wave_VFrac(double xpt, double ypt, double zpt, double tpt, double delta_c
 
 
 
+void update_probes(double tpt) {
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1: {
+		if (probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, irregular, ramp);
+		}
+		break;
+	}
+	case 4: {
+#pragma omp single nowait
+		if (probes.checkTime(tpt)) {
+			probes.write(tpt, sgrid, irregular, ramp);
+		}
+		break;
+	}
+	case 11: {
+		if (probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, wavemaker, ramp);
+		}
+		break;
+	}
+	case 21: {
+		if (probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, stokes5, ramp);
+		}
+		break;
+	}
+#if defined(SWD_enable)
+	case 31:
+	{
+		if (!probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, swd, ramp);
+		}
+		break;
+	}
+	case 34:
+	{
+		if (!probes.checkTime(tpt)) {
+#pragma omp single nowait
+			probes.write(tpt, sgrid, swd, ramp);
+		}
+		break;
+	}
+#endif	
+	}
+}
+
+
+
 //EXPORT int Init(double& tmin_in, double& tmax_in)
 int wave_Initialize()
 {
-	cout << "---------------------------------------" << endl;
-	cout << "CFD WAVEMAKER v.1.07" << endl;
-	cout << "---------------------------------------" << endl;
+	std::string lineA;
+	std::ifstream fid;
+	std::string res;
+	std::cout << "\n\n***********************************************\n\n" << std::endl;
+	std::cout << "---------------------------------------" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.5" << std::endl;
+	std::cout << "---------------------------------------" << std::endl;
 	
-	// Check if license has expired
-	if (check_license() == 1){
-		cout << "License checks out...carry on..." << endl;
+	
+	std::filesystem::path cwd = std::filesystem::current_path();
+
+	std::cout <<"working directory: " << cwd << std::endl;
+
+	// Check for waveinput.dat file in most common locations
+
+	// Open and read file to find which input file version to read.
+	// READ INPUT FILE AND REMOVE COMMENT LINES
+	fid.open("./waveinput.dat");
+	// check one step up in the folder tree (this is used in the latest comflow version)
+	if (fid.fail()) {
+		fid.open("./constant/waveinput.dat");
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ./constant/" << std::endl;
+		}
+	}
+	// Special cases for comflow
+	if (fid.fail()) {
+		fid.open("../input_files/waveinput.dat");
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ./input_files/" << std::endl;
+		}
+	}
+	if (fid.fail()) {
+		fid.open("../waveinput.dat");
+		if (!fid.fail()) {
+			std::cout << "Waveinput.dat file found in folder ../" << std::endl;
+		}
+	}
+	if (fid.fail()) {
+		std::cerr << "Could not open file (is it really there?) " << std::endl;
+		return -1;
+		exit(1);
+	}
+	while (fid.good()) {
+		getline(fid, lineA);
+		//cout << lineA << endl;
+		lineA.erase(find(lineA.begin(), lineA.end(), '#'), lineA.end());
+		if (lineA.length() > 0) {
+			res += lineA + "\n";
+		}
+	}
+	fid.close();
+
+	std::istringstream buf;
+	std::istringstream f(res);
+	int inputfile_version = 0; // 0 = version 2 input format , 1 = version 2009 (new)
+	//check file version
+	while (!f.eof()) {
+		getline(f, lineA);
+		trim(lineA);
+		if (!lineA.compare("@v213")) {
+			inputfile_version = 1;
+		}
+		else if (!lineA.compare("@v209")) {
+			inputfile_version = 0;
+		}
+		else if (!lineA.compare(0, 2, "@v")) {
+			std::cout << "Unknown version of input file specified: Currently supported are: @v209 and @v213" << std::endl;
+			exit(-1);
+		}
+
+	}
+
+	if (inputfile_version == 0) {
+		std::cout << "Reading old input file version2 format v.2.0.9(@v209). This file format is depricated and will be removed in a future version." << std::endl;
+		int i = process_inputdata_v2(res, irregular, stokes5, wavemaker, sgrid, ramp);
+	}
+	else if (inputfile_version == 1) {
+		std::cout << "Reading new input file version2 format v2.1.3 or newer (@v213)" << std::endl;
+		int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, ramp);
 	}
 	else {
-		cout << "License for CFDwavemaker has expired. Please contact Oeystein Lande to update the program." << endl << endl;
-		cout << "This program will auto-distruct in \n5..." << endl;
-		wait(1);
-		cout << "4..." << endl;
-		wait(1);
-		cout << "3..." << endl;
-		wait(1);
-		cout << "2..." << endl;
-		wait(1);
-		cout << "1..." << endl;
-		wait(1);
-		cout << "Bang!" << endl;
-
-		return -1;
+		std::cout << "Could not locate or input file unrecognizable. exiting." << std::endl;
+		exit(-1);
 	}
-	//for (int i = 0; i < nfreq; i++) {
-	//	k[i] = pow(2. * pi * f[i], 2.) / 9.81;
-	//}
-	int i = read_inputdata();
 
+	CFDwmInit = true;
 	return 0;
 }
 
 
 int wave_Cleanup()
 {
-	if (wavetype == 1) {
-		delete[] w, Ampspec, D, k, thetaA, phas;
-	}
-	else if (wavetype == 2) {
-		delete[] w, Ampspec, k, thetaA, phas;
-	}
-	else if (wavetype == 3) {
-		delete[] w, Ampspec, k, thetaA, phas;
-		delete[] ETA, UX, UY, UZ, index;
+	/*if (wavetype == 1) {
+		delete irregular;
 	}
 	else if (wavetype == 4) {
 		delete[] PD_time, PD_ampl, PD_velo, PD_eta;
-	}
+	}*/
 	return 0;
 }
-//}
 
-
+int CFDwavemaker_is_initialized() {
+	return int(CFDwmInit);
+}
 
 // external functions used by COMFLOW
 double VelocityX(int i, int j, int kk, double xpt, double ypt, double zpt, double time) {
@@ -1947,3 +2137,39 @@ int Cleanup() {
 	return wave_Cleanup();
 }
 
+double wave_phase_velocity(int opt) {
+	return irregular.phase_velocity(opt);
+}
+
+double wave_mean_length(int opt) {
+	return irregular.mean_wave_length(opt);
+}
+double wave_mean_period(int opt) {
+	return irregular.mean_wave_period(opt);
+}
+
+void wave_sgrid_update(double tpt) {
+	if (!sgrid.CheckTime(tpt)) {
+//#pragma omp single
+		sgrid.update(irregular, tpt);
+	}
+}
+
+/*
+int main() {
+	//cout << GetCurrentWorkingDir() << endl;
+	read_inputdata_v2();
+	//for (int i = 0; i < 1; i++) {
+	//	std::cout << double(i) << "wave elevation: " << wave_SurfElev(0.0, double(i), 0.0) << std::endl;
+	//}
+
+	std::cout << "rampvalue: " << ramp.ramp_init_y_up << std::endl;
+	std::cout << "wave elevation: " << wave_SurfElev(0.0, 11.0, 0.0) << std::endl;
+	std::cout << "wave elevation true: " << irregular.eta(0.0, 0.0, 0.0) << std::endl;
+	std::cout << "velo x: " << wave_VeloX(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << "velo y: " << wave_VeloY(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << "velo z: " << wave_VeloZ(0.0, 0.0, -5.0, 10.5) << std::endl;
+	//std::cout << irregular.Ampspec[0] << std::endl;
+
+}
+*/

@@ -1,29 +1,40 @@
 #ifndef Stokes5_H
 #define Stokes5_H
 
-#define eta Stokes5_eta // rename functions
-#define u Stokes5_u
-#define v Stokes5_v
+#ifndef PI
+#define PI 3.14159265358979323846
+#endif
+#define G 9.81
 
-#include<stdio.h>
-#include<math.h>
+class Stokes5 {
+private:
+	double A11, A22, A31, A33, A42, A44, A51, A53, A55,
+		B22, B31, B42, B44, B53, B55,
+		C0, C2, C4,
+		D2, D4,
+		E2, E4,
+		S, eps, k, kd, kH, c, cs, u_mean, Q, R;
+	void calculate_stokes_coefficients();
 
-typedef struct{
-/* Coefficients depending on wave and environmental properties */
-  double A11, A22, A31, A33, A42, A44, A51, A53, A55,
-  B22, B31, B42, B44, B53, B55,
-  C0, C2, C4,
-  D2, D4,
-  E2, E4,
-  S, eps, wave_length, wave_height, current, gravity, depth, k, kd, kH, c, cs, u_mean, Q, R,
-  x0, y0;
-} Stokes5;
+public:
+	bool initialized = false;
+	double wave_length;
+	double wave_height;
+	double current = 0.;
+	double depth;
+	double gravity = G;
+	double x0 = 0.;
+	double y0 = 0.;
+	double z0 = 0.; // Still water line
+	double t0 = 0.;
+	double theta = 0.;
+	void set_stokes5_properties(double _wave_length, double _wave_height);
+	double eta(double t, double X, double Y);
+	double u(double t, double X, double Y, double Z);
+	double v(double t, double X, double Y, double Z);
+	double w(double t, double X, double Y, double Z);
 
-
-extern void set_stokes5_properties(Stokes5 *stokes5, double wave_length, double wave_height, double current, double depth, double gravity, double x0, double y0);
-extern double eta(Stokes5 *stokes5, double t, double X);
-extern double u(Stokes5 *stokes5, double t, double X, double Y);
-extern double v(Stokes5 *stokes5, double t, double X, double Y);
+};
 
 #endif
 

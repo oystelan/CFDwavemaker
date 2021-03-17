@@ -1,0 +1,55 @@
+@v213
+# Wavedata CFDwavemaker2
+
+[wave type]
+# WAVETYPE 
+# 1. irregular
+# 2. pistonwavemaker
+# 3. spectralwave
+# 4. stokes5
+# 5. vtk
+vtk
+
+[vtk input]
+path ./vtk/
+prefix data
+grid_type lsgrid
+
+
+[general input data] 
+# for rotating vtk input
+mtheta 0.0000      
+
+[wave reference point]
+# for shifting in time and space
+# Time(s)  x(m)  y(m)
+time 50.00
+x     0.00
+y     0.00
+
+[lsgrid]
+# XMIN XMAX YMIN YMAX
+bounds -882.6850 -872.6850 -882.6850 882.6850
+nx 2
+ny 50
+nl 10
+t0 0.0
+dt 1.
+#ignore_subdomain -875. 900. -900. 900.
+ignore_at_init 0
+
+[vtk output]
+storage_path ./vtk/
+filename kin
+
+[timeseries output]
+storage_path ./ts/ 
+filename tsfile
+t0 0.
+dt 0.5
+npos 3
+# x y z
+0.0 0.0 0.0
+3.3 5.4 -10.
+0.0 5.4 -10.
+
