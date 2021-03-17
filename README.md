@@ -19,6 +19,16 @@ outputs:
 Special:
 - Grid interpolation of wave kinematics for faster initialization when using second order kinematics
 
+
+## Build instructions
+
+1. navigate into the folder src/
+2. run make and the serial version of CFDwavemaker will be built. Alternatively provide an alternative build option:
+    - make openmp
+    - make openmp_swd
+
+## Version log (a coarse one)
+
 Version 2.1.5 release:
 - added probes as output such that x,y,z coordinates may be specified to dump kinematics to file.
 - Fixed CFDwavemaker for windows. now compiles without SWD.
