@@ -1685,6 +1685,11 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 #endif
 	}
 
+	// VTK kinematics input
+	if (inputdata.wavetype == 41) {
+		vtkreader.init();
+	}
+
 	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
 
 	return 0;

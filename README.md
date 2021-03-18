@@ -1,4 +1,4 @@
-# CFDwavemaker v2.1.5
+# CFDwavemaker v2.1.6
 wave kinematics package for CFD initialization of CFD domains or boundaries.
 The code supports OpenMP and has some special features for fast initialization of large domains built in.
 
@@ -26,8 +26,11 @@ Special:
 2. run make and the serial version of CFDwavemaker will be built. Alternatively provide an alternative build option:
     - make openmp
     - make openmp_swd
+    - make openmp_vtk
 
 ## Version log (a coarse one)
+
+Version 2.1.6 release:
 
 Version 2.1.5 release:
 - added probes as output such that x,y,z coordinates may be specified to dump kinematics to file.
