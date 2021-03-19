@@ -36,9 +36,11 @@ private:
 public:
 	VTKreader() {
 		Uindex = -1;
+		loadcount = 0;
+		vtk_timelabel = "TimeValue";
 	}
 	~VTKreader() {
-		delete[] ZB;
+		delete[] beta;
 	}
 
 	
@@ -46,14 +48,17 @@ public:
 	//vtkSmartPointer<vtkXMLStructuredGridReader> reader1;
 	vtkXMLStructuredGridReader* reader0;
 	vtkXMLStructuredGridReader* reader1;
-	vtkFloatArray* floatdata;
-	vtkDoubleArray* doubledata;
+	//vtkFloatArray* floatdata;
+	
 	vtkStructuredGrid* dataset0;
 	vtkStructuredGrid* dataset1;
+	vtkDataArray* U0;
+	vtkDataArray* U1;
+	vtkCellDataToPointData* c2p0;
+	vtkCellDataToPointData* c2p1;
 
 	int nx, ny, nl, dx, dy;
 	double bounds[6];
-	double* ZB;
 	double* beta; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;
 	double t0, t1, dt;
@@ -61,25 +66,29 @@ public:
 	int velo_field_located;
 	int dimensions[3];
 
-	int filecount, Uindex;
+	int loadcount, Uindex;
 	bool cell2Pointdata = false;
 
 	int runOptionSwitch = 0;
 	vector<string>* filevec;
-	string vtkfilepath, vtk_prefix, Uname;
+	string vtkfilepath, vtk_prefix, Uname, vtk_timelabel;
 
 	double* trilinear_interpolation(double tpt, double xpt, double ypt, double zpt);
 
+	bool CheckTime(double tpt);
 
+	void write_vtk(bool endtime);
+
+	void export_vtu(FILE* fp, bool last);
 
 	double z2s(double z, double wave_elev, double depth);
-
 	double s2z(double s, double wave_elev, double depth);
-
 
 	vector<string>* listdir(const char* dirname, const char* suffix);
 	void init();
 	void loadInit(string path, const char* fname);
+	void loadNext(string path, const char* fname);
+	double stretchInterpLocatorZ(double x, int* iptr, int nxp, int nyp);
 	//void loadNext(string path, const char* fname);
 
 
