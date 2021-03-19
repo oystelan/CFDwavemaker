@@ -57,7 +57,8 @@ public:
 	vtkCellDataToPointData* c2p0;
 	vtkCellDataToPointData* c2p1;
 
-	int nx, ny, nl, dx, dy;
+	int nx, ny, nl;
+	double dx, dy;
 	double bounds[6];
 	double* beta; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;

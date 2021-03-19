@@ -102,10 +102,13 @@ void VTKreader::loadInit(string path, const char* fname) {
 	dataset1->GetPoint(0, 0, 0, coord);
 	double x0 = coord[0];
 	double y0 = coord[1];
+	cout << coord[0] << " " << coord[1] << " " << coord[2] << endl;
 	dataset1->GetPoint(1, 1, 0, coord);
+	cout << coord[0] << " " << coord[1] << " " << coord[2] << endl;
 	dx = coord[0] - x0;
 	dy = coord[1] - y0;
 
+	cout << "dx: " << dx << ", dy: " << dy << endl;
 
 	/*
 	// extract sea bed coordinates
@@ -134,7 +137,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 				seabed = pNew[2];
 				dataset1->GetPoint(i, j, nl-1, pNew);
 				welev = pNew[2];
-				beta[i * ny * nl + j * nl + k] = 1. + z2s(z, welev, -seabed);
+				beta[k * ny * nx + j * nx + i] = 1. + z2s(z, welev, -seabed);
 			}
 		}
 	}
@@ -266,7 +269,7 @@ double VTKreader::stretchInterpLocatorZ(double s, int* iptr, int nxp, int nyp){
 	// get z values for given point
 	double selevs[nl], laynum[nl];
 	for (int k = 0; k < nl; k++) {
-		selevs[k] = beta[nxp * ny * nl + nyp * nl + k];
+		selevs[k] = beta[k* ny * nx + nyp * nx + nxp];
 		//cout << "h: " << selevs[k] << endl;
 		laynum[k] = double(k);
 	}
@@ -551,10 +554,10 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 
 	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
 	if (last) {
-		for (int i = 0; i < nx; i++) {
+		for (int m = 0; m < nl; m++) {
 			for (int j = 0; j < ny; j++) {
-				for (int m = 0; m < nl; m++) {
-					double* C1 = U1->GetTuple3(i * ny * nl + j * nl + m);
+				for (int i = 0; i < nx; i++) {	
+					double* C1 = U1->GetTuple3(m * ny * nx + j * nx + i);
 					fprintf(fp, "%g %g %g\n", C1[0], C1[1], C1[2]);
 				}
 			}
@@ -564,7 +567,7 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 		for (int i = 0; i < nx; i++) {
 			for (int j = 0; j < ny; j++) {
 				for (int m = 0; m < nl; m++) {
-					double* C0 = U0->GetTuple3(i * ny * nl + j * nl + m);
+					double* C0 = U0->GetTuple3(m * ny * nx + j * nx + i);
 					fprintf(fp, "%g %g %g\n", C0[0], C0[1], C0[2]);
 				}
 			}
@@ -602,10 +605,12 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 				// get values of eta
 				dataset0->GetPoint(i, j, nl - 1, pNew);
 				double eta0_temp = pNew[2];
+				//ypt = pNew[1];
+				//xpt = pNew[0];
 				dataset0->GetPoint(i, j, 0, pNew);
 				double seabed = pNew[2];
 				for (int m = 0; m < nl; m++) {
-					double zpt0 = s2z(beta[i * ny * nl + j * nl + m] - 1., eta0_temp, -seabed);
+					double zpt0 = s2z(beta[m * ny * nx + j * nx + i] - 1., eta0_temp, -seabed);
 					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
 				}
 			}
