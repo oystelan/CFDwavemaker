@@ -1687,7 +1687,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 	// VTK kinematics input
 	if (inputdata.wavetype == 41) {
-		vtkreader.init();
+		vtkreader.init(0.);
 	}
 
 	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
@@ -1725,15 +1725,15 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
-		
+
 		// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-		
+
 		// wavemaker
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
-		
+
 		// swd
 	case 31:
 	{
@@ -1769,6 +1769,22 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single nowait
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.u(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+	
+	
 	default:
 		return 0.0;
 	}
@@ -1829,6 +1845,20 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single nowait
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.v(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1884,6 +1914,20 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single nowait
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.w(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
 #endif
 	}
 	default:
@@ -1971,8 +2015,39 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single nowait
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.eta(tpt, xpt, ypt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
+	}
+}
+
+double wave_Seabed(double xpt, double ypt)
+{
+	switch (inputdata.wavetype) {
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		return vtkreader.seabed(xpt, ypt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+	default:
+		return -inputdata.depth;;
 	}
 }
 
@@ -2064,7 +2139,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v2.1.5" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.6" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	

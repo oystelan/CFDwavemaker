@@ -41,7 +41,7 @@ vector<string>* VTKreader::listdir(const char* dirname, const char* suffix) {
 }
 
 // VTK reader
-void VTKreader::init() {
+void VTKreader::init(double tpt) {
 
 	filevec = listdir(vtkfilepath.c_str(), vtk_prefix.c_str());
 	ostream_iterator<string> out(cout, " ");
@@ -51,17 +51,80 @@ void VTKreader::init() {
 
 	//cout << filevec->size();
 	if (filevec->size() >= 2) {
+		// get min and max time value store in fileseries
+
+		tmin = getTimeFromVTKFile(vtkfilepath, filevec->at(0).c_str());
+		tmax = getTimeFromVTKFile(vtkfilepath, filevec->at(filevec->size()-1).c_str());
+		
+		cout << "Time range of vts files: " << tmin << " to " << tmax << " seconds." << endl;
+
+		// calculate which file to start from
+		double dt_approx = (tmax - tmin) / (filevec->size() - 1);
+
+
 		// load vtufiles
 		loadInit(vtkfilepath, filevec->at(0).c_str());
 		loadNext(vtkfilepath, filevec->at(1).c_str());
-		write_vtk(false);
+		//write_vtk(false);
 		cout << "VTU Files found and loaded..." << endl;
+		//cout << "u: " << u(0.1, 70., 0.0, 0.0) << endl;
 	}
 	else {
 		cout << "Not enough (or no) VTU files in folder. A minimum of two files are required.\n\
 			Perhaps the wrong path is specified? just trying to be helpful..." << endl;
 	}
 
+}
+
+
+void VTKreader::update(double tpt) {
+	if (loadcount < (filevec->size() + 1)) {
+		loadNext(vtkfilepath, filevec->at(loadcount + 1).c_str());
+	}
+	else {
+		cerr << "End of VTK file list reached. (i.e. no more data to load)." << endl;
+		exit(-2);
+	}
+}
+
+
+double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
+	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+	return temp[2];
+}
+
+double VTKreader::v(double tpt, double xpt, double ypt, double zpt) {
+	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+	return temp[3];
+}
+
+double VTKreader::w(double tpt, double xpt, double ypt, double zpt) {
+	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+	return temp[4];
+}
+
+double VTKreader::eta(double tpt, double xpt, double ypt) {
+	double* temp = bilinear_interpolation(tpt, xpt, ypt);
+	return temp[0];
+}
+
+double VTKreader::seabed(double xpt, double ypt) {
+	double* temp = bilinear_interpolation(t0, xpt, ypt);
+	return temp[1];
+}
+
+
+double VTKreader::getTimeFromVTKFile(string path, const char* fname) {
+	path.append(fname);
+	vtkXMLStructuredGridReader* tempreader = vtkXMLStructuredGridReader::New();
+	tempreader->SetFileName(path.c_str());
+	tempreader->Update();
+	vtkStructuredGrid* dataset = tempreader->GetOutput();
+
+	// Get time
+	vtkDoubleArray* doubledata = vtkDoubleArray::SafeDownCast(dataset->GetFieldData()->GetArray("TimeValue"));
+	
+	return doubledata->GetValue(0);
 }
 
 // Function loading data from the frist file into data set 2. This function is only called during initialization
@@ -384,38 +447,24 @@ double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, d
 
 	//exit(0);
 	// Trilinear interpolation.
-	double* C000 = U0->GetTuple3(nxp * ny * nl + nyp * nl + nsp0);
+	double* C000 = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
+	double* C001 = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	double* C010 = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	double* C011 = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	double* C100 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
+	double* C101 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	double* C110 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	double* C111 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
 
-	double* C001 = U0->GetTuple3(nxp * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1));
 
-	double* C010 = U0->GetTuple3(nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0);
-
-	double* C011 = U0->GetTuple3(nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1));
-
-	double* C100 = U0->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp0);
-
-	double* C101 = U0->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1));
-
-	double* C110 = U0->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0);
-
-	double* C111 = U0->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1));
-	
-
-	double* D000 = U1->GetTuple3(nxp * ny * nl + nyp * nl + nsp1);
-
-	double* D001 = U1->GetTuple3(nxp * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1));
-
-	double* D010 = U1->GetTuple3(nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1);
-
-	double* D011 = U1->GetTuple3(nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1));
-
-	double* D100 = U1->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp1);
-
-	double* D101 = U1->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1));
-
-	double* D110 = U1->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1);
-
-	double* D111 = U1->GetTuple3(clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1));
+	double* D000 = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
+	double* D001 = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	double* D010 = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	double* D011 = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	double* D100 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
+	double* D101 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	double* D110 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	double* D111 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
 
 	//double sd0 = nsp0 - floor(nsp0);
 	//double sd1 = nsp1 - floor(nsp1);
@@ -473,6 +522,86 @@ double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, d
 	res[2] = (CC0[0] * (1. - sd0) + CC1[0] * sd0) * (1. - td) + (DD0[0] * (1. - sd1) + DD1[0] * sd1) * td; // u
 	res[3] = (CC0[1] * (1. - sd0) + CC1[1] * sd0) * (1. - td) + (DD0[1] * (1. - sd1) + DD1[1] * sd1) * td; // v
 	res[4] = (CC0[2] * (1. - sd0) + CC1[2] * sd0) * (1. - td) + (DD0[2] * (1. - sd1) + DD1[2] * sd1) * td; // w
+
+	return res;
+}
+
+
+/* Function for bi interpolation on a cartesian evenly spaced mesh*/
+double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
+
+	static double res[2]; // array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
+
+	float nxp_temp, nyp_temp;
+	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
+	double yd = std::modf(clip((ypt - bounds[2]) / dy, 0., ny - 1.), &nyp_temp);
+
+	int nxp = int(nxp_temp);
+	int nyp = int(nyp_temp);
+
+	double pNew[3];
+
+	// get values of eta
+	dataset0->GetPoint(nxp, nyp, nl - 1, pNew);
+	double C00 = pNew[2];
+	dataset0->GetPoint(nxp, clip(nyp + 1, 0, ny - 1), nl - 1, pNew);
+	double C01 = pNew[2];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), nyp, nl - 1, pNew);
+	double C10 = pNew[2];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), nl - 1, pNew);
+	double C11 = pNew[2];
+
+	dataset1->GetPoint(nxp, nyp, nl - 1, pNew);
+	double D00 = pNew[2];
+	dataset1->GetPoint(nxp, clip(nyp + 1, 0, ny - 1), nl - 1, pNew);
+	double D01 = pNew[2];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), nyp, nl - 1, pNew);
+	double D10 = pNew[2];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), nl - 1, pNew);
+	double D11 = pNew[2];
+
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+
+	double C0 = C00 * (1. - xd) + C10 * xd;
+	double C1 = C01 * (1. - xd) + C11 * xd;
+	double D0 = D00 * (1. - xd) + D10 * xd;
+	double D1 = D01 * (1. - xd) + D11 * xd;
+
+	double wave_elev0 = C0 * (1. - yd) + C1 * yd;
+	double wave_elev1 = D0 * (1. - yd) + D1 * yd;
+
+	// set seabed elevation for point
+	res[0] = wave_elev0 * (1. - td) + wave_elev1 * td;
+
+	// get values of seabed
+	dataset0->GetPoint(nxp, nyp, 0, pNew);
+	C00 = pNew[2];
+	dataset0->GetPoint(nxp, clip(nyp + 1, 0, ny - 1), 0, pNew);
+	C01 = pNew[2];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), nyp, 0, pNew);
+	C10 = pNew[2];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), 0, pNew);
+	C11 = pNew[2];
+
+	dataset1->GetPoint(nxp, nyp, 0, pNew);
+	D00 = pNew[2];
+	dataset1->GetPoint(nxp, clip(nyp + 1, 0, ny - 1), 0, pNew);
+	D01 = pNew[2];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), nyp, 0, pNew);
+	D10 = pNew[2];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), 0, pNew);
+	D11 = pNew[2];
+
+	C0 = C00 * (1. - xd) + C10 * xd;
+	C1 = C01 * (1. - xd) + C11 * xd;
+	D0 = D00 * (1. - xd) + D10 * xd;
+	D1 = D01 * (1. - xd) + D11 * xd;
+
+	double zb0 = C0 * (1. - yd) + C1 * yd;
+	double zb1 = D0 * (1. - yd) + D1 * yd;
+
+	// set seabed elevation for point
+	res[1] = zb0 * (1. - td) + zb1 * td;
 
 	return res;
 }
@@ -554,9 +683,9 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 
 	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
 	if (last) {
-		for (int m = 0; m < nl; m++) {
+		for (int i = 0; i < nx; i++) {
 			for (int j = 0; j < ny; j++) {
-				for (int i = 0; i < nx; i++) {	
+				for (int m = 0; m < nl; m++) {
 					double* C1 = U1->GetTuple3(m * ny * nx + j * nx + i);
 					fprintf(fp, "%g %g %g\n", C1[0], C1[1], C1[2]);
 				}

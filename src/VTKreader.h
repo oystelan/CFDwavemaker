@@ -62,7 +62,7 @@ public:
 	double bounds[6];
 	double* beta; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;
-	double t0, t1, dt;
+	double t0, t1, dt, tmin, tmax;
 	int vfraq_field_located;
 	int velo_field_located;
 	int dimensions[3];
@@ -76,6 +76,8 @@ public:
 
 	double* trilinear_interpolation(double tpt, double xpt, double ypt, double zpt);
 
+	double* bilinear_interpolation(double tpt, double xpt, double ypt);
+
 	bool CheckTime(double tpt);
 
 	void write_vtk(bool endtime);
@@ -86,7 +88,14 @@ public:
 	double s2z(double s, double wave_elev, double depth);
 
 	vector<string>* listdir(const char* dirname, const char* suffix);
-	void init();
+	void init(double tpt);
+	void update(double tpt);
+	double u(double tpt, double xpt, double ypt, double zpt);
+	double v(double tpt, double xpt, double ypt, double zpt);
+	double w(double tpt, double xpt, double ypt, double zpt);
+	double eta(double tpt, double xpt, double ypt);
+	double seabed(double xpt, double ypt);
+	double getTimeFromVTKFile(string path, const char* fname);
 	void loadInit(string path, const char* fname);
 	void loadNext(string path, const char* fname);
 	double stretchInterpLocatorZ(double x, int* iptr, int nxp, int nyp);

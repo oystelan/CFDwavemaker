@@ -68,11 +68,10 @@ def clean_up(mydll):
 print(init_dll(mydll))
 
 
-clean_up(mydll)
 
-exit()
 
-time = np.arange(0,20,0.1)
+
+time = np.arange(0,0.5,0.01)
 
 
 ww = []
@@ -81,14 +80,18 @@ u = []
 v = []
 w = []
 
-for t in time:
-    print(waveelev(mydll,t,-200,0))
+x = 70.
+y = 0.
+z = -7.
 
-    ww.append(waveelev(mydll,t,-200,0))
-    ww2.append(waveelev(mydll,t,-200.,3.))
-    u.append(velocityX(mydll,t,-200.,0.,-5.))
-    v.append(velocityY(mydll,t,-200.,0.,-5.))
-    w.append(velocityZ(mydll,t,-200.,0.,-5.))
+for t in time:
+    #print(waveelev(mydll,t,x,y))
+
+    ww.append(waveelev(mydll,t,x,y))
+    ww2.append(waveelev(mydll,t,x,y))
+    u.append(velocityX(mydll,t,x,y,z))
+    v.append(velocityY(mydll,t,x,y,z))
+    w.append(velocityZ(mydll,t,x,y,z))
     
 
 plt.plot(time, ww, label="x=-200, y=0")
@@ -106,6 +109,6 @@ plt.grid(True)
 plt.savefig("./result_u.png")
 
 
-
+clean_up(mydll)
 
 
