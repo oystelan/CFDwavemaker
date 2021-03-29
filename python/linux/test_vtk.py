@@ -71,7 +71,7 @@ print(init_dll(mydll))
 
 
 
-time = np.arange(0,0.5,0.01)
+time = np.arange(15, 20., 0.1)
 
 
 ww = []

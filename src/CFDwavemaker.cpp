@@ -1684,12 +1684,12 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
-
+#if defined(VTK_enable)
 	// VTK kinematics input
 	if (inputdata.wavetype == 41) {
 		vtkreader.init(0.);
 	}
-
+#endif
 	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
 
 	return 0;
@@ -1774,9 +1774,10 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	{
 #if defined(VTK_enable)
 		if (!vtkreader.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			vtkreader.update(tpt);
 		}
+
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * vtkreader.u(tpt, xpt, ypt, zpt);
 #else
@@ -1790,6 +1791,33 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 	}
 
 
+}
+
+double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
+	
+	double* temp;
+
+	switch (inputdata.wavetype) {
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		temp = vtkreader.trilinear_interpolation(tpt, xpt, ypt, zpt);
+		return temp;
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+
+
+	default:
+		return temp;
+	}
 }
 
 
@@ -1850,7 +1878,7 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 	{
 #if defined(VTK_enable)
 		if (!vtkreader.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			vtkreader.update(tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -1908,7 +1936,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
@@ -1921,7 +1949,7 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	{
 #if defined(VTK_enable)
 		if (!vtkreader.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			vtkreader.update(tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -2020,7 +2048,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	{
 #if defined(VTK_enable)
 		if (!vtkreader.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			vtkreader.update(tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -2284,10 +2312,38 @@ double wave_mean_period(int opt) {
 	return irregular.mean_wave_period(opt);
 }
 
-void wave_sgrid_update(double tpt) {
-	if (!sgrid.CheckTime(tpt)) {
-//#pragma omp single
-		sgrid.update(irregular, tpt);
+void wave_force_update(double tpt) {
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 4: {
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
+		}
+		break;
+	}
+
+#if defined(SWD_enable)
+	case 34: {
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrid.update(swd, tpt);
+		}
+		break;
+	}
+#endif
+
+#if defined(VTK_enable)
+	case 41: {
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		break;
+	}
+#endif
 	}
 }
 

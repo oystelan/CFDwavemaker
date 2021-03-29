@@ -61,10 +61,11 @@ void VTKreader::init(double tpt) {
 		// calculate which file to start from
 		double dt_approx = (tmax - tmin) / (filevec->size() - 1);
 
+		loadcount = floor((tpt - tmin) / dt_approx);
 
 		// load vtufiles
-		loadInit(vtkfilepath, filevec->at(0).c_str());
-		loadNext(vtkfilepath, filevec->at(1).c_str());
+		loadInit(vtkfilepath, filevec->at(loadcount).c_str());
+		loadNext(vtkfilepath, filevec->at(loadcount+1).c_str());
 		//write_vtk(false);
 		cout << "VTU Files found and loaded..." << endl;
 		//cout << "u: " << u(0.1, 70., 0.0, 0.0) << endl;
@@ -78,14 +79,23 @@ void VTKreader::init(double tpt) {
 
 
 void VTKreader::update(double tpt) {
+
 	if (loadcount < (filevec->size() + 1)) {
-		loadNext(vtkfilepath, filevec->at(loadcount + 1).c_str());
+		int i = 1;
+		while (loadcount < (filevec->size() - 1)) {
+			loadNext(vtkfilepath, filevec->at(loadcount + 1).c_str());
+			if (tpt >= t0 && tpt <= t1) {
+				break;
+			}
+		}
 	}
 	else {
 		cerr << "End of VTK file list reached. (i.e. no more data to load)." << endl;
 		exit(-2);
 	}
 }
+
+
 
 
 double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
@@ -296,7 +306,7 @@ void VTKreader::loadNext(string path, const char* fname) {
 	vtkDoubleArray* doubledata = vtkDoubleArray::SafeDownCast(dataset1->GetFieldData()->GetArray("TimeValue"));
 	t1 = doubledata->GetValue(0);
 	
-	cout << "Time interval: " << t0 << " to " << t1 << " sec" << endl;
+	cout << "Loaded new interval: " << t0 << " to " << t1 << " sec" << endl;
 	dt = t1 - t0;
 
 
@@ -609,7 +619,7 @@ double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
 bool VTKreader::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t1) {
-		std::cout << "t0: " << t0 << ", t1: " << (t1) << ", tpt: " << tpt << std::endl;
+		//std::cout << "t0: " << t0 << ", t1: " << t1 << ", tpt: " << tpt << std::endl;
 		return false;
 
 	}

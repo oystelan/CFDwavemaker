@@ -9,7 +9,7 @@ depth 300.00
 mtheta 0.0000
 
 [swd wave properties]
-swdfile  hosm_out.swd
+swdfile  fenton_h1.2_d1_l2.swd
 
 [lsgrid]
 #         XMIN   XMAX   YMIN   YMAX

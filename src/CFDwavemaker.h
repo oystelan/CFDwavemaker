@@ -32,10 +32,11 @@ extern "C" {
 	double wave_DynPres(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 	double wave_SurfElev(double, double, double); // input variables are {xpoint,ypoint,time}
 	double wave_VFrac(double, double, double, double, double);// input variables are {xpoint,ypoint,zpoint,time, delta_cellsize}
-	double wave_Seabed(double, double, double); // input variables are {xpoint,ypoint,zpoint}
+	double wave_Seabed(double, double); // input variables are {xpoint,ypoint}
+	double* wave_Kinematics(double, double, double, double); // input variables are {xpoint,ypoint,zpoint,time}
 
 	// sgrid updater function
-	void wave_sgrid_update(double); // function checking timestep and updating if neccessary the sgrid kinematics
+	void wave_force_update(double); // function checking timestep and updating if neccessary the sgrid kinematics
 	
 	// update probes
 	EXPORT void update_probes(double); // writes wave kinematics data to probe files for a given time step as argument.
