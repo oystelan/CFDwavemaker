@@ -1,33 +1,10 @@
 @v213
-# Wavedata CFDwavemaker2
-
+# wave kinematics read from vtk files
 [wave type]
-swd
+vtk
 
-[general input data]
-depth 300.00
-mtheta 0.0000
-
-[swd wave properties]
-swdfile  fenton_h1.2_d1_l2.swd
-
-[wave reference point]
-# for focused waves this will correspond to the focus point in time and space
-time 0.
-
-#[lsgrid]
-#         XMIN   XMAX   YMIN   YMAX
-bounds  -810.00 610.00 -10.00 10.00
-nx  300
-ny  1
-nl  16
-t0  0.0
-dt  0.1
-stretch_params 0.7   1.5
-#                 xmin     xmax   ymin   ymax
-#ignore_subdomain -100.00 100.00 -150. 150.
-
-#[vtk output]
-storage_path ./hosm_vtk/
-filename kinematics
-vtk_timelabel TIME
+[vtk input]
+#storage_path /home/oland/storage/basilisk/MultilayerOcean/kalsto_model4_newB/subdomain/
+storage_path /home/oland/storage/basilisk/MultilayerOcean/validation/long_term_statistics/version6_tp154_newB/vtk/
+filename surface
+name_velocity_field Velocity

@@ -25,10 +25,6 @@ all: $(TARGETS_SHARED_OMP_VTK) $(TARGETS_STATIC_OMP_VTK)
 clean:
 	rm -f $(OBJ)
 
-
-$(MAINS):: %.o : %.cpp	 
-	$(CC2) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS)
-
 $(OBJ):: %.o : %.cpp	 
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS) -DVTK_enable=1 -I$(VTK_INCL)
 

@@ -96,30 +96,58 @@ void VTKreader::update(double tpt) {
 }
 
 
-
-
 double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
-	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
-	return temp[2];
+    double* temp;
+    if (input2d){
+        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+    }
+    else{
+	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+    }
+    return temp[2];
 }
 
 double VTKreader::v(double tpt, double xpt, double ypt, double zpt) {
-	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
-	return temp[3];
+    double* temp;
+    if (input2d){
+        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+    }
+    else{
+	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+    }
+    return temp[3];
 }
 
 double VTKreader::w(double tpt, double xpt, double ypt, double zpt) {
-	double* temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
-	return temp[4];
+    double* temp;
+    if (input2d){
+        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+    }
+    else{
+	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+    }
+    return temp[4];
 }
 
 double VTKreader::eta(double tpt, double xpt, double ypt) {
-	double* temp = bilinear_interpolation(tpt, xpt, ypt);
-	return temp[0];
+        double* temp;
+        if (input2d){
+            temp = linear_interpolation(tpt, xpt);
+        }
+        else{
+            temp = bilinear_interpolation(tpt, xpt, ypt);
+        }
+        return temp[0];
 }
 
 double VTKreader::seabed(double xpt, double ypt) {
-	double* temp = bilinear_interpolation(t0, xpt, ypt);
+	double* temp;
+        if (input2d){
+            temp = linear_interpolation(0, xpt);
+        }
+        else{
+            temp = bilinear_interpolation(0, xpt, ypt);
+        }
 	return temp[1];
 }
 
@@ -158,17 +186,32 @@ void VTKreader::loadInit(string path, const char* fname) {
 	// get bounds
 	dataset1->GetBounds(bounds);
 	cout << "The bounds: " << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << " " << endl;
-	if (bounds[2] == bounds[3]) {
-		cout << "2D modus switched on." << endl;
-		switch2d = 1;
-	}
-
+	
+	
 	//get extent of grid (ncells in each direction
 	int* dims = dataset1->GetDimensions();
 	cout << "Dimensions of grid: " << dims[0] << ", " << dims[1] << ", " << dims[2] << ", " << endl;
-	nx = dims[0];
-	ny = dims[1];
-	nl = dims[2];
+
+	// check if data is 2D or 3D
+	if (dims[2] == 1) {
+		cout << "Two dimensional data read, given in x-y plane" << endl;
+		input2d = true;
+	}
+	else {
+		cout << "This is a 3D case." << endl;
+	}
+
+
+	if (input2d) {
+		nx = dims[0];
+		ny = 1;
+		nl = dims[1];
+	}
+	else {
+		nx = dims[0];
+		ny = dims[1];
+		nl = dims[2];
+	}
 
 	// find cell size dx and dy
 	double coord[3];
@@ -197,24 +240,45 @@ void VTKreader::loadInit(string path, const char* fname) {
 	}
 	*/
 
-	// Calculate beta for all points i LSgrid
-	beta = new double[nx * ny * nl];
-	double z, welev, seabed, pNew[3];
-	for (int k = 0; k < nl; k++) {
-		for (int j = 0; j < ny; j++) {
+	if (input2d) {
+		// Calculate beta for all points i LSgrid
+		beta = new double[nx * nl];
+		double z, welev, seabed, pNew[3];
+		for (int k = 0; k < nl; k++) {
 			for (int i = 0; i < nx; i++) {
 				//cout << i << ", " << j << endl;
-				dataset1->GetPoint(i, j, k, pNew);
-				z = pNew[2];
-				dataset1->GetPoint(i, j, 0, pNew);
-				seabed = pNew[2];
-				dataset1->GetPoint(i, j, nl-1, pNew);
-				welev = pNew[2];
-				beta[k * ny * nx + j * nx + i] = 1. + z2s(z, welev, -seabed);
+				dataset1->GetPoint(i, k, 0, pNew);
+				z = pNew[1];
+				dataset1->GetPoint(i, 0, 0, pNew);
+				seabed = pNew[1];
+				dataset1->GetPoint(i, nl - 1, 0, pNew);
+				welev = pNew[1];
+				beta[k * nx  + i] = 1. + z2s(z, welev, -seabed);
+				cout << "seabed:" << seabed << " welev: " << welev << endl;
+			}
+		}
+
+	}
+	else {
+		// Calculate beta for all points i LSgrid
+		beta = new double[nx * ny * nl];
+		double z, welev, seabed, pNew[3];
+		for (int k = 0; k < nl; k++) {
+			for (int j = 0; j < ny; j++) {
+				for (int i = 0; i < nx; i++) {
+					//cout << i << ", " << j << endl;
+					dataset1->GetPoint(i, j, k, pNew);
+					z = pNew[2];
+					dataset1->GetPoint(i, j, 0, pNew);
+					seabed = pNew[2];
+					dataset1->GetPoint(i, j, nl - 1, pNew);
+					welev = pNew[2];
+					beta[k * ny * nx + j * nx + i] = 1. + z2s(z, welev, -seabed);
+					//cout << "seabed:" << seabed << " welev: " << welev << endl;
+				}
 			}
 		}
 	}
-	
 
 	// Identify field data store in vtk files and see if velocity field can be located. This may either be stored as pointdata or celldata.
 	vtkIdType numberOfPointArrays =  dataset1->GetPointData()->GetNumberOfArrays();
@@ -536,11 +600,120 @@ double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, d
 	return res;
 }
 
+/* Function for bilinear interpolation on a cartesian evenly spaced mesh in x direction and
+ streched mesh in y direction*/
+double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt) {
+
+	static double res[5]; // array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
+
+	float nxp_temp;
+	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
+
+	int nxp = int(nxp_temp);
+
+	double pNew[3];
+
+	// get values of eta
+	dataset0->GetPoint(nxp, nl - 1, 0, pNew);
+	double C0 = pNew[1];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), nl - 1, 0, pNew);
+	double C1 = pNew[1];
+
+	dataset1->GetPoint(nxp, nl - 1, 0, pNew);
+	double D0 = pNew[1];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), nl - 1, 0, pNew);
+	double D1 = pNew[1];
+	
+
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+
+	double wave_elev0 = C0 * (1. - xd) + C1 * xd;
+	double wave_elev1 = D0 * (1. - xd) + D1 * xd;
+
+	// set seabed elevation for point
+	res[0] = wave_elev0 * (1. - td) + wave_elev1 * td;
+
+	// get values of seabed
+	dataset0->GetPoint(nxp, 0, 0, pNew);
+	C0 = pNew[1];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), 0, 0, pNew);
+	C1 = pNew[1];
+	
+
+	dataset1->GetPoint(nxp, 0, 0, pNew);
+	D0 = pNew[1];	
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), 0, 0, pNew);
+	D1 = pNew[1];
+
+	double zb0 = C0 * (1. - xd) + C1 * xd;
+	double zb1 = D0 * (1. - xd) + D1 * xd;
+
+	// set seabed elevation for point
+	res[1] =  zb0 * (1. - td) + zb1 * td;
+
+
+	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
+
+	double spt0 = std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
+	double spt1 = std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb0), -1.);
+	
+
+	int nsp0, nsp1;
+
+	
+	double sd0 = stretchInterpLocatorZ(spt0 + 1., &nsp0, nxp, 0);
+	double sd1 = stretchInterpLocatorZ(spt1 + 1., &nsp1, nxp, 0);
+
+	//int temp = clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1);
+	
+	//cout << "nxp: " << nxp << ", nyp: " << nyp << "nsp0: " << nsp0 << "sum: " << temp << endl;
+
+	//exit(0);
+	// Trilinear interpolation.
+	double* CC00 = U0->GetTuple3(nsp0 * nx + nxp);
+	double* CC01 = U0->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));        
+	double* CC10 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	double* CC11 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
+
+
+	double* DD00 = U1->GetTuple3(nsp0 * nx + nxp);
+	double* DD01 = U1->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));	
+	double* DD10 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	double* DD11 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	
+
+	//double sd0 = nsp0 - floor(nsp0);
+	//double sd1 = nsp1 - floor(nsp1);
+
+	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
+
+	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
+
+	double CC0[2], CC1[2], DD0[2], DD1[2];
+	CC0[0] = CC00[0] * (1. - xd) + CC10[0] * xd;
+	CC0[1] = CC00[1] * (1. - xd) + CC10[1] * xd;
+	CC1[0] = CC01[0] * (1. - xd) + CC11[0] * xd;
+	CC1[1] = CC01[1] * (1. - xd) + CC11[1] * xd;
+	DD0[0] = DD00[0] * (1. - xd) + DD10[0] * xd;
+	DD0[1] = DD00[1] * (1. - xd) + DD10[1] * xd;
+	DD1[0] = DD01[0] * (1. - xd) + DD11[0] * xd;
+	DD1[1] = DD01[1] * (1. - xd) + DD11[1] * xd;
+
+	
+	res[2] = (CC0[0] * (1. - sd0) + CC1[0] * sd0) * (1. - td) + (DD0[0] * (1. - sd1) + DD1[0] * sd1) * td; // u
+	res[4] = (CC0[1] * (1. - sd0) + CC1[1] * sd0) * (1. - td) + (DD0[1] * (1. - sd1) + DD1[1] * sd1) * td; // w
+	res[3] = 0.; // v
+
+	return res;
+}
+
+
+
 
 /* Function for bi interpolation on a cartesian evenly spaced mesh*/
 double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
 
-	static double res[2]; // array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
+	static double res[2]; // array to store results, where 0 = eta, 1=seabed
 
 	float nxp_temp, nyp_temp;
 	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
@@ -609,6 +782,58 @@ double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
 
 	double zb0 = C0 * (1. - yd) + C1 * yd;
 	double zb1 = D0 * (1. - yd) + D1 * yd;
+
+	// set seabed elevation for point
+	res[1] = zb0 * (1. - td) + zb1 * td;
+
+	return res;
+}
+
+
+/* Function for bi interpolation on a cartesian evenly spaced mesh*/
+double* VTKreader::linear_interpolation(double tpt, double xpt) {
+
+	static double res[2]; // array to store results, where 0 = eta, 1=seabed
+
+	float nxp_temp;
+	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
+	int nxp = int(nxp_temp);
+	
+	double pNew[3];
+
+	// get values of eta
+	dataset0->GetPoint(nxp, nl - 1, 0, pNew);
+	double C0 = pNew[1];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), nl - 1, 0, pNew);
+	double C1 = pNew[1];
+	
+
+	dataset1->GetPoint(nxp, nl - 1, 0, pNew);
+	double D0 = pNew[1];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), nl - 1, 0, pNew);
+	double D1 = pNew[1];
+	
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+
+	double wave_elev0 = C0 * (1. - xd) + C1 * xd;
+	double wave_elev1 = D0 * (1. - xd) + D1 * xd;
+
+	// set seabed elevation for point
+	res[0] = wave_elev0 * (1. - td) + wave_elev1 * td;
+
+	// get values of seabed
+	dataset0->GetPoint(nxp, 0, 0, pNew);
+	C0 = pNew[1];
+	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), 0, 0, pNew);
+	C1 = pNew[1];
+
+	dataset1->GetPoint(nxp, 0, 0, pNew);
+	D0 = pNew[1];
+	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), 0, 0, pNew);
+	D1 = pNew[1];
+
+	double zb0 = C0 * (1. - xd) + C1 * xd;
+	double zb1 = D0 * (1. - xd) + D1 * xd;
 
 	// set seabed elevation for point
 	res[1] = zb0 * (1. - td) + zb1 * td;

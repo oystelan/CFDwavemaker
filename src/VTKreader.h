@@ -57,6 +57,7 @@ public:
 	vtkCellDataToPointData* c2p0;
 	vtkCellDataToPointData* c2p1;
 
+        bool input2d = false;
 	int nx, ny, nl;
 	double dx, dy;
 	double bounds[6];
@@ -77,6 +78,10 @@ public:
 	double* trilinear_interpolation(double tpt, double xpt, double ypt, double zpt);
 
 	double* bilinear_interpolation(double tpt, double xpt, double ypt);
+
+	double* bilinear_interpolation_xy(double tpt, double xpt, double zpt);
+        
+        double* linear_interpolation(double tpt, double xpt); 
 
 	bool CheckTime(double tpt);
 

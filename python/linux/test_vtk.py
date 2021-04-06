@@ -80,7 +80,7 @@ u = []
 v = []
 w = []
 
-x = 70.
+x = -795.
 y = 0.
 z = -7.
 
@@ -98,6 +98,7 @@ plt.plot(time, ww, label="x=-200, y=0")
 plt.plot(time, ww2, label="x=-150, y=5.")
 plt.legend()
 plt.grid(True)
+#plt.show()
 plt.savefig("./result_eta.png")
 
 plt.clf()
@@ -106,6 +107,7 @@ plt.plot(time,v, label='v')
 plt.plot(time,w, label='w')
 plt.legend()
 plt.grid(True)
+#plt.show()
 plt.savefig("./result_u.png")
 
 
