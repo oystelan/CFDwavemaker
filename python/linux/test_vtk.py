@@ -77,6 +77,8 @@ time = np.arange(15, 20., 0.1)
 ww = []
 ww2 = []
 u = []
+u2 = []
+u3 = []
 v = []
 w = []
 
@@ -90,8 +92,10 @@ for t in time:
     ww.append(waveelev(mydll,t,x,y))
     ww2.append(waveelev(mydll,t,x,y))
     u.append(velocityX(mydll,t,x,y,z))
-    v.append(velocityY(mydll,t,x,y,z))
-    w.append(velocityZ(mydll,t,x,y,z))
+    u2.append(velocityX(mydll,t,x,y,z-20.))
+    u3.append(velocityX(mydll,t,x,y,z-40.))
+    #v.append(velocityY(mydll,t,x,y,z))
+    #w.append(velocityZ(mydll,t,x,y,z))
     
 
 plt.plot(time, ww, label="x=-200, y=0")
@@ -103,8 +107,8 @@ plt.savefig("./result_eta.png")
 
 plt.clf()
 plt.plot(time,u, label='u')
-plt.plot(time,v, label='v')
-plt.plot(time,w, label='w')
+plt.plot(time,u2, label='u2')
+plt.plot(time,u3, label='u3')
 plt.legend()
 plt.grid(True)
 #plt.show()

@@ -35,6 +35,7 @@ $(TARGETS_SHARED_OMP_SWD): $(OBJ)
 	$(CC) $(CCFLAGS) -shared -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
-$(TARGETS_STATIC_OMP_SWD): $(OBJ) 
+$(TARGETS_STATIC_OMP_SWD): $(OBJ)
+	rm -f $(BUILD_DIR)lib$@ 
 	ar rvs -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o
 	chmod 775 $(BUILD_DIR)lib$@

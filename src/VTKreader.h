@@ -63,7 +63,7 @@ public:
 	double bounds[6];
 	double* beta; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;
-	double t0, t1, dt, tmin, tmax;
+	double t0, t1, dt, tmin, tmax, zmin;
 	int vfraq_field_located;
 	int velo_field_located;
 	int dimensions[3];
@@ -81,7 +81,7 @@ public:
 
 	double* bilinear_interpolation_xy(double tpt, double xpt, double zpt);
         
-        double* linear_interpolation(double tpt, double xpt); 
+    double* linear_interpolation(double tpt, double xpt); 
 
 	bool CheckTime(double tpt);
 

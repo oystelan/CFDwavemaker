@@ -97,6 +97,7 @@ void VTKreader::update(double tpt) {
 
 
 double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
+	//cout << "zpt: " << zpt << endl;
     double* temp;
     if (input2d){
         temp = bilinear_interpolation_xy(tpt, xpt, zpt);
@@ -196,9 +197,11 @@ void VTKreader::loadInit(string path, const char* fname) {
 	if (dims[2] == 1) {
 		cout << "Two dimensional data read, given in x-y plane" << endl;
 		input2d = true;
+		zmin = bounds[2];
 	}
 	else {
 		cout << "This is a 3D case." << endl;
+		zmin = bounds[4];
 	}
 
 
@@ -254,7 +257,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 				dataset1->GetPoint(i, nl - 1, 0, pNew);
 				welev = pNew[1];
 				beta[k * nx  + i] = 1. + z2s(z, welev, -seabed);
-				cout << "seabed:" << seabed << " welev: " << welev << endl;
+				//cout << "seabed:" << seabed << " welev: " << welev << endl;
 			}
 		}
 
@@ -655,7 +658,7 @@ double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt)
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
 	double spt0 = std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
-	double spt1 = std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb0), -1.);
+	double spt1 = std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb1), -1.);
 	
 
 	int nsp0, nsp1;
@@ -665,8 +668,9 @@ double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt)
 	double sd1 = stretchInterpLocatorZ(spt1 + 1., &nsp1, nxp, 0);
 
 	//int temp = clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1);
-	
-	//cout << "nxp: " << nxp << ", nyp: " << nyp << "nsp0: " << nsp0 << "sum: " << temp << endl;
+	//cout << "wave_elev: " << wave_elev0 << ", " << wave_elev1 << " sb: " << zb0 << ", " << zb1 << endl;
+	//cout << "zpt: " << zpt <<" spt0: " << spt0 << endl;
+	//cout << "nxp: " << nxp << ", " << "nsp0: " << nsp0 << endl;
 
 	//exit(0);
 	// Trilinear interpolation.

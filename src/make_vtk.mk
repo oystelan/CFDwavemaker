@@ -34,6 +34,7 @@ $(TARGETS_SHARED_OMP_VTK): $(OBJ)
 
 $(TARGETS_STATIC_OMP_VTK): EXTRA_FLAGS = -ldl -lpthread -fopenmp
 $(TARGETS_STATIC_OMP_VTK): $(OBJ)
+	rm -f $(BUILD_DIR)lib$@
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
 	ar -M <vtk_static.mri

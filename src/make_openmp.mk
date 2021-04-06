@@ -29,5 +29,6 @@ $(TARGETS_SHARED_OMP): $(OBJ)
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_STATIC_OMP): $(OBJ)
+	rm -f $(BUILD_DIR)lib$@
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
