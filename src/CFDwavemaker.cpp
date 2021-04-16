@@ -1761,7 +1761,8 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
-#pragma omp single nowait
+			std::cout << "ape3" << std::endl;
+#pragma omp single nowait		
 			sgrid.update(swd, tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -2036,7 +2037,8 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
-#pragma omp single nowait
+			std::cout << "ape2" << std::endl;
+#pragma omp single nowait 	
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
@@ -2303,14 +2305,38 @@ int Cleanup() {
 }
 
 double wave_phase_velocity(int opt) {
-	return irregular.phase_velocity(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.phase_velocity(opt);
+	case 4:
+		return irregular.phase_velocity(opt);
+	default:
+		return 0.;
+	}
 }
 
 double wave_mean_length(int opt) {
-	return irregular.mean_wave_length(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.mean_wave_length(opt);
+	case 4:
+		return irregular.mean_wave_length(opt);
+	default:
+		return 0.;
+	}
 }
 double wave_mean_period(int opt) {
-	return irregular.mean_wave_period(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.mean_wave_period(opt);
+	case 4:
+		return irregular.mean_wave_period(opt);
+	default:
+		return 0.;
+	}	
 }
 
 void wave_force_update(double tpt) {
@@ -2327,9 +2353,11 @@ void wave_force_update(double tpt) {
 
 #if defined(SWD_enable)
 	case 34: {
+		
 		if (!sgrid.CheckTime(tpt)) {
+			std::cout << "ape" << std::endl;
 			//#pragma omp single
-#pragma omp single nowait
+//#pragma omp single nowait 			
 			sgrid.update(swd, tpt);
 		}
 		break;

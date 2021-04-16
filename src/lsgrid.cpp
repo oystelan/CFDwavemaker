@@ -676,8 +676,8 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		{
 			// Main grid
 #pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
+			for (int j = 0; j < ny; j++) {
+				for (int i = 0; i < nx; i++) {
 					double xpt = domain[0] + dx * i;
 					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
 					double ypt = domain[2] + dy * j;
@@ -1133,12 +1133,14 @@ if (!disable_checkbounds){
 			// we first need to call: swd.ExceptionClear()
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
+
 #pragma omp parallel
 		{
 			// Main grid
+// switch order of i and j on purpose since this works much betten when ignore is on and wave propagate from the x boundary only
 #pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
+			for (int j = 0; j < ny; j++) { 
+				for (int i = 0; i < nx; i++) {
 					if (!IGNORE[i * ny + j]) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
