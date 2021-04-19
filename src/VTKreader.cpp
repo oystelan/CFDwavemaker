@@ -744,18 +744,36 @@ double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt)
 	//cout << "nxp: " << nxp << ", " << "nsp0: " << nsp0 << endl;
 
 	//exit(0);
-	// Trilinear interpolation.
-	double* CC00 = U0->GetTuple3(nsp0 * nx + nxp);
-	double* CC01 = U0->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));        
-	double* CC10 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
-	double* CC11 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	// Bilinear interpolation.
+	double* temp;
+	double CC00[8];
+	temp = U0->GetTuple3(nsp0 * nx + nxp);
+	CC00[0] = temp[0];
+	CC00[1] = temp[1];
+	temp = U0->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));
+	CC00[2] = temp[0];
+	CC00[3] = temp[1];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	CC00[4] = temp[0];
+	CC00[5] = temp[1];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	CC00[6] = temp[0];
+	CC00[7] = temp[1];
 
-
-	double* DD00 = U1->GetTuple3(nsp0 * nx + nxp);
-	double* DD01 = U1->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));	
-	double* DD10 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
-	double* DD11 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
 	
+	double DD00[8];
+	temp = U1->GetTuple3(nsp0 * nx + nxp);
+	DD00[0] = temp[0];
+	DD00[1] = temp[1];
+	temp = U1->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));
+	DD00[2] = temp[0];
+	DD00[3] = temp[1];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	DD00[4] = temp[0];
+	DD00[5] = temp[1];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	DD00[6] = temp[0];
+	DD00[7] = temp[1];
 
 	//double sd0 = nsp0 - floor(nsp0);
 	//double sd1 = nsp1 - floor(nsp1);
@@ -765,14 +783,14 @@ double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt)
 	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
 
 	double CC0[2], CC1[2], DD0[2], DD1[2];
-	CC0[0] = CC00[0] * (1. - xd) + CC10[0] * xd;
-	CC0[1] = CC00[1] * (1. - xd) + CC10[1] * xd;
-	CC1[0] = CC01[0] * (1. - xd) + CC11[0] * xd;
-	CC1[1] = CC01[1] * (1. - xd) + CC11[1] * xd;
-	DD0[0] = DD00[0] * (1. - xd) + DD10[0] * xd;
-	DD0[1] = DD00[1] * (1. - xd) + DD10[1] * xd;
-	DD1[0] = DD01[0] * (1. - xd) + DD11[0] * xd;
-	DD1[1] = DD01[1] * (1. - xd) + DD11[1] * xd;
+	CC0[0] = CC00[0] * (1. - xd) + CC00[1] * xd;
+	CC0[1] = CC00[2] * (1. - xd) + CC00[3] * xd;
+	CC1[0] = CC00[4] * (1. - xd) + CC00[5] * xd;
+	CC1[1] = CC00[6] * (1. - xd) + CC00[7] * xd;
+	DD0[0] = DD00[0] * (1. - xd) + DD00[1] * xd;
+	DD0[1] = DD00[2] * (1. - xd) + DD00[3] * xd;
+	DD1[0] = DD00[4] * (1. - xd) + DD00[5] * xd;
+	DD1[1] = DD00[6] * (1. - xd) + DD00[7] * xd;
 
 	
 	res[2] = (CC0[0] * (1. - sd0) + CC1[0] * sd0) * (1. - td) + (DD0[0] * (1. - sd1) + DD1[0] * sd1) * td; // u
