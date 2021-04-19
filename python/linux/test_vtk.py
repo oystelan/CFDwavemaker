@@ -71,9 +71,10 @@ print(init_dll(mydll))
 
 
 
-time = np.arange(10, 30., 0.05)
+#time = np.arange(10, 30., 0.05)
 
-
+zz = np.arange(-40, 0., 1.)
+t = 0.
 ww = []
 u = []
 #u2 = []
@@ -81,11 +82,12 @@ u = []
 v = []
 w = []
 
-x = -795.
-y = 0.
-z = -250.
+x = 30.
+y = -174.
+#z = -250.
 
-for t in time:
+#for t in time:
+for z in zz:    
     #print(waveelev(mydll,t,x,y))
 
     ww.append(waveelev(mydll,t,x,y))
@@ -94,15 +96,16 @@ for t in time:
     #u3.append(velocityX(mydll,t,x,y,z-40.))
     v.append(velocityY(mydll,t,x,y,z))
     w.append(velocityZ(mydll,t,x,y,z))
+    print("z:", z, " u: ",velocityX(mydll,t,x,y,z))
     
 
 
 
 
 plt.clf()
-plt.plot(time,u, label='u')
-plt.plot(time,v, label='v')
-plt.plot(time,w, label='w')
+plt.plot(u,zz, label='u')
+plt.plot(v,zz, label='v')
+plt.plot(w,zz, label='w')
 #plt.plot(time, ww, label="eta")
 plt.legend()
 plt.grid(True)

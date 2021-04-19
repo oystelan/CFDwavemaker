@@ -1,4 +1,4 @@
-CC      := g++
+CC      := g++-9
 CCFLAGS := -O2 -fPIC -pthread -std=c++17 -fopenmp
 LIBS += -lm 
 BUILD_DIR += ../builds/linux64/

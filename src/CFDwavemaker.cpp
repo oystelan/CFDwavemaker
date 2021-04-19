@@ -1761,7 +1761,6 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
-			std::cout << "ape3" << std::endl;
 #pragma omp single nowait		
 			sgrid.update(swd, tpt);
 		}
@@ -2037,7 +2036,6 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
-			std::cout << "ape2" << std::endl;
 #pragma omp single nowait 	
 			sgrid.update(swd, tpt);
 		}
@@ -2355,9 +2353,8 @@ void wave_force_update(double tpt) {
 	case 34: {
 		
 		if (!sgrid.CheckTime(tpt)) {
-			std::cout << "ape" << std::endl;
 			//#pragma omp single
-//#pragma omp single nowait 			
+#pragma omp single nowait 			
 			sgrid.update(swd, tpt);
 		}
 		break;

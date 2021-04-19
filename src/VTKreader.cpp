@@ -518,87 +518,158 @@ double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, d
 	double sd0 = stretchInterpLocatorZ(spt0 + 1., &nsp0, nxp, nyp);
 	double sd1 = stretchInterpLocatorZ(spt1 + 1., &nsp1, nxp, nyp);
 
-	int temp = clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1);
+	//cout << "sd0: " << sd0 << "z: " << zpt << endl;
+
+	//int temp = clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1);
 	
 	//cout << "nxp: " << nxp << ", nyp: " << nyp << "nsp0: " << nsp0 << "sum: " << temp << endl;
 
 	//exit(0);
+
+	//cout << "nsp0: " << nsp0 << " " << clip(nsp0 + 1, 0, nl - 1) << endl;
+
 	// Trilinear interpolation.
-	double* C000 = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
-	double* C001 = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
-	double* C010 = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
-	double* C011 = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
-	double* C100 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
-	double* C101 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
-	double* C110 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
-	double* C111 = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	double* temp;
+	double C000[24];
+	temp = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
+	C000[0] = temp[0];
+	C000[1] = temp[1];
+	C000[2] = temp[2];
+	temp = U0->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	C000[3] = temp[0];
+	C000[4] = temp[1];
+	C000[5] = temp[2];
+	temp = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	C000[6] = temp[0];
+	C000[7] = temp[1];
+	C000[8] = temp[2];
+	temp = U0->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	C000[9] = temp[0];
+	C000[10] = temp[1];
+	C000[11] = temp[2];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
+	C000[12] = temp[0];
+	C000[13] = temp[1];
+	C000[14] = temp[2];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	C000[15] = temp[0];
+	C000[16] = temp[1];
+	C000[17] = temp[2];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	C000[18] = temp[0];
+	C000[19] = temp[1];
+	C000[20] = temp[2];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	C000[21] = temp[0];
+	C000[22] = temp[1];
+	C000[23] = temp[2];
 
+	//cout << "ulow: " << C000[0] << " " << C000[3] << " " << C000[6] << " " << C000[9] << endl;
+	//cout << "uhigh: " << C000[12] << " " << C000[15] << " " << C000[18] << " " << C000[21] << endl;
 
-	double* D000 = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
-	double* D001 = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
-	double* D010 = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
-	double* D011 = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
-	double* D100 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
-	double* D101 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
-	double* D110 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
-	double* D111 = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	// Trilinear interpolation.
+	double D000[24];
+	temp = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
+	D000[0] = temp[0];
+	D000[1] = temp[1];
+	D000[2] = temp[2];
+	temp = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	D000[3] = temp[0];
+	D000[4] = temp[1];
+	D000[5] = temp[2];
+	temp = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	D000[6] = temp[0];
+	D000[7] = temp[1];
+	D000[8] = temp[2];
+	temp = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	D000[9] = temp[0];
+	D000[10] = temp[1];
+	D000[11] = temp[2];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
+	D000[12] = temp[0];
+	D000[13] = temp[1];
+	D000[14] = temp[2];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	D000[15] = temp[0];
+	D000[16] = temp[1];
+	D000[17] = temp[2];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	D000[18] = temp[0];
+	D000[19] = temp[1];
+	D000[20] = temp[2];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	D000[21] = temp[0];
+	D000[22] = temp[1];
+	D000[23] = temp[2];
 
 	//double sd0 = nsp0 - floor(nsp0);
 	//double sd1 = nsp1 - floor(nsp1);
 
 	double CC00[3], CC01[3], CC10[3], CC11[3];
-	CC00[0] = C000[0] * (1. - xd) + C100[0] * xd;
-	CC00[1] = C000[1] * (1. - xd) + C100[1] * xd;
-	CC00[2] = C000[2] * (1. - xd) + C100[2] * xd;
+	CC00[0] = C000[0] * (1. - xd) + C000[3] * xd;
+	CC00[1] = C000[1] * (1. - xd) + C000[4] * xd;
+	CC00[2] = C000[2] * (1. - xd) + C000[5] * xd;
 
-	CC01[0] = C001[0] * (1. - xd) + C101[0] * xd;
-	CC01[1] = C001[1] * (1. - xd) + C101[1] * xd;
-	CC01[2] = C001[2] * (1. - xd) + C101[2] * xd;
+	CC01[0] = C000[6] * (1. - xd) + C000[9] * xd;
+	CC01[1] = C000[7] * (1. - xd) + C000[10] * xd;
+	CC01[2] = C000[8] * (1. - xd) + C000[11] * xd;
 
-	CC10[0] = C010[0] * (1. - xd) + C110[0] * xd;
-	CC10[1] = C010[1] * (1. - xd) + C110[1] * xd;
-	CC10[2] = C010[2] * (1. - xd) + C110[2] * xd;
+	CC10[0] = C000[12] * (1. - xd) + C000[15] * xd;
+	CC10[1] = C000[13] * (1. - xd) + C000[16] * xd;
+	CC10[2] = C000[14] * (1. - xd) + C000[17] * xd;
 
-	CC11[0] = C011[0] * (1. - xd) + C111[0] * xd;
-	CC11[1] = C011[1] * (1. - xd) + C111[1] * xd;
-	CC11[2] = C011[2] * (1. - xd) + C111[2] * xd;
+	CC11[0] = C000[18] * (1. - xd) + C000[21] * xd;
+	CC11[1] = C000[19] * (1. - xd) + C000[22] * xd;
+	CC11[2] = C000[20] * (1. - xd) + C000[23] * xd;
+
+	//cout << "ulow: " << CC00[0] << " " << CC01[0] << endl;
+	//cout << "uhigh: " << CC10[0] << " " << CC11[0] << endl;
 
 	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
 
 	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
 
 	double DD00[3], DD01[3], DD10[3], DD11[3];
-	DD00[0] = D000[0] * (1. - xd) + D100[0] * xd;
-	DD00[1] = D000[1] * (1. - xd) + D100[1] * xd;
-	DD00[2] = D000[2] * (1. - xd) + D100[2] * xd;
-	DD01[0] = D001[0] * (1. - xd) + D101[0] * xd;
-	DD01[1] = D001[1] * (1. - xd) + D101[1] * xd;
-	DD01[2] = D001[2] * (1. - xd) + D101[2] * xd;
-	DD10[0] = D010[0] * (1. - xd) + D110[0] * xd;
-	DD10[1] = D010[1] * (1. - xd) + D110[1] * xd;
-	DD10[2] = D010[2] * (1. - xd) + D110[2] * xd;
-	DD11[0] = D011[0] * (1. - xd) + D111[0] * xd;
-	DD11[1] = D011[1] * (1. - xd) + D111[1] * xd;
-	DD11[2] = D011[2] * (1. - xd) + D111[2] * xd;
+	DD00[0] = D000[0] * (1. - xd) + D000[3] * xd;
+	DD00[1] = D000[1] * (1. - xd) + D000[4] * xd;
+	DD00[2] = D000[2] * (1. - xd) + D000[5] * xd;
+
+	DD01[0] = D000[6] * (1. - xd) + D000[9] * xd;
+	DD01[1] = D000[7] * (1. - xd) + D000[10] * xd;
+	DD01[2] = D000[8] * (1. - xd) + D000[11] * xd;
+
+	DD10[0] = D000[12] * (1. - xd) + D000[15] * xd;
+	DD10[1] = D000[13] * (1. - xd) + D000[16] * xd;
+	DD10[2] = D000[14] * (1. - xd) + D000[17] * xd;
+
+	DD11[0] = D000[18] * (1. - xd) + D000[21] * xd;
+	DD11[1] = D000[19] * (1. - xd) + D000[22] * xd;
+	DD11[2] = D000[20] * (1. - xd) + D000[23] * xd;
 
 	double CC0[3], CC1[3], DD0[3], DD1[3];
-	CC0[0] = CC00[0] * (1. - yd) + CC10[0] * yd;
-	CC0[1] = CC00[1] * (1. - yd) + CC10[1] * yd;
-	CC0[2] = CC00[2] * (1. - yd) + CC10[2] * yd;
-	CC1[0] = CC01[0] * (1. - yd) + CC11[0] * yd;
-	CC1[1] = CC01[1] * (1. - yd) + CC11[1] * yd;
-	CC1[2] = CC01[2] * (1. - yd) + CC11[2] * yd;
-	DD0[0] = DD00[0] * (1. - yd) + DD10[0] * yd;
-	DD0[1] = DD00[1] * (1. - yd) + DD10[1] * yd;
-	DD0[2] = DD00[2] * (1. - yd) + DD10[2] * yd;
-	DD1[0] = DD01[0] * (1. - yd) + DD11[0] * yd;
-	DD1[1] = DD01[1] * (1. - yd) + DD11[1] * yd;
-	DD1[2] = DD01[2] * (1. - yd) + DD11[2] * yd;
+	CC0[0] = CC00[0] * (1. - yd) + CC01[0] * yd;
+	CC0[1] = CC00[1] * (1. - yd) + CC01[1] * yd;
+	CC0[2] = CC00[2] * (1. - yd) + CC01[2] * yd;
+	CC1[0] = CC11[0] * (1. - yd) + CC11[0] * yd;
+	CC1[1] = CC11[1] * (1. - yd) + CC11[1] * yd;
+	CC1[2] = CC11[2] * (1. - yd) + CC11[2] * yd;
+
+	//cout << "ulow: " << CC0[0]  << endl;
+	//cout << "uhigh: " << CC1[0] << endl;
+
+	DD0[0] = DD00[0] * (1. - yd) + DD01[0] * yd;
+	DD0[1] = DD00[1] * (1. - yd) + DD01[1] * yd;
+	DD0[2] = DD00[2] * (1. - yd) + DD01[2] * yd;
+	DD1[0] = DD10[0] * (1. - yd) + DD11[0] * yd;
+	DD1[1] = DD10[1] * (1. - yd) + DD11[1] * yd;
+	DD1[2] = DD10[2] * (1. - yd) + DD11[2] * yd;
 
 	
 	res[2] = (CC0[0] * (1. - sd0) + CC1[0] * sd0) * (1. - td) + (DD0[0] * (1. - sd1) + DD1[0] * sd1) * td; // u
 	res[3] = (CC0[1] * (1. - sd0) + CC1[1] * sd0) * (1. - td) + (DD0[1] * (1. - sd1) + DD1[1] * sd1) * td; // v
 	res[4] = (CC0[2] * (1. - sd0) + CC1[2] * sd0) * (1. - td) + (DD0[2] * (1. - sd1) + DD1[2] * sd1) * td; // w
+
+	//cout << "ulow:" << CC0[0] << ", uhigh: "<< CC1[0] << endl;
 
 	return res;
 }

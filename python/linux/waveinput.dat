@@ -4,7 +4,7 @@
 vtk
 
 [vtk input]
-#storage_path /home/oland/storage/basilisk/MultilayerOcean/kalsto_model4_newB/subdomain/
-storage_path /home/oland/storage/basilisk/MultilayerOcean/validation/long_term_statistics/version6_tp154_newB/vtk/
-filename surface
+storage_path /home/oland/storage/basilisk/MultilayerOcean/kalsto_model4_newB_hosm/seastate0010/sim0000/filling/subdomain/
+#storage_path /home/oland/storage/basilisk/MultilayerOcean/validation/long_term_statistics/version6_tp154_newB/vtk/
+filename subdomain
 name_velocity_field Velocity
