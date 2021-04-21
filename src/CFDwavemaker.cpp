@@ -26,7 +26,8 @@
 #include <vector>
 #include <numeric>      // std::iota
 #include <algorithm>    // std::sort, std::stable_sort
-#include <filesystem>
+//#include <filesystem>
+
 
 //#include <direct.h> // windows only function
 #//include <cctype>
@@ -1808,7 +1809,8 @@ double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
 			vtkreader.update(tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
-		temp = vtkreader.trilinear_interpolation(tpt, xpt, ypt, zpt);
+		double res[5];
+		double* temp = vtkreader.trilinear_interpolation(res, tpt, xpt, ypt, zpt);
 		return temp;
 #else
 		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
@@ -2172,7 +2174,9 @@ int wave_Initialize()
 	std::cout << "---------------------------------------" << std::endl;
 	
 	
-	std::filesystem::path cwd = std::filesystem::current_path();
+	//std::filesystem::path cwd = std::filesystem::current_path();
+
+	std::string cwd = get_current_dir();
 
 	std::cout <<"working directory: " << cwd << std::endl;
 
