@@ -75,13 +75,13 @@ public:
 	vector<string>* filevec;
 	string vtkfilepath, vtk_prefix, Uname, vtk_timelabel;
 
-	double* trilinear_interpolation(double tpt, double xpt, double ypt, double zpt);
+	double* trilinear_interpolation(double* res, double tpt, double xpt, double ypt, double zpt);
 
-	double* bilinear_interpolation(double tpt, double xpt, double ypt);
+	double* bilinear_interpolation(double* res, double tpt, double xpt, double ypt);
 
-	double* bilinear_interpolation_xy(double tpt, double xpt, double zpt);
+	double* bilinear_interpolation_xy(double* res, double tpt, double xpt, double zpt);
         
-    double* linear_interpolation(double tpt, double xpt); 
+    double* linear_interpolation(double* res, double tpt, double xpt);
 
 	bool CheckTime(double tpt);
 

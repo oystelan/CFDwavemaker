@@ -3,9 +3,17 @@
 #include <algorithm>
 #include <cmath>
 #include <sys/stat.h>
-#if defined(_WIN32)
-#include < direct.h >
+//#if defined(_WIN32)
+//#include < direct.h >
+//#endif
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
 #endif
+#include<iostream>
 
 // -------------------------------------------------------------------------------------------------
 // ramp class function
@@ -59,6 +67,7 @@ double Ramp::ramp(double t, double x, double y) {
 }
 
 
+
 /******************************************************************************
  * Checks to see if a directory exists. Note: This method only checks the
  * existence of the full path AND if path leaf is a dir.
@@ -96,4 +105,14 @@ void createDirectory(std::string sPath) {
 	if (nError != 0) {
 		// handle your error here
 	}
+}
+
+
+using namespace std;
+
+std::string get_current_dir() {
+	char buff[FILENAME_MAX]; //create string buffer to hold path
+	GetCurrentDir(buff, FILENAME_MAX);
+	string current_working_dir(buff);
+	return current_working_dir;
 }

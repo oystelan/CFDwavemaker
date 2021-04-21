@@ -98,56 +98,61 @@ void VTKreader::update(double tpt) {
 
 double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
 	//cout << "zpt: " << zpt << endl;
-    double* temp;
+    double res[5];
+	double* temp;
     if (input2d){
-        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res, tpt, xpt, zpt);
     }
     else{
-	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
     }
     return temp[2];
 }
 
 double VTKreader::v(double tpt, double xpt, double ypt, double zpt) {
-    double* temp;
+	double res[5];
+	double* temp;
     if (input2d){
-        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res,tpt, xpt, zpt);
     }
     else{
-	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
     }
     return temp[3];
 }
 
 double VTKreader::w(double tpt, double xpt, double ypt, double zpt) {
-    double* temp;
+	double res[5];
+	double* temp;
     if (input2d){
-        temp = bilinear_interpolation_xy(tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res, tpt, xpt, zpt);
     }
     else{
-	temp = trilinear_interpolation(tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
     }
     return temp[4];
 }
 
 double VTKreader::eta(double tpt, double xpt, double ypt) {
-        double* temp;
+		double res[2];
+		double* temp;
         if (input2d){
-            temp = linear_interpolation(tpt, xpt);
+			 temp = linear_interpolation(res, tpt, xpt);
         }
         else{
-            temp = bilinear_interpolation(tpt, xpt, ypt);
+			 temp = bilinear_interpolation(res, tpt, xpt, ypt);
         }
         return temp[0];
 }
 
 double VTKreader::seabed(double xpt, double ypt) {
-	double* temp;
+		double res[2];
+		double* temp;
         if (input2d){
-            temp = linear_interpolation(0, xpt);
+			 temp = linear_interpolation(res, 0, xpt);
         }
         else{
-            temp = bilinear_interpolation(0, xpt, ypt);
+			 temp = bilinear_interpolation(res, 0, xpt, ypt);
         }
 	return temp[1];
 }
@@ -430,9 +435,9 @@ T clip(const T & n, const T & lower, const T & upper) {
 }
 
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, double zpt) {
+double* VTKreader::trilinear_interpolation(double* res, double tpt, double xpt, double ypt, double zpt) {
 
-	static double res[5]; // array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
+	// array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
 
 	float nxp_temp, nyp_temp;
 	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
@@ -676,9 +681,9 @@ double* VTKreader::trilinear_interpolation(double tpt, double xpt, double ypt, d
 
 /* Function for bilinear interpolation on a cartesian evenly spaced mesh in x direction and
  streched mesh in y direction*/
-double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt) {
+double* VTKreader::bilinear_interpolation_xy(double* res, double tpt, double xpt, double zpt) {
 
-	static double res[5]; // array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
+	// array to store results, where 0 = eta, 1=seabed, 2=u, 3=v, 4=w
 
 	float nxp_temp;
 	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
@@ -804,9 +809,9 @@ double* VTKreader::bilinear_interpolation_xy(double tpt, double xpt, double zpt)
 
 
 /* Function for bi interpolation on a cartesian evenly spaced mesh*/
-double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
+double* VTKreader::bilinear_interpolation(double* res, double tpt, double xpt, double ypt) {
 
-	static double res[2]; // array to store results, where 0 = eta, 1=seabed
+	// array to store results, where 0 = eta, 1=seabed
 
 	float nxp_temp, nyp_temp;
 	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
@@ -884,9 +889,9 @@ double* VTKreader::bilinear_interpolation(double tpt, double xpt, double ypt) {
 
 
 /* Function for bi interpolation on a cartesian evenly spaced mesh*/
-double* VTKreader::linear_interpolation(double tpt, double xpt) {
+double* VTKreader::linear_interpolation(double* res, double tpt, double xpt) {
 
-	static double res[2]; // array to store results, where 0 = eta, 1=seabed
+	// array to store results, where 0 = eta, 1=seabed
 
 	float nxp_temp;
 	double xd = std::modf(clip((xpt - bounds[0]) / dx, 0., nx - 1.), &nxp_temp);
