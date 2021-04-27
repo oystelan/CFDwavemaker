@@ -3,8 +3,8 @@ CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp
 LDFLAGS := -L./
 LIBS += -lm 
 BUILD_DIR += ../builds/linux64/
-VTK_DIR= /home/oland/vtk/install_vtk-9.0.1
-VTK_LIBS = $(VTK_DIR)/lib64
+VTK_DIR= /home/oland/programs/vtk-9.0.1/installdir
+VTK_LIBS = $(VTK_DIR)/lib
 VTK_INCL = $(VTK_DIR)/include/vtk-9.0
 
 export PATH:=$(VTK_INCL):${PATH}
