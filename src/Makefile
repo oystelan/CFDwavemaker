@@ -19,3 +19,6 @@ swd:
 
 vtk:
 	@$(MAKE) -f make_vtk.mk
+
+vtk_cluster:
+	@$(MAKE) -f make_vtk.mk

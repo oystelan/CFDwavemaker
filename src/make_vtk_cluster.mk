@@ -38,5 +38,5 @@ $(TARGETS_STATIC_OMP_VTK): $(OBJ)
 	ar rvs -o $(BUILD_DIR)lib$@ $^
 	chmod 775 $(BUILD_DIR)lib$@
 	export PATH=$(PATH):$(VTK_LIBS)
-	ar -M <vtk_static.mri
+	ar -M <vtk_static_cluster.mri
 
