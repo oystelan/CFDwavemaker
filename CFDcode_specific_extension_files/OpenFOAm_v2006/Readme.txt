@@ -17,8 +17,16 @@ Installation instructions
 waveGenerationModels/derived/CFDwavemaker/CFDwavemakerWaveModel.C
 waveDampToIncident/WaveDampToIncident.C
 6. add the following lines to OpenFOAM-v2006/src/waveModels/Make/options
-	-lgfortran \ 
-   which is required since the swd library is fortran.
+
+LIB_LIBS = \
+    -lfiniteVolume \
+    -lmeshTools \
+    -lfvOptions \
+    -fopenmp \
+    -lCFDwavemaker_openmp \
+    -L$(LIB_SRC)/waveModels/waveGenerationModels/derived/CFDwavemaker 
+   
+which is required since the swd library is fortran.
 
 7. Now, compile openfoam. Step 1-3 may be done after openfoam has been compiled, just remember to recompile the wave library. This is most easily done by running OpenFOAM-v2006/src/Allrun.
 If you compile openfoam for the first time, be patient. It takes a while! (typically half a day).
