@@ -1,8 +1,7 @@
 MAKE_DIR = $(PWD)
 
 all:
-	@$(MAKE) -f make_openmp.mk
-	@$(MAKE) -f make_swd.mk
+	@$(MAKE) -f make_complete.mk
 
 .PHONY: clean all
 
