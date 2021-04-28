@@ -1,5 +1,5 @@
-CC      := g++-9
-CCFLAGS := -O2 -fPIC -pthread -std=c++17 -fopenmp
+CC      := g++
+CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp
 LIBS += -lm 
 BUILD_DIR += ../builds/linux64/
 
