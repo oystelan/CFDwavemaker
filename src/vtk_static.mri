@@ -1,32 +1,11 @@
 open ../builds/linux64/libCFDwavemaker_vtk_openmp.a
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkWrappingTools-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonColor-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtksys-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOParallelXML-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtklibxml2-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkzlib-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOImport-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOGeometry-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOExport-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersTopology-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersSelection-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersSMP-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersProgrammable-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersPoints-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersVerdict-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersGeneric-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersParallel-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersExtraction-9.0.a  
+
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOCore-9.0.a
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersCore-9.0.a
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOXML-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOXMLParser-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkexpat-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkParallelCore-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOLegacy-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOCore-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkdoubleconversion-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtklz4-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtklzma-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersCore-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonExecutionModel-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonDataModel-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonSystem-9.0.a 
@@ -34,7 +13,12 @@ addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonMisc-9.0.a
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonTransforms-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonMath-9.0.a 
 addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkCommonCore-9.0.a 
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkzlib-9.0.a
-addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkloguru-9.0.a  
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkloguru-9.0.a    
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtksys-9.0.a  
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkzlib-9.0.a 
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkIOImport-9.0.a     
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersGeneric-9.0.a 
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkFiltersParallel-9.0.a  
+addlib /home/oland/programs/vtk-9.0.1/installdir/lib/libvtkexpat-9.0.a   
 save
 end
