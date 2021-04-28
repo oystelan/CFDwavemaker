@@ -22,7 +22,7 @@ OBJ	   := $(MAINS) Stokes5.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o 
 all: $(TARGETS_SHARED_OMP_SWD) $(TARGETS_STATIC_OMP_SWD)
 
 clean:
-	rm -f $(OBJ) $(OBJ_SWD) *f90.o *F90.o
+	rm -f $(OBJ) *f90.o *F90.o
 	cp ../swd/cpp/SpectralWaveData.cpp .
 	cp ../swd/inc/SpectralWaveData.h .
 	cp ../swd/inc/spectral_wave_data.h .
