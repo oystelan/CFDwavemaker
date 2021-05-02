@@ -11,6 +11,10 @@ Here is a list of planned upgrades,ideas and improvements to the library:
 - implement wind turbulence models for two-phase problems
 - add more illustrations in the manual (figures)
 - implement time-trace dump for specified list of points
+- Implement dopple shift to take into account a constant current. Redefine x og y for a given current (U, V)
+x' = x – Ut
+y' = y - Vt
+t' = t
 
 Task completed
 --------------
