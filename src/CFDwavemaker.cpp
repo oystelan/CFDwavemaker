@@ -26,7 +26,8 @@
 #include <vector>
 #include <numeric>      // std::iota
 #include <algorithm>    // std::sort, std::stable_sort
-#include <filesystem>
+//#include <filesystem>
+
 
 //#include <direct.h> // windows only function
 #//include <cctype>
@@ -39,11 +40,14 @@
 #include "lsgrid.h"
 #include "probes.h"
 
-
 // for now, spectralwavedata is only supported in linux build
 
 #if defined(SWD_enable)
 #include "SpectralWaveData.h"
+#endif
+
+#if defined(VTK_enable)
+#include "VTKreader.h"
 #endif
 
 
@@ -106,6 +110,10 @@ Probes probes;
 // SWD class;
 #if defined(SWD_enable)
 SpectralWaveData *swd;
+#endif
+
+#if defined(VTK_enable)
+VTKreader vtkreader;
 #endif
 
 //string GetCurrentWorkingDir(void) {
@@ -677,6 +685,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				inputdata.wavetype = 31;
 				std::cout << "Spectral wave data (swd) specified" << std::endl;
 			}
+			else if (!lineA.compare("vtk")) {
+				inputdata.wavetype = 41;
+				std::cout << "Special branch VTK file interpolation" << std::endl;
+			}
 			
 			else {
 				std::cerr << "INPUTFILE ERROR: Unknown wave type specified. Valid alternatives are:" << std::endl;
@@ -684,6 +696,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 				std::cerr << "regular" << std::endl;
 				std::cerr << "wavemaker" << std::endl;
 				std::cerr << "swd" << std::endl;
+				std::cerr << "vtk" << std::endl;
 				
 				exit(-1);
 			}
@@ -1368,7 +1381,6 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 
 		}
 		
-
 		if (!lineA.compare("[vtk output]")) { //optional
 			std::cout << "--------------------" << std::endl;
 			std::cout << "VTK output settings:" << std::endl;
@@ -1487,6 +1499,51 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					break;
 				}
 			}
+		}
+
+		if (!lineA.compare("[vtk input]")) {
+
+#if defined(VTK_enable)
+			std::cout << "----------------------------" << std::endl;
+			std::cout << "VTK interpolation from file:" << std::endl;
+			std::cout << "----------------------------" << std::endl;
+
+			while (!f.eof()) {
+				lineP = lineA;
+				getline(f, lineA);
+				trim(lineA);
+				if (!lineA.compare(0, 12, "storage_path")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.vtkfilepath;
+					buf.clear();
+					std::cout << "Directory where vtk files are stored: " << vtkreader.vtkfilepath << std::endl;
+				}
+				if (!lineA.compare(0, 8, "filename")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.vtk_prefix;
+					buf.clear();
+					std::cout << "filename prefix: " << vtkreader.vtk_prefix << std::endl;
+				}
+				if (!lineA.compare(0, 19, "name_velocity_field")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.Uname;
+					buf.clear();
+					std::cout << "Name of velocity scalar field: " << vtkreader.Uname << std::endl;
+				}
+				// if new tag is reach. break while loop.
+				if (!lineA.compare(0, 1, "[")) {
+					skip_getline = true;
+					break;
+				}
+			}
+#else
+			std::cerr << "VTK interpolation not supported in current compiled version of CFDwavemaker. Recompile width flag -DVTK_enable=1." << std::endl;
+			exit(-1);
+#endif
+			
 		}
 	}
 
@@ -1628,7 +1685,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
-
+#if defined(VTK_enable)
+	// VTK kinematics input
+	if (inputdata.wavetype == 41) {
+		vtkreader.init(0.);
+		inputdata.depth = -vtkreader.zmin;
+	}
+#endif
 	std::cout << "WaveID: " << inputdata.wavetype << std::endl;
 
 	return 0;
@@ -1664,15 +1727,15 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
 
-		
+
 		// stokes 5th
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.u(tpt, xpt, ypt, zpt);
-		
+
 		// wavemaker
 	case 11:
 		return ramp.ramp(tpt, xpt, ypt) * wavemaker.u_piston(tpt);
-		
+
 		// swd
 	case 31:
 	{
@@ -1699,7 +1762,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
 			//#pragma omp single
-#pragma omp single nowait
+#pragma omp single nowait		
 			sgrid.update(swd, tpt);
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
@@ -1708,11 +1771,56 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.u(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+	
+	
 	default:
 		return 0.0;
 	}
 
 
+}
+
+double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
+	
+	double* temp;
+
+	switch (inputdata.wavetype) {
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		double res[5];
+		double* temp = vtkreader.trilinear_interpolation(res, tpt, xpt, ypt, zpt);
+		return temp;
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+
+
+	default:
+		return temp;
+	}
 }
 
 
@@ -1768,6 +1876,20 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.v(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
 	}
@@ -1817,12 +1939,26 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
+#endif
+	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.w(tpt, xpt, ypt, zpt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
 #endif
 	}
 	default:
@@ -1902,7 +2038,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 	{
 #if defined(SWD_enable)
 		if (!sgrid.CheckTime(tpt)) {
-#pragma omp single nowait
+#pragma omp single nowait 	
 			sgrid.update(swd, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);
@@ -1910,8 +2046,39 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 #endif
 	}
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return ramp.ramp(tpt, xpt, ypt) * vtkreader.eta(tpt, xpt, ypt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
 	default:
 		return 0.0;
+	}
+}
+
+double wave_Seabed(double xpt, double ypt)
+{
+	switch (inputdata.wavetype) {
+	// VTKinput
+	case 41:
+	{
+#if defined(VTK_enable)
+		return vtkreader.seabed(xpt, ypt);
+#else
+		std::cerr << "Use of vtk library specified in the waveinput.dat file. Please recompile CFDwavemaker with VTK_enable=1." << std::endl;
+#endif
+	}
+	default:
+		return -inputdata.depth;;
 	}
 }
 
@@ -2003,11 +2170,13 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v2.1.5" << std::endl;
+	std::cout << "CFD WAVEMAKER v2.1.6" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	
-	std::filesystem::path cwd = std::filesystem::current_path();
+	//std::filesystem::path cwd = std::filesystem::current_path();
+
+	std::string cwd = get_current_dir();
 
 	std::cout <<"working directory: " << cwd << std::endl;
 
@@ -2138,20 +2307,73 @@ int Cleanup() {
 }
 
 double wave_phase_velocity(int opt) {
-	return irregular.phase_velocity(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.phase_velocity(opt);
+	case 4:
+		return irregular.phase_velocity(opt);
+	default:
+		return 0.;
+	}
 }
 
 double wave_mean_length(int opt) {
-	return irregular.mean_wave_length(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.mean_wave_length(opt);
+	case 4:
+		return irregular.mean_wave_length(opt);
+	default:
+		return 0.;
+	}
 }
 double wave_mean_period(int opt) {
-	return irregular.mean_wave_period(opt);
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 1:
+		return irregular.mean_wave_period(opt);
+	case 4:
+		return irregular.mean_wave_period(opt);
+	default:
+		return 0.;
+	}	
 }
 
-void wave_sgrid_update(double tpt) {
-	if (!sgrid.CheckTime(tpt)) {
-//#pragma omp single
-		sgrid.update(irregular, tpt);
+void wave_force_update(double tpt) {
+	switch (inputdata.wavetype) {
+		// Linear wave theory, expenential profile used above free surface
+	case 4: {
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrid.update(irregular, tpt);
+		}
+		break;
+	}
+
+#if defined(SWD_enable)
+	case 34: {
+		
+		if (!sgrid.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait 			
+			sgrid.update(swd, tpt);
+		}
+		break;
+	}
+#endif
+
+#if defined(VTK_enable)
+	case 41: {
+		if (!vtkreader.CheckTime(tpt)) {
+#pragma omp single
+			vtkreader.update(tpt);
+		}
+		break;
+	}
+#endif
 	}
 }
 

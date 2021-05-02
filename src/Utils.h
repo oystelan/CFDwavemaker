@@ -29,4 +29,6 @@ int dirExists(const char* const path);
 
 void createDirectory(std::string sPath);
 
+std::string get_current_dir();
+
 #endif

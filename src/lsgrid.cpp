@@ -494,9 +494,8 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				if (!IGNORE[i * ny + j]) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
@@ -528,8 +527,8 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 #pragma omp parallel // start parallel initialization
 		{
 #pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
+			for (int j = 0; j < ny; j++) {
+				for (int i = 0; i < nx; i++) {
 					if (!IGNORE[i * ny + j]) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
@@ -629,8 +628,8 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 	{
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				if (!IGNORE[i * ny + j]) {
@@ -676,8 +675,8 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		{
 			// Main grid
 #pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
+			for (int j = 0; j < ny; j++) {
+				for (int i = 0; i < nx; i++) {
 					double xpt = domain[0] + dx * i;
 					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
 					double ypt = domain[2] + dy * j;
@@ -865,9 +864,8 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				double eta_temp = ETA0[i * ny + j] - swl;
@@ -907,9 +905,8 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 				double eta_temp = ETA1[i * ny + j] - swl;
@@ -1058,8 +1055,8 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 		}
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				if (!IGNORE[i * ny + j]) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
@@ -1083,9 +1080,8 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 		}
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
 				if (!IGNORE[i * ny + j]) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
@@ -1114,8 +1110,15 @@ if (!disable_checkbounds){
 // new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
 		double new_time = dt * std::floor(t_target / dt);
-		initialize_surface_elevation(swd, new_time);
-		initialize_kinematics(swd);
+		std::cout << "Time step to large. reinitializing LSgrid." << std::endl;
+		if (ignore_domain){
+			initialize_surface_elevation_with_ignore(swd, new_time);
+			initialize_kinematics_with_ignore(swd);
+		}
+		else{
+			initialize_surface_elevation(swd, new_time);
+			initialize_kinematics(swd);
+		}
 	}
 	else {
 		t0 += dt;
@@ -1133,12 +1136,14 @@ if (!disable_checkbounds){
 			// we first need to call: swd.ExceptionClear()
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
+
 #pragma omp parallel
 		{
 			// Main grid
+// switch order of i and j on purpose since this works much betten when ignore is on and wave propagate from the x boundary only
 #pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
+			for (int j = 0; j < ny; j++) { 
+				for (int i = 0; i < nx; i++) {
 					if (!IGNORE[i * ny + j]) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
