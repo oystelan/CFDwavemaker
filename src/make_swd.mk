@@ -2,7 +2,7 @@ BUILD_DIR += ../builds/linux64/
 SWD_INCL = ../swd/inc
 CC      := g++-9
 CCFLAGS := -O2 -fPIC -pthread -std=c++17 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
-LDFLAGS := -L./ -L/home/oland/programs/CFDwavemaker/swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9
+LDFLAGS := -L./ -L../swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9
 LIBS += -lm -lgfortran
 
 
@@ -26,6 +26,7 @@ clean:
 	cp ../swd/cpp/SpectralWaveData.cpp .
 	cp ../swd/inc/SpectralWaveData.h .
 	cp ../swd/inc/spectral_wave_data.h .
+	cp ../swd/lib/libSpectralWaveData.a .
 
 $(OBJ):: %.o : %.cpp	 
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS) 
