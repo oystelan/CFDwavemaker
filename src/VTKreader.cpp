@@ -6,7 +6,9 @@
 // Transforms normal z axis to streched sigma coordinates 
 // s defined between -1 (seabed) and 0 (free surface)
 double VTKreader::z2s(double z, double wave_elev, double depth) {
-	return (z - wave_elev) / (depth + wave_elev);
+	
+	return (z - wave_elev) / max((depth + wave_elev),0.00000001);
+
 }
 
 // Transforms stretched sigma coordinate to normal z
@@ -268,21 +270,22 @@ void VTKreader::loadInit(string path, const char* fname) {
 
 	}
 	else {
+		//cout << "nx, ny, nl: " << nx << ", " << ny << ", " << nl << endl;
 		// Calculate beta for all points i LSgrid
 		beta = new double[nx * ny * nl];
 		double z, welev, seabed, pNew[3];
 		for (int k = 0; k < nl; k++) {
 			for (int j = 0; j < ny; j++) {
 				for (int i = 0; i < nx; i++) {
-					//cout << i << ", " << j << endl;
+					//cout << i << ", " << j << ", " << k << endl;
 					dataset1->GetPoint(i, j, k, pNew);
 					z = pNew[2];
 					dataset1->GetPoint(i, j, 0, pNew);
 					seabed = pNew[2];
 					dataset1->GetPoint(i, j, nl - 1, pNew);
 					welev = pNew[2];
+					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << endl;
 					beta[k * ny * nx + j * nx + i] = 1. + z2s(z, welev, -seabed);
-					//cout << "seabed:" << seabed << " welev: " << welev << endl;
 				}
 			}
 		}

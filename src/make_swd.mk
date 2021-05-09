@@ -1,8 +1,8 @@
 BUILD_DIR += ../builds/linux64/
 SWD_INCL = ../swd/inc
-CC      := g++-9
-CCFLAGS := -O2 -fPIC -pthread -std=c++17 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
-LDFLAGS := -L./ -L/home/oland/programs/CFDwavemaker/swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9
+CC      := c++
+CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL) -D_GLIBCXX_USE_CXX11_ABI=0
+LDFLAGS := -L./ -L../swd/lib -L/usr/lib/gcc/x86_64-linux-gnu/9
 LIBS += -lm -lgfortran
 
 
