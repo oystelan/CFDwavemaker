@@ -252,8 +252,8 @@ void VTKreader::loadInit(string path, const char* fname) {
 	*/
 
 	if (input2d) {
-		// Calculate beta for all points i LSgrid
-		beta = new double[nx * nl];
+		// Calculate betah for all points i LSgrid
+		betah = new double[nx * nl];
 		double z, welev, seabed, pNew[3];
 		for (int k = 0; k < nl; k++) {
 			for (int i = 0; i < nx; i++) {
@@ -264,16 +264,16 @@ void VTKreader::loadInit(string path, const char* fname) {
 				seabed = pNew[1];
 				dataset1->GetPoint(i, nl - 1, 0, pNew);
 				welev = pNew[1];
-				beta[k * nx  + i] = welev == seabed ? double(k)/nl : 1 + z2s(z, welev, -seabed);
-				//cout << "seabed:" << seabed << " welev: " << welev << " beta:" << beta[k * nx  + i]<< endl;
+				betah[k * nx  + i] = welev == seabed ? double(k)/nl : 1 + z2s(z, welev, -seabed);
+				//cout << "seabed:" << seabed << " welev: " << welev << " betah:" << betah[k * nx  + i]<< endl;
 			}
 		}
 
 	}
 	else {
 		//cout << "nx, ny, nl: " << nx << ", " << ny << ", " << nl << endl;
-		// Calculate beta for all points i LSgrid
-		beta = new double[nx * ny * nl];
+		// Calculate betah for all points i LSgrid
+		betah = new double[nx * ny * nl];
 		double z, welev, seabed, pNew[3];
 		for (int k = 0; k < nl; k++) {
 			for (int j = 0; j < ny; j++) {
@@ -286,8 +286,8 @@ void VTKreader::loadInit(string path, const char* fname) {
 					dataset1->GetPoint(i, j, nl - 1, pNew);
 					welev = pNew[2];
 					
-					beta[k * ny * nx + j * nx + i] = welev == seabed ? double(k)/nl : 1. + z2s(z, welev, -seabed);
-					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " beta:" << beta[k * ny * nx + j * nx + i] << endl;
+					betah[k * ny * nx + j * nx + i] = welev == seabed ? double(k)/nl : 1. + z2s(z, welev, -seabed);
+					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " betah:" << betah[k * ny * nx + j * nx + i] << endl;
 				}
 			}
 		}
@@ -419,7 +419,7 @@ double VTKreader::stretchInterpLocatorZ(double s, int* iptr, int nxp, int nyp){
 	// get z values for given point
 	double selevs[nl], laynum[nl];
 	for (int k = 0; k < nl; k++) {
-		selevs[k] = beta[k* ny * nx + nyp * nx + nxp];
+		selevs[k] = betah[k* ny * nx + nyp * nx + nxp];
 		//cout << "h: " << selevs[k] << endl;
 		laynum[k] = double(k);
 	}
@@ -1058,7 +1058,7 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 				dataset1->GetPoint(i, j, 0, pNew);
 				double seabed = pNew[2];
 				for (int m = 0; m < nl; m++) {
-					double zpt1 = s2z(beta[i * ny * nl + j * nl + m] - 1., eta1_temp, -seabed);
+					double zpt1 = s2z(betah[i * ny * nl + j * nl + m] - 1., eta1_temp, -seabed);
 					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt1);
 				}
 			}
@@ -1077,7 +1077,7 @@ void VTKreader::export_vtu(FILE* fp, bool last)
 				dataset0->GetPoint(i, j, 0, pNew);
 				double seabed = pNew[2];
 				for (int m = 0; m < nl; m++) {
-					double zpt0 = s2z(beta[m * ny * nx + j * nx + i] - 1., eta0_temp, -seabed);
+					double zpt0 = s2z(betah[m * ny * nx + j * nx + i] - 1., eta0_temp, -seabed);
 					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
 				}
 			}

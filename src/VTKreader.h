@@ -40,7 +40,7 @@ public:
 		vtk_timelabel = "TimeValue";
 	}
 	~VTKreader() {
-		delete[] beta;
+		delete[] betah;
 	}
 
 	
@@ -61,7 +61,7 @@ public:
 	int nx, ny, nl;
 	double dx, dy;
 	double bounds[6];
-	double* beta; // stretching factor of each cell (percent of total height)
+	double* betah; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;
 	double t0, t1, dt, tmin, tmax, zmin;
 	int vfraq_field_located;
