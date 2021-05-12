@@ -3,6 +3,9 @@ MAKE_DIR = $(PWD)
 all:
 	@$(MAKE) -f make_all.mk
 
+all_cluster:
+	@$(MAKE) -f make_all_cluster.mk
+
 .PHONY: clean all
 
 clean:

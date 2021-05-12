@@ -265,7 +265,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 				dataset1->GetPoint(i, nl - 1, 0, pNew);
 				welev = pNew[1];
 				beta[k * nx  + i] = welev == seabed ? double(k)/nl : 1 + z2s(z, welev, -seabed);
-				cout << "seabed:" << seabed << " welev: " << welev << " beta:" << beta[k * nx  + i]<< endl;
+				//cout << "seabed:" << seabed << " welev: " << welev << " beta:" << beta[k * nx  + i]<< endl;
 			}
 		}
 
@@ -287,7 +287,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 					welev = pNew[2];
 					
 					beta[k * ny * nx + j * nx + i] = welev == seabed ? double(k)/nl : 1. + z2s(z, welev, -seabed);
-					cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " beta:" << beta[k * ny * nx + j * nx + i] << endl;
+					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " beta:" << beta[k * ny * nx + j * nx + i] << endl;
 				}
 			}
 		}

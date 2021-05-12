@@ -1,9 +1,9 @@
 CC      := c++
-VTK_DIR= /home/oland/vtk/install_vtk9.0.1_gcc9
+VTK_DIR= /home/oland/vtk/install_vtk-9.0.1_gcc9
 SWD_INCL = ../swd/inc
 VTK_INCL = $(VTK_DIR)/include/vtk-9.0
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL) -DVTK_enable=1 -I$(VTK_INCL) 
-LDFLAGS := -L./ -L/home/oland/programs/CFDwavemaker/swd/lib 
+LDFLAGS := -L./ -L../swd/lib 
 LIBS += -lm -lgfortran
 BUILD_DIR += ../builds/linux64/
 # -D_GLIBCXX_USE_CXX11_ABI=0
