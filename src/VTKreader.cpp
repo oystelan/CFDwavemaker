@@ -7,7 +7,8 @@
 // s defined between -1 (seabed) and 0 (free surface)
 double VTKreader::z2s(double z, double wave_elev, double depth) {
 	
-	return (z - wave_elev) / max((depth + wave_elev),0.00000001);
+	//return (z - wave_elev) / max((depth + wave_elev),0.00000001);
+	return (z - wave_elev) / (depth + wave_elev);
 
 }
 
@@ -263,8 +264,8 @@ void VTKreader::loadInit(string path, const char* fname) {
 				seabed = pNew[1];
 				dataset1->GetPoint(i, nl - 1, 0, pNew);
 				welev = pNew[1];
-				beta[k * nx  + i] = 1. + z2s(z, welev, -seabed);
-				//cout << "seabed:" << seabed << " welev: " << welev << endl;
+				beta[k * nx  + i] = welev == seabed ? double(k)/nl : 1 + z2s(z, welev, -seabed);
+				cout << "seabed:" << seabed << " welev: " << welev << " beta:" << beta[k * nx  + i]<< endl;
 			}
 		}
 
@@ -284,8 +285,9 @@ void VTKreader::loadInit(string path, const char* fname) {
 					seabed = pNew[2];
 					dataset1->GetPoint(i, j, nl - 1, pNew);
 					welev = pNew[2];
-					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << endl;
-					beta[k * ny * nx + j * nx + i] = 1. + z2s(z, welev, -seabed);
+					
+					beta[k * ny * nx + j * nx + i] = welev == seabed ? double(k)/nl : 1. + z2s(z, welev, -seabed);
+					cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " beta:" << beta[k * ny * nx + j * nx + i] << endl;
 				}
 			}
 		}
