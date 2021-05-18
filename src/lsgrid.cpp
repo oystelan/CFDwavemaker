@@ -843,6 +843,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
+
 void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
