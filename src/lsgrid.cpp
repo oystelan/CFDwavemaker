@@ -454,8 +454,8 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 					for (int m = 0; m < nl; m++) {
 						double spt = s2tan(-1. + ds * m);
 						double zpt1 = s2z(spt, eta1_temp, water_depth);
-						double zpt1max = std::max(0., zpt0 - swl);
-						double zpt1min = std::min(0., zpt0); // swl already included in irregular class functions
+						double zpt1max = std::max(0., zpt1 - swl);
+						double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
 						UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
 						UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
@@ -545,8 +545,8 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 						for (int m = 0; m < nl; m++) {
 							double spt = s2tan(-1. + ds * m);
 							double zpt1 = s2z(spt, eta1_temp, water_depth);
-							double zpt1max = std::max(0., zpt0 - swl);
-							double zpt1min = std::min(0., zpt0); // swl already included in irregular class functions
+							double zpt1max = std::max(0., zpt1 - swl);
+							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
 							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
 							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
@@ -706,8 +706,8 @@ void lsGrid::update(Irregular& irregular, double t_target)
 							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
 							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
 
-							double zpt1max = std::max(0., zpt0 - swl);
-							double zpt1min = std::min(0., zpt0); // swl already included in irregular class functions
+							double zpt1max = std::max(0., zpt1 - swl);
+							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
 							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
 							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
