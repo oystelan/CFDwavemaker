@@ -376,7 +376,9 @@ double lsGrid::eta(double tpt, double xpt, double ypt) {
 bool lsGrid::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t0 + dt) {
-		std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
+		if (mpid == 0) {
+			std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
+		}
 		return false;
 
 	}
@@ -390,7 +392,9 @@ bool lsGrid::CheckBounds()
 	if (bxmin >= domain[0] && bxmax <= domain[1] && bymin >= domain[2] && bymax <= domain[3])
 		return true;
 	else {
-		std::cout << "Requested point outside specified grid domain. adjust the bounds of the grid and try again." << std::endl;
+		if (mpid == 0) {
+			std::cout << "Requested point outside specified grid domain. adjust the bounds of the grid and try again." << std::endl;
+		}
 		exit(-1);
 		return false;
 	}
@@ -426,8 +430,9 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
 	//  Get the individual process ID.
 	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
-	std::cout << "Number of available mpi cores: " << mpin << std::endl;
-
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 	// Main grid
 
 	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
@@ -516,8 +521,9 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
 	//  Get the individual process ID.
 	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
-	std::cout << "Number of available mpi cores: " << mpin << std::endl;
-
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 	// Main grid
 
 	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
@@ -606,7 +612,9 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
 	//  Get the individual process ID.
 	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
-	std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 
 	// Main grid
 
@@ -628,7 +636,9 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	std::cout << "Surface Elevation generated successfully. ";
+	if (mpid == 0) {
+		std::cout << "Surface Elevation generated successfully. ";
+	}
 	//std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
@@ -641,7 +651,9 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
 	//  Get the individual process ID.
 	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
-	std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 
 	// Main grid
 	int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
@@ -668,7 +680,9 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	std::cout << "Surface Elevation generated successfully. ";
+	if (mpid == 0) {
+		std::cout << "Surface Elevation generated successfully. ";
+	}
 	//std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
@@ -748,11 +762,12 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		if (dump_vtk && mpid == 0) {
 			write_vtk(false);
 			update_count++;
+			//std::cout << "update time: " << dd << " sec" << std::endl;
+			std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 		}
 
 		
-		//std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+		
 	}
 }
 
