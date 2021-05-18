@@ -762,7 +762,9 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		if (dump_vtk && mpid == 0) {
 			write_vtk(false);
 			update_count++;
-			//std::cout << "update time: " << dd << " sec" << std::endl;
+			
+		}
+		if (mpid == 0) {
 			std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 		}
 
@@ -778,6 +780,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------
+#define SWD_enable 1
 
 #if defined(SWD_enable)
 
@@ -788,54 +791,52 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double dd = omp_get_wtime();
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
 
 	// timestep T0.
 	try {
 		swd->UpdateTime(t0);
 	}
 	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-		std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+		if (mpid == 0) {
+			std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
+		}
 		// If we will try again with a new value of t
 		// we first need to call: swd.ExceptionClear()
 		exit(EXIT_FAILURE);  // In this case we just abort.
 	}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
 
-#pragma omp parallel // start parallel initialization
-	{
-		// timestep T0.
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		int m = iter - ny * nl * i - j * nl;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		double spt = s2tan(-1. + ds * m);
+		double eta_temp = ETA0[i * ny + j] - swl;
+		double zpt = s2z(spt, eta_temp, water_depth);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta_temp = ETA0[i * ny + j] - swl;
-
-				//std::cout << i << " " << j << ": " << ETA0[i * ny + j] << std::endl;
-
-
-				for (int m = 0; m < nl; m++) {
-					//std::cout << i << " " << j << " " << m << std::endl;
-					double spt = s2tan(-1. + ds * m);
-					double zpt = s2z(spt, eta_temp, water_depth);
-					vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-
-					UX0[i * ny * nl + j * nl + m] = U.x;
-					UY0[i * ny * nl + j * nl + m] = U.y;
-					UZ0[i * ny * nl + j * nl + m] = U.z;
-
-				}
-			}
-		}
+		UX0core[iterloc] = U.x;
+		UY0core[iterloc] = U.y;
+		UZ0core[iterloc] = U.z;
+		iterloc++;	
 	}
+	MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 	// timestep T1.
 
@@ -848,169 +849,165 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 		// we first need to call: swd.ExceptionClear()
 		exit(EXIT_FAILURE);  // In this case we just abort.
 	}
-#pragma omp parallel // start parallel initialization
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
+	iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		int m = iter - ny * nl * i - j * nl;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		double spt = s2tan(-1. + ds * m);
+		double eta_temp = ETA1[i * ny + j] - swl;
+		double zpt = s2z(spt, eta_temp, water_depth);
+		vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta_temp = ETA1[i * ny + j] - swl;
+		UX1core[iterloc] = U.x;
+		UY1core[iterloc] = U.y;
+		UZ1core[iterloc] = U.z;
+		iterloc++;
+	}
+	MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt = s2z(spt, eta_temp, water_depth);
-					vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-
-					UX1[i * ny * nl + j * nl + m] = U.x;
-					UY1[i * ny * nl + j * nl + m] = U.y;
-					UZ1[i * ny * nl + j * nl + m] = U.z;
-
-				}
-			}
-		}
-	} // End parallel initialization
-
-	if (dump_vtk) {
+	if (dump_vtk && mpid == 0) {
 		write_vtk(false);
 		update_count++;
 	}
-	std::cout << "Generation of domain kinematics using SWD completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (mpid == 0) {
+		std::cout << "Generation of domain kinematics using SWD completed. ";
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double dd = omp_get_wtime();
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	}
 
-#pragma omp parallel // start parallel initialization
-	{
-		// timestep T0.
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
-		try {
-			swd->UpdateTime(t0);
+	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
+
+	// timestep T0.
+	try {
+		swd->UpdateTime(t0);
+	}
+	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+		std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
+		
+		// If we will try again with a new value of t
+		// we first need to call: swd.ExceptionClear()
+		exit(EXIT_FAILURE);  // In this case we just abort.
+	}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		if (!IGNORE[i * ny + j]) {
+			int m = iter - ny * nl * i - j * nl;
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			double spt = s2tan(-1. + ds * m);
+			double eta_temp = ETA0[i * ny + j] - swl;
+			double zpt = s2z(spt, eta_temp, water_depth);
+			vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+			UX0core[iterloc] = U.x;
+			UY0core[iterloc] = U.y;
+			UZ0core[iterloc] = U.z;
 		}
-		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
-			// If we will try again with a new value of t
-			// we first need to call: swd.ExceptionClear()
-			exit(EXIT_FAILURE);  // In this case we just abort.
+		else {
+			UX0core[iterloc] = 0.;
+			UY0core[iterloc] = 0.;
+			UZ0core[iterloc] = 0.;
 		}
+		iterloc++;
+	}
+	MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta_temp = ETA0[i * ny + j] - swl;
+		
+	// timestep T1.
+	try {
+		swd->UpdateTime(t0 + dt);
+	}
+	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+		std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
+		// If we will try again with a new value of t
+		// we first need to call: swd.ExceptionClear()
+		exit(EXIT_FAILURE);  // In this case we just abort.
+	}
 
-				if (!IGNORE[i * ny + j]) {
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt = s2z(spt, eta_temp, water_depth);
-						vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+	iterloc = 0;
 
-						UX0[i * ny * nl + j * nl + m] = U.x;
-						UY0[i * ny * nl + j * nl + m] = U.y;
-						UZ0[i * ny * nl + j * nl + m] = U.z;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		if (!IGNORE[i * ny + j]) {
+			int m = iter - ny * nl * i - j * nl;
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			double spt = s2tan(-1. + ds * m);
+			double eta_temp = ETA1[i * ny + j] - swl;
+			double zpt = s2z(spt, eta_temp, water_depth);
+			vector_swd U = swd->GradPhi(xpt, ypt, zpt);
 
-					}
-				}
-				else {
-					for (int m = 0; m < nl; m++) {
-						UX0[i * ny * nl + j * nl + m] = 0.;
-						UY0[i * ny * nl + j * nl + m] = 0.;
-						UZ0[i * ny * nl + j * nl + m] = 0.;
-					}
-				}
-			}
+			UX1core[iterloc] = U.x;
+			UY1core[iterloc] = U.y;
+			UZ1core[iterloc] = U.z;
 		}
-		// timestep T1.
-#pragma omp master
-		try {
-			swd->UpdateTime(t0 + dt);
+		else {
+			UX1core[iterloc] = 0.;
+			UY1core[iterloc] = 0.;
+			UZ1core[iterloc] = 0.;
 		}
-		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
-			// If we will try again with a new value of t
-			// we first need to call: swd.ExceptionClear()
-			exit(EXIT_FAILURE);  // In this case we just abort.
-		}
-
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta_temp = ETA1[i * ny + j] - swl;
-
-				if (!IGNORE[i * ny + j]) {
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt = s2z(spt, eta_temp, water_depth);
-						vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-
-						UX1[i * ny * nl + j * nl + m] = U.x;
-						UY1[i * ny * nl + j * nl + m] = U.y;
-						UZ1[i * ny * nl + j * nl + m] = U.z;
-
-					}
-				}
-				else {
-					for (int m = 0; m < nl; m++) {
-						UX1[i * ny * nl + j * nl + m] = 0.;
-						UY1[i * ny * nl + j * nl + m] = 0.;
-						UZ1[i * ny * nl + j * nl + m] = 0.;
-					}
-				}
-			}
-		}
-	} // End parallel initialization
-	if (dump_vtk) {
+		iterloc++;
+	}
+	MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	if (dump_vtk && mpid == 0) {
 		write_vtk(false);
 		update_count++;
 	}
-	std::cout << "Generation of domain kinematics data completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (mpid == 0) {
+		std::cout << "Generation of domain kinematics data completed. ";
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
-	std::cout << "time: " << t_target << std::endl;
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+		std::cout << "time: " << t_target << std::endl;
+	}
 	t0 = t_target;
 
 	// Allocating memory for storage of surface elevation and velocities
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-
-	omp_set_num_threads(omp_get_max_threads());
-	//omp_set_num_threads(1);
 
 	// TIME T0
 	try {
@@ -1023,22 +1020,20 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 		exit(EXIT_FAILURE);  // In this case we just abort.
 	}
 
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2) 
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-
-				//std::cout << "wavelev: " << swd->Elev(xpt, ypt) << std::endl;
-
-				ETA0[i * ny + j] = swd->Elev(xpt, ypt) + swl;
-			}
-
-		}
+	// Main grid
+	int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		ETA0core[iterloc] = swd->Elev(xpt, ypt) + swl;
+		iterloc++;
 	}
+	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 	// Time T1
 	try {
@@ -1051,29 +1046,33 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 		exit(EXIT_FAILURE);  // In this case we just abort.
 	}
 
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-
-				ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
-
-			}
-		}
+	// Main grid	
+	iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		ETA1core[iterloc] = swd->Elev(xpt, ypt) + swl;
+		iterloc++;
 	}
-	dd = omp_get_wtime() - dd;
+	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	if (mpid == 0) {
+		std::cout << "Surface Elevation generated successfully. ";
+	}
 }
 
 void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
-	std::cout << "time: " << t_target << std::endl;
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	if (mpid == 0) {
+		std::cout << "Number of available mpi cores: " << mpin << std::endl;
+		std::cout << "time: " << t_target << std::endl;
+	}
 	t0 = t_target;
 
 	// Allocating memory for storage of surface elevation and velocities
@@ -1081,80 +1080,73 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-#pragma omp master
-		try {
-			swd->UpdateTime(t0);
-		}
-		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
-			// If we will try again with a new value of t
-			// we first need to call: swd.ExceptionClear()
-			exit(EXIT_FAILURE);  // In this case we just abort.
-		}
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-
-					ETA0[i * ny + j] = swd->Elev(xpt, ypt) + swl;
-				}
-				else {
-					ETA0[i * ny + j] = 0. + swl;
-				}
-			}
-		}
-#pragma omp master
-		try {
-			swd->UpdateTime(t0 + dt);
-		}
-		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
-			// If we will try again with a new value of t
-			// we first need to call: swd.ExceptionClear()
-			exit(EXIT_FAILURE);  // In this case we just abort.
-		}
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
-				}
-				else {
-					ETA1[i * ny + j] = 0. + swl;
-				}
-			}
-		}
+	// TIME T0
+	try {
+		swd->UpdateTime(t0);
 	}
-	dd = omp_get_wtime() - dd;
+	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+		std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+		// If we will try again with a new value of t
+		// we first need to call: swd.ExceptionClear()
+		exit(EXIT_FAILURE);  // In this case we just abort.
+	}
 
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	// Main grid
+	int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		if (!IGNORE[i * ny + j]) {
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			ETA0core[iterloc] = swd->Elev(xpt, ypt) + swl;
+		}
+		else {
+			ETA0core[iterloc] = swl;
+		}
+		iterloc++;
+	}
+	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+
+	// Time T1
+	try {
+		swd->UpdateTime(t0 + dt);
+	}
+	catch (SwdInputValueException& e) {  //Could be t > tmax from file.
+		std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+		// If we will try again with a new value of t
+		// we first need to call: swd.ExceptionClear()
+		exit(EXIT_FAILURE);  // In this case we just abort.
+	}
+
+	// Main grid	
+	iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		if (!IGNORE[i * ny + j]) {
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			ETA1core[iterloc] = swd->Elev(xpt, ypt) + swl;
+		}
+		else {
+			ETA1core[iterloc] = swl;
+		}
+		iterloc++;
+	}
+	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+
+	if (mpid == 0) {
+		std::cout << "Surface Elevation generated successfully. ";
+	}
 }
 
 void lsGrid::update(SpectralWaveData* swd, double t_target)
 {
-	// Start by checking bounds
-/*
-if (!disable_checkbounds){
-	CheckBounds();
-}*/
+
 
 // new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
@@ -1171,61 +1163,76 @@ if (!disable_checkbounds){
 	}
 	else {
 		t0 += dt;
-		// Updating surface elevations
-		double dd = omp_get_wtime();
-		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
-
 		try {
 			swd->UpdateTime(t0 + dt);
 		}
 		catch (SwdInputValueException& e) {  //Could be t > tmax from file.
-			std::cout << typeid(e).name() << std::endl << e.what() << std::endl;
+			std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
 			// If we will try again with a new value of t
 			// we first need to call: swd.ExceptionClear()
 			exit(EXIT_FAILURE);  // In this case we just abort.
 		}
 
-#pragma omp parallel
-		{
-			// Main grid
-// switch order of i and j on purpose since this works much betten when ignore is on and wave propagate from the x boundary only
-#pragma omp for collapse(2)
-			for (int j = 0; j < ny; j++) { 
-				for (int i = 0; i < nx; i++) {
-					if (!IGNORE[i * ny + j]) {
-						double xpt = domain[0] + dx * i;
-						double ypt = domain[2] + dy * j;
-						ETA0[i * ny + j] = ETA1[i * ny + j];
-						ETA1[i * ny + j] = swd->Elev(xpt, ypt) + swl;
 
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
-
-							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
-							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
-							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
-
-							vector_swd U = swd->GradPhi(xpt, ypt, zpt);
-
-							UX1[i * ny * nl + j * nl + m] = U.x;
-							UY1[i * ny * nl + j * nl + m] = U.y;
-							UZ1[i * ny * nl + j * nl + m] = U.z;
-						}
-					}
-				}
+		int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
+		int i1 = (mpid * iter_p_process);
+		int i2 = ((mpid + 1) * iter_p_process);
+		int iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / ny;
+			int j = iter - ny * i;
+			if (!IGNORE[i * ny + j]) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				ETA0core[iterloc] = ETA1core[iterloc];
+				ETA1core[iterloc] = swd->Elev(xpt, ypt) + swl;
 			}
 		}
+		MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-		if (dump_vtk) {
-			write_vtk(false);
-			update_count++;
+
+		iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
+		i1 = (mpid * iter_p_process);
+		i2 = ((mpid + 1) * iter_p_process);
+		iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / (ny * nl);
+			int j = (iter - ny * nl * i) / nl;
+			if (!IGNORE[i * ny + j]) {
+				int m = iter - ny * nl * i - j * nl;
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double spt = s2tan(-1. + ds * m);
+				double eta1_temp = ETA1[i * ny + j] - swl;
+				double zpt1 = s2z(spt, eta1_temp, water_depth);
+
+				UX0core[iterloc] = UX1core[iterloc];
+				UY0core[iterloc] = UY1core[iterloc];
+				UZ0core[iterloc] = UZ1core[iterloc];
+
+				vector_swd U = swd->GradPhi(xpt, ypt, zpt);
+
+				UX1core[iterloc] = U.x;
+				UY1core[iterloc] = U.y;
+				UZ1core[iterloc] = U.z;
+			}
+			iterloc++;
 		}
+		MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-		dd = omp_get_wtime() - dd;
-		std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+		if (dump_vtk && mpid == 0) {
+			write_vtk(false);
+			update_count++;		
+		}
+		if (mpid == 0) {
+			std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+		}
 	}
 }
 
