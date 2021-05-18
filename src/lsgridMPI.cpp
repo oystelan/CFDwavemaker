@@ -1,4 +1,5 @@
-#include "lsgrid.h"
+#include "lsgridMPI.h"
+#include <mpi.h>
 #include <algorithm>
 #include <iostream>
 #include <cmath>
@@ -20,6 +21,19 @@
 
 // Allocation of memory to storage matrices
 void lsGrid::allocate() {
+
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
+	
+	if (((nx * ny) % mpin) > 0) {
+		std::cerr << "Specified grid size nx*ny is not well resolved with the specified number of processors " << mpin << ". Please adjust grid and try again..." << std::endl;
+	}
+	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
+
 	ETA0 = new double[nx * ny];
 	ETA1 = new double[nx * ny];
 
@@ -32,6 +46,17 @@ void lsGrid::allocate() {
 	UX1 = new double[nx * ny * nl];
 	UY1 = new double[nx * ny * nl];
 	UZ1 = new double[nx * ny * nl];
+
+	// Set storage arrays for mpi
+	UX0core = new double[iter_p_process];
+	UY0core = new double[iter_p_process];
+	UZ0core = new double[iter_p_process];
+	UX1core = new double[iter_p_process];
+	UY1core = new double[iter_p_process];
+	UZ1core = new double[iter_p_process];
+	iter_p_process = nx * ny / mpin;
+	ETA0core = new double[iter_p_process];
+	ETA1core = new double[iter_p_process];
 }
 
 // A streching function for setting variable layer thickness
@@ -396,40 +421,41 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double dd = omp_get_wtime();
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	// Main grid
 
-#pragma omp parallel // start parallel initialization
-	{
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
 
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta0_temp = ETA0[i * ny + j] - swl;
-
-				double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-				double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-				double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt0 = s2z(spt, eta0_temp, water_depth);
-
-					UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
-					UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
-					UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
-				}
-			}
-		}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		int m = iter - ny * nl * i - j * nl;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		double spt = s2tan(-1. + ds * m);
+		double eta0_temp = ETA0[i * ny + j] - swl;
+		double zpt0 = s2z(spt, eta0_temp, water_depth);
+		double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+		double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+		double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+		UX0core[iterloc] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
+		UY0core[iterloc] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
+		UZ0core[iterloc] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
+		iterloc++;
 	}
+
+	MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 		
 	if (init_only) {
 		UX1 = UX0;
@@ -437,40 +463,40 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 		UZ1 = UZ0;
 	}
 	else{
-	#pragma omp parallel // start parallel initialization
-		{
-#pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta1_temp = ETA1[i * ny + j] - swl;
-
-					double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-					double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-					double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt1 = s2z(spt, eta1_temp, water_depth);
-
-						UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-						UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-						UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-					}
-				}
-			}
+		iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / (ny * nl);
+			int j = (iter - ny * nl * i) / nl;
+			int m = iter - ny * nl * i - j * nl;
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			double spt = s2tan(-1. + ds * m);
+			double eta1_temp = ETA1[i * ny + j] - swl;
+			double zpt1 = s2z(spt, eta1_temp, water_depth);
+			double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+			double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+			double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+			UX1core[iterloc] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
+			UY1core[iterloc] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
+			UZ1core[iterloc] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
+			iterloc++;
 		}
+		MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 	} 
 	// End parallel initialization
 	if (dump_vtk) {
-		write_vtk(false);
-		update_count++;
+		if (mpid == 0) {
+			write_vtk(false);
+			update_count++;
+		}
+		
 	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (mpid == 0) {
+		std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
@@ -481,41 +507,44 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double dd = omp_get_wtime();
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	// Main grid
 
-#pragma omp parallel // start parallel initialization
-	{
-#pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+	int iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
 
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta0_temp = ETA0[i * ny + j] - swl;
-
-					double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-					double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-					double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt0 = s2z(spt, eta0_temp, water_depth);
-
-						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
-						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
-						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
-					}
-				}
-			}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		
+		int i = iter / (ny * nl);
+		int j = (iter - ny * nl * i) / nl;
+		if (!IGNORE[i * ny + j]) {
+			int m = iter - ny * nl * i - j * nl;
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			double spt = s2tan(-1. + ds * m);
+			double eta0_temp = ETA0[i * ny + j] - swl;
+			double zpt0 = s2z(spt, eta0_temp, water_depth);
+			double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
+			double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
+			double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
+			UX0core[iterloc] = irregular.u1(t0, xpt, ypt, zpt0) + irregular.u2(t0, xpt, ypt, zpt0) + PHI0_dxdz * std::max(0., (zpt0 - swl));
+			UY0core[iterloc] = irregular.v1(t0, xpt, ypt, zpt0) + irregular.v2(t0, xpt, ypt, zpt0) + PHI0_dydz * std::max(0., (zpt0 - swl));
+			UZ0core[iterloc] = irregular.w1(t0, xpt, ypt, zpt0) + irregular.w2(t0, xpt, ypt, zpt0) + PHI0_dzdz * std::max(0., (zpt0 - swl));
 		}
+		iterloc++;
 	}
+
+	MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 	if (init_only) {
 		UX1 = UX0;
@@ -523,140 +552,128 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 		UZ1 = UZ0;
 	}
 	else {
-#pragma omp parallel // start parallel initialization
-		{
-#pragma omp for collapse(2)
-			for (int j = 0; j < ny; j++) {
-				for (int i = 0; i < nx; i++) {
-					if (!IGNORE[i * ny + j]) {
-						double xpt = domain[0] + dx * i;
-						double ypt = domain[2] + dy * j;
-						double eta1_temp = ETA1[i * ny + j] - swl;
-
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, eta1_temp, water_depth);
-
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-						}
-					}
-				}
+		iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / (ny * nl);
+			int j = (iter - ny * nl * i) / nl;
+			if (!IGNORE[i * ny + j]) {
+				int m = iter - ny * nl * i - j * nl;
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double spt = s2tan(-1. + ds * m);
+				double eta1_temp = ETA1[i * ny + j] - swl;
+				double zpt1 = s2z(spt, eta1_temp, water_depth);
+				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+				UX1core[iterloc] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
+				UY1core[iterloc] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
+				UZ1core[iterloc] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
 			}
+			iterloc++;
 		}
+		MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 	}
 	// End parallel initialization
-	if (dump_vtk) {
-		write_vtk(false);
-		update_count++;
+	if (dump_vtk && mpid == 0) {
+			write_vtk(false);
+			update_count++;
 	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
-	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (mpid == 0) {
+		std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
 void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
+	// Main grid
 
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
 
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-
-				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-				ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-
-			}
-		}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		double xpt = domain[0] + dx * i;
+		double ypt = domain[2] + dy * j;
+		ETA0core[iterloc] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+		ETA1core[iterloc] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+		iterloc++;
 	}
-	dd = omp_get_wtime() - dd;
+
+	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	//std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
 
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
+	// Main grid
+	int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
 
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				if (!IGNORE[i * ny + j]) {
-					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-				}
-				else {
-					ETA0[i * ny + j] = swl;
-					ETA1[i * ny + j] = swl;
-				}
-			}
+	int i1 = (mpid * iter_p_process);
+	int i2 = ((mpid + 1) * iter_p_process);
+	int iterloc = 0;
+	for (int iter = i1; iter < i2; iter++) {
+		int i = iter / ny;
+		int j = iter - ny * i;
+		if (!IGNORE[i * ny + j]) {
+			double xpt = domain[0] + dx * i;
+			double ypt = domain[2] + dy * j;
+			ETA0core[iterloc] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+			ETA1core[iterloc] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 		}
+		else {
+			ETA0core[iterloc] = swl;
+			ETA1core[iterloc] = swl;
+		}
+		iterloc++;
 	}
-	dd = omp_get_wtime() - dd;
+
+	MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
 	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+	//std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void lsGrid::update(Irregular& irregular, double t_target)
 {
-	// Start by checking bounds
-	/*
-	if (!disable_checkbounds){
-		CheckBounds();
-	}*/
+	int mpierr, mpid, mpin;
+	//  Get the number of processes.
+	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
+	//  Get the individual process ID.
+	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
 	// new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
@@ -666,56 +683,65 @@ void lsGrid::update(Irregular& irregular, double t_target)
 	}
 	else {
 		t0 += dt;
-		// Updating surface elevations
-		double dd = omp_get_wtime();
-		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
-#pragma omp parallel
-		{
-			// Main grid
-#pragma omp for collapse(2)
-			for (int j = 0; j < ny; j++) {
-				for (int i = 0; i < nx; i++) {
-					double xpt = domain[0] + dx * i;
-					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
-					double ypt = domain[2] + dy * j;
-					if (!IGNORE[i * ny + j]) {
-						ETA0[i * ny + j] = ETA1[i * ny + j];
-						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+		// Main grid
+		int iter_p_process = nx * ny / mpin; // split kinematics points evenly among cpus.
 
-						double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
-						double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
-						double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
-
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
-
-							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
-							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
-							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
-
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
-
-						}
-					}
-				}
+		int i1 = (mpid * iter_p_process);
+		int i2 = ((mpid + 1) * iter_p_process);
+		int iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / ny;
+			int j = iter - ny * i;
+			if (!IGNORE[i * ny + j]) {
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				ETA0core[iterloc] = ETA1core[iterloc];
+				ETA1core[iterloc] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 			}
 		}
+		MPI_Allgather(ETA0core, iter_p_process, MPI_DOUBLE, ETA0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(ETA1core, iter_p_process, MPI_DOUBLE, ETA1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
 
-		if (dump_vtk) {
+		iter_p_process = nx * ny * nl / mpin; // split kinematics points evenly among cpus.
+		i1 = (mpid * iter_p_process);
+		i2 = ((mpid + 1) * iter_p_process);
+		iterloc = 0;
+		for (int iter = i1; iter < i2; iter++) {
+			int i = iter / (ny * nl);
+			int j = (iter - ny * nl * i) / nl;
+			if (!IGNORE[i * ny + j]) {
+				int m = iter - ny * nl * i - j * nl;
+				double xpt = domain[0] + dx * i;
+				double ypt = domain[2] + dy * j;
+				double spt = s2tan(-1. + ds * m);
+				double eta1_temp = ETA1[i * ny + j] - swl;
+				double zpt1 = s2z(spt, eta1_temp, water_depth);
+				double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
+				double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
+				double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+				UX0core[iterloc] = UX1core[iterloc];
+				UY0core[iterloc] = UY1core[iterloc];
+				UZ0core[iterloc] = UZ1core[iterloc];
+				UX1core[iterloc] = irregular.u1(t0 + dt, xpt, ypt, zpt1) + irregular.u2(t0 + dt, xpt, ypt, zpt1) + PHI1_dxdz * std::max(0., (zpt1 - swl));
+				UY1core[iterloc] = irregular.v1(t0 + dt, xpt, ypt, zpt1) + irregular.v2(t0 + dt, xpt, ypt, zpt1) + PHI1_dydz * std::max(0., (zpt1 - swl));
+				UZ1core[iterloc] = irregular.w1(t0 + dt, xpt, ypt, zpt1) + irregular.w2(t0 + dt, xpt, ypt, zpt1) + PHI1_dzdz * std::max(0., (zpt1 - swl));
+			}
+			iterloc++;
+		}
+		MPI_Allgather(UX0core, iter_p_process, MPI_DOUBLE, UX0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY0core, iter_p_process, MPI_DOUBLE, UY0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ0core, iter_p_process, MPI_DOUBLE, UZ0, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UX1core, iter_p_process, MPI_DOUBLE, UX1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UY1core, iter_p_process, MPI_DOUBLE, UY1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+		MPI_Allgather(UZ1core, iter_p_process, MPI_DOUBLE, UZ1, iter_p_process, MPI_DOUBLE, MPI_COMM_WORLD);
+
+		if (dump_vtk && mpid == 0) {
 			write_vtk(false);
 			update_count++;
 		}
 
-		dd = omp_get_wtime() - dd;
-		std::cout << "update time: " << dd << " sec" << std::endl;
+		
+		//std::cout << "update time: " << dd << " sec" << std::endl;
 		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 	}
 }
@@ -727,7 +753,6 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------
-
 
 #if defined(SWD_enable)
 

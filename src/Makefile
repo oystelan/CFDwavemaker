@@ -11,3 +11,6 @@ openmp:
 
 swd:
 	@$(MAKE) -f make_swd.mk
+
+mpi:
+	@$(MAKE) -f make_mpi.mk
