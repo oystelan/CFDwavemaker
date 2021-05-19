@@ -19,7 +19,7 @@ temp = os.path.dirname(temp)
 print(temp)
 #lib = CDLL("./comflow_wavemaker.so")
 
-mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_vtk_openmp.so")     
+mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_all_openmp.so")     
 
 #exit()
 
@@ -73,8 +73,8 @@ print(init_dll(mydll))
 
 #time = np.arange(10, 30., 0.05)
 
-zz = np.arange(-40, 0., 1.)
-t = 0.
+zz = np.arange(-35.7596, -35., 1.)
+t = 0.0
 ww = []
 u = []
 #u2 = []
@@ -82,8 +82,8 @@ u = []
 v = []
 w = []
 
-x = 30.
-y = -174.
+x = 25.
+y = 375.
 #z = -250.
 
 #for t in time:
@@ -96,7 +96,7 @@ for z in zz:
     #u3.append(velocityX(mydll,t,x,y,z-40.))
     v.append(velocityY(mydll,t,x,y,z))
     w.append(velocityZ(mydll,t,x,y,z))
-    print("z:", z, " u: ",velocityX(mydll,t,x,y,z))
+    print("z:", z, " u: ",velocityX(mydll,t,x,y,z), "elev: ", waveelev(mydll,t,x,y), 'veloy: ',velocityY(mydll,t,x,y,z), 'veloz: ',velocityZ(mydll,t,x,y,z))
     
 
 

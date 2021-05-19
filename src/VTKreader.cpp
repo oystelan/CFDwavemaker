@@ -7,6 +7,7 @@
 // s defined between -1 (seabed) and 0 (free surface)
 double VTKreader::z2s(double z, double wave_elev, double depth) {
 	
+	//cout << "z2s: " << z << " " << wave_elev << " " << depth << endl;
 	//return (z - wave_elev) / max((depth + wave_elev),0.00000001);
 	return (z - wave_elev) / (depth + wave_elev);
 
@@ -103,12 +104,14 @@ double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
 	//cout << "zpt: " << zpt << endl;
     double res[5];
 	double* temp;
+	//cout << "coords: " << tpt << " " << xpt << " " << ypt << " " << zpt << endl;
     if (input2d){
 		temp = bilinear_interpolation_xy(res, tpt, xpt, zpt);
     }
     else{
 		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
     }
+	//cout << "velou:" << temp[2] << endl;
     return temp[2];
 }
 
@@ -518,8 +521,8 @@ double* VTKreader::trilinear_interpolation(double* res, double tpt, double xpt, 
 
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
-	double spt0 = std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
-	double spt1 = std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb0), -1.);
+	double spt0 = wave_elev0 == zb0 ? -1. : std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
+	double spt1 = wave_elev1 == zb0 ? -1. : std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb0), -1.);
 	
 
 	int nsp0, nsp1;
@@ -738,8 +741,8 @@ double* VTKreader::bilinear_interpolation_xy(double* res, double tpt, double xpt
 
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
-	double spt0 = std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
-	double spt1 = std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb1), -1.);
+	double spt0 = wave_elev0 == zb0 ? -1. : std::max(z2s(std::min(zpt, wave_elev0), wave_elev0, -zb0), -1.);
+	double spt1 = wave_elev1 == zb0 ? -1. : std::max(z2s(std::min(zpt, wave_elev1), wave_elev1, -zb1), -1.);
 	
 
 	int nsp0, nsp1;
