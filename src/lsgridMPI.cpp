@@ -22,7 +22,6 @@
 // Allocation of memory to storage matrices
 void lsGrid::allocate() {
 
-	int mpierr, mpid, mpin;
 	//  Get the number of processes.
 	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
 	//  Get the individual process ID.
@@ -425,11 +424,6 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -516,11 +510,6 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -607,11 +596,6 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -646,11 +630,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -690,12 +670,6 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void lsGrid::update(Irregular& irregular, double t_target)
 {
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
-	std::cout << "Number of available mpi cores: " << mpin << std::endl;
 
 	// new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
@@ -780,7 +754,6 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------
-#define SWD_enable 1
 
 #if defined(SWD_enable)
 
@@ -791,11 +764,6 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -887,12 +855,6 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 	ds = 1. / std::max(1., double(nl - 1));
 
-
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 	}
@@ -993,11 +955,6 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 
 void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 		std::cout << "time: " << t_target << std::endl;
@@ -1064,11 +1021,7 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 }
 
 void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
-	int mpierr, mpid, mpin;
-	//  Get the number of processes.
-	mpierr = MPI_Comm_size(MPI_COMM_WORLD, &mpin);
-	//  Get the individual process ID.
-	mpierr = MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
+	
 	if (mpid == 0) {
 		std::cout << "Number of available mpi cores: " << mpin << std::endl;
 		std::cout << "time: " << t_target << std::endl;

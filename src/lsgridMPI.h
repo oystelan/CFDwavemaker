@@ -29,6 +29,9 @@ public:
 		delete[] UX0, UY0, UZ0, ETA0, UX1, UY1, UZ1, IGNORE;
 	};
 
+	//MPI variables
+	int mpid, mpierr, mpin;
+
 	// Volume grid, used for fast initialization
 	double* UX0, * UY0, * UZ0, * UX1, * UY1, * UZ1; // 3D grids	
 	double* UX0core, * UY0core, * UZ0core, * UX1core, * UY1core, * UZ1core; // 3D grids

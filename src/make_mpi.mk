@@ -8,7 +8,7 @@ TARGETS_SHARED_OMP:= $(addsuffix _mpi.so, $(TARGETS))
 TARGETS_STATIC_OMP:= $(addsuffix _mpi.a, $(TARGETS))
 
 MAINS  := $(addsuffix MPI.o, $(TARGETS) )
-OBJ    := Stokes5.o Irregular.o Utils.o Wavemaker.o lsgridMPI.o probes.o $(MAINS) 
+OBJ    := Stokes5.o Irregular.o Wavemaker.o lsgridMPI.o probes.o $(MAINS) Utils.o
 
 
 .PHONY: clean openmp

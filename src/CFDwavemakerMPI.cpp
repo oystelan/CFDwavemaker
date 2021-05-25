@@ -54,8 +54,8 @@
 
 
 //// Initialize MPI
-//int mpierr, mpin, mpid;
-//mpierr = MPI_Init(&argc, &argv);
+int mpierr, mpid;
+int initialized, finalized;
 
 //if (mpierr != 0)
 //{
@@ -75,9 +75,9 @@
 //	std::cout << "P" << id << ":    The number of processes is " << p << "\n";
 //	std::cout << "\n";
 //}
-int mpid;
+//int mpid;
 
-
+extern std::string get_current_dir();
 // Storage class of input data.
 class CFDwavemakerInputdata {
 public:
@@ -1850,6 +1850,11 @@ int wave_Initialize()
 	std::ifstream fid;
 	std::string res;
 
+	
+
+	MPI_Initialized(&initialized);
+	if (!initialized)
+		MPI_Init(NULL, NULL);
 	//  Get the individual process ID.
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpid);
 
@@ -1955,6 +1960,11 @@ int wave_Cleanup()
 	else if (wavetype == 4) {
 		delete[] PD_time, PD_ampl, PD_velo, PD_eta;
 	}*/
+	// You also need this when your program is about to exit
+	MPI_Finalized(&finalized);
+	if (!finalized)
+		MPI_Finalize();
+
 	return 0;
 }
 
