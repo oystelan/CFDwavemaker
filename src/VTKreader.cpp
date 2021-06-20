@@ -65,7 +65,10 @@ void VTKreader::init(double tpt) {
 		// calculate which file to start from
 		double dt_approx = (tmax - tmin) / (filevec->size() - 1);
 
-		loadcount = floor((tpt - tmin) / dt_approx);
+
+		loadcount = max(int(floor((tpt + dt_start - tmin) / dt_approx))-1, 0);
+
+		cout << "Approximated file startfile no. " << loadcount << endl;
 
 		// load vtufiles
 		loadInit(vtkfilepath, filevec->at(loadcount).c_str());
@@ -88,7 +91,7 @@ void VTKreader::update(double tpt) {
 		int i = 1;
 		while (loadcount < (filevec->size() - 1)) {
 			loadNext(vtkfilepath, filevec->at(loadcount + 1).c_str());
-			if (tpt >= t0 && tpt <= t1) {
+			if ((tpt + dt_start) >= t0 && (tpt + dt_start) <= t1) {
 				break;
 			}
 		}
@@ -106,10 +109,10 @@ double VTKreader::u(double tpt, double xpt, double ypt, double zpt) {
 	double* temp;
 	//cout << "coords: " << tpt << " " << xpt << " " << ypt << " " << zpt << endl;
     if (input2d){
-		temp = bilinear_interpolation_xy(res, tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res, (tpt + dt_start), xpt, zpt);
     }
     else{
-		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, (tpt + dt_start), xpt, ypt, zpt);
     }
 	//cout << "velou:" << temp[2] << endl;
     return temp[2];
@@ -119,10 +122,10 @@ double VTKreader::v(double tpt, double xpt, double ypt, double zpt) {
 	double res[5];
 	double* temp;
     if (input2d){
-		temp = bilinear_interpolation_xy(res,tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res, (tpt + dt_start), xpt, zpt);
     }
     else{
-		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, (tpt + dt_start), xpt, ypt, zpt);
     }
     return temp[3];
 }
@@ -131,10 +134,10 @@ double VTKreader::w(double tpt, double xpt, double ypt, double zpt) {
 	double res[5];
 	double* temp;
     if (input2d){
-		temp = bilinear_interpolation_xy(res, tpt, xpt, zpt);
+		temp = bilinear_interpolation_xy(res, (tpt + dt_start), xpt, zpt);
     }
     else{
-		temp = trilinear_interpolation(res, tpt, xpt, ypt, zpt);
+		temp = trilinear_interpolation(res, (tpt + dt_start), xpt, ypt, zpt);
     }
     return temp[4];
 }
@@ -143,10 +146,10 @@ double VTKreader::eta(double tpt, double xpt, double ypt) {
 		double res[2];
 		double* temp;
         if (input2d){
-			 temp = linear_interpolation(res, tpt, xpt);
+			 temp = linear_interpolation(res, (tpt + dt_start), xpt);
         }
         else{
-			 temp = bilinear_interpolation(res, tpt, xpt, ypt);
+			 temp = bilinear_interpolation(res, (tpt + dt_start), xpt, ypt);
         }
         return temp[0];
 }
@@ -949,7 +952,7 @@ double* VTKreader::linear_interpolation(double* res, double tpt, double xpt) {
 
 bool VTKreader::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
-	if (tpt > t1) {
+	if ((tpt + dt_start) > t1) {
 		//std::cout << "t0: " << t0 << ", t1: " << t1 << ", tpt: " << tpt << std::endl;
 		return false;
 

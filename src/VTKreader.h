@@ -37,6 +37,7 @@ public:
 	VTKreader() {
 		Uindex = -1;
 		loadcount = 0;
+		dt_start = 0.;
 		vtk_timelabel = "TimeValue";
 	}
 	~VTKreader() {
@@ -60,6 +61,7 @@ public:
         bool input2d = false;
 	int nx, ny, nl;
 	double dx, dy;
+	double dt_start;
 	double bounds[6];
 	double* betah; // stretching factor of each cell (percent of total height)
 	int switch2d = 0;

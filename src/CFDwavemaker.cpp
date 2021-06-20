@@ -1533,6 +1533,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 					std::cout << "Name of velocity scalar field: " << vtkreader.Uname << std::endl;
 				}
+				if (!lineA.compare(0, 8, "dt_start")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.dt_start;
+					buf.clear();
+					std::cout << "Time shift: " << vtkreader.dt_start << std::endl;
+		}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
@@ -1652,6 +1659,10 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		std::cout << "************************************************************************* " << std::endl;
 		for (size_t i = 0; i < v.size(); i++)
 			std::cout << v[i] << std::endl;
+		double dkx = swd->GetReal("dk");
+		double domainsize_swd = 2 * PI / dkx;
+		std::cout << "dk: " << dkx << std::endl;
+		std::cout << "domainsize used in SWD simulation: " << domainsize_swd << std::endl;
 		std::cout << "************************************************************************* " << std::endl;
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
