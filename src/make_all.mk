@@ -1,4 +1,4 @@
-CC      := g++-9
+CC      := c++
 VTK_DIR= /home/oland/programs/vtk-9.0.1/installdir
 SWD_INCL = ../swd/inc
 VTK_INCL = $(VTK_DIR)/include/vtk-9.0

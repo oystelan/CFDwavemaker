@@ -1659,11 +1659,28 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 		std::cout << "************************************************************************* " << std::endl;
 		for (size_t i = 0; i < v.size(); i++)
 			std::cout << v[i] << std::endl;
-		double dkx = swd->GetReal("dk");
-		double domainsize_swd = 2 * PI / dkx;
-		std::cout << "dk: " << dkx << std::endl;
-		std::cout << "domainsize used in SWD simulation: " << domainsize_swd << std::endl;
-		std::cout << "************************************************************************* " << std::endl;
+		
+		int shp = swd->GetInt("shp");
+		if (shp > 3) {
+			double dkx = swd->GetReal("dkx");
+			double dky = swd->GetReal("dky");
+			double domainsize_swdx = 2 * PI / dkx;
+			double domainsize_swdy = 2 * PI / dky;
+			std::cout << "Short-crested sea in SWD file" << std::endl;
+			std::cout << "dkx: " << dkx << ", dky: " << dky << std::endl;
+			std::cout << "domain size used in SWD simulation, x: " << domainsize_swdx << ", y:  " << domainsize_swdy << std::endl;
+			std::cout << "************************************************************************* " << std::endl;
+		}
+		else {
+			double dkx = swd->GetReal("dk");
+			double domainsize_swdx = 2 * PI / dkx;
+			std::cout << "Long-crested sea in SWD file" << std::endl;
+			std::cout << "dkx: " << dkx << std::endl;
+			std::cout << "domain length used in SWD simulation, x: " << domainsize_swdx << std::endl;
+			std::cout << "************************************************************************* " << std::endl;
+		}
+		
+		
 #else
 		std::cerr << "Use of swd library specified in the waveinput.dat file. Please recompile CFDwavemaker with SWD_enable=1." << std::endl;
 
