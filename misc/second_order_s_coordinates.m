@@ -1,23 +1,62 @@
 clear;
-dw = 0.01;
-hs = 10;
-tp = 15;
-w = [0.45:dw:0.7];
-S = jonsnor(w./(2*pi),hs,tp)./(2*pi);
 
-a = sqrt(2*dw*S);
-ampl_target = 13;
-a = ampl_target*a./sum(a);
+data =      [0.11080      0.00070      0.00650      0.74589      0.00000
+     0.21761      0.36414      0.01300      1.41866      0.00000
+     0.31728      2.22268      0.01950      2.47253      0.00000
+     0.40800      2.22121      0.02600      0.21543      0.00000
+     0.48927      0.81950      0.03250      0.08896      0.00000
+     0.56154      0.55020      0.03900      1.32717      0.00000
+     0.62583      0.76512      0.04550      2.32825      0.00000
+     0.68333      0.26258      0.05200      1.92497      0.00000
+     0.73521      0.68427      0.05850     -2.55420      0.00000
+     0.78250      0.45274      0.06500      1.14243      0.00000
+     0.82608      0.65714      0.07150     -2.68367      0.00000
+     0.86664      0.41977      0.07800     -2.93449      0.00000
+     0.90473      0.35399      0.08450      0.32237      0.00000
+     0.94079      0.26757      0.09099     -0.76264      0.00000
+     0.97515      0.32077      0.09749     -2.74067      0.00000
+     1.00807      0.30037      0.10399      0.40715      0.00000
+     1.03975      0.25986      0.11049      2.54649      0.00000
+     1.07035      0.08913      0.11699     -1.72757      0.00000
+     1.10000      0.08262      0.12349     -2.99408      0.00000
+     1.12880      0.14344      0.12999      1.03086      0.00000
+     1.15683      0.08981      0.13649     -1.94635      0.00000
+     1.18415      0.25319      0.14299     -1.10753      0.00000
+     1.21084      0.13686      0.14949     -1.28013      0.00000
+     1.23694      0.24739      0.15599     -1.05011      0.00000
+     1.26248      0.13820      0.16249     -0.04418      0.00000
+     1.28750      0.21529      0.16899      1.01351      0.00000
+     1.31205      0.04220      0.17549     -1.00691      0.00000
+     1.33613      0.03675      0.18199      0.52142      0.00000
+     1.35979      0.02334      0.18849     -2.63187      0.00000
+     1.38304      0.05700      0.19499     -1.03381      0.00000
+     1.40591      0.07078      0.20149     -1.13084      0.00000]
+
+% w = [0.45:dw:0.7];
+w = data(:,1);
+a = data(:,2);
+phas = data(:,4);
+% S = jonsnor(w./(2*pi),hs,tp)./(2*pi);
+
+% a = sqrt(2*dw*S);
+% ampl_target = 13;
+% a = ampl_target*a./sum(a);
 
 
 
 % sum(a)
 % return
-h = 300.;
+h = 30.;
 g = 9.81;
-k = w.^2./g;
 
-t = 2.;
+%calculate wavenumber;
+for i = 1:length(w),
+    omega = w(i);
+    W = @(k1)omega-sqrt(9.81*k1.*tanh(k1.*h));
+    k(i) = abs(fzero(W,0.0));
+end
+
+t = 0.;
 x = 0.;
 
 
@@ -25,54 +64,64 @@ x = 0.;
 
 signk1 = [1 -1 1 -1];
 signk2 = [1 -1 -1 1];
+tt = 1;
+time = 0:0.25:100;
+for t = 0:0.25:100,
+    for i = 1:length(k),
+        eta1(i) = a(i)*exp(1i*(k(i)*x-w(i)*t+ phas(i)));
+        for j = 1:length(k),
+            for s = 1:4,
+                w1 = signk1(s)*w(i);
+                w2 = signk2(s)*w(j);
+                k1 = signk1(s)*k(i);
+                k2 = signk2(s)*k(j);
 
-for i = 1:length(k),
-    eta1(i) = a(i)*exp(1i*(k(i)*x-w(i)*t));
-    for j = 1:length(k),
-        for s = 1:4,
-            w1 = signk1(s)*w(i);
-            w2 = signk2(s)*w(j);
-            k1 = signk1(s)*k(i);
-            k2 = signk2(s)*k(j);
-            
-            if (k1 + k2) == 0,
-                eta2_temp(s) = 0.;
-            else
-                %                                 w12 = w(i) + w(j);
-                w12 = w1 + w2;
-                sigma12 = sqrt(g*abs(k1+k2)*tanh(abs(k1+k2)*h));
-                %                 sigma12 = sqrt(g*abs(k1)+abs(k2)*tanh(abs(k1)+abs(k2)*h));
-                
-%                 chs12 = cosh(abs(k1+k2)*h*(1+s))
-                h12(s) = (1i*w12*g*g)/(sigma12^2-w12^2)*...
-                    ((k1*k2)/(w1*w2)-(w1*w2 + w1*w1 + w2*w2)/(2*(g*g))+...
-                    (k1*k1*w2+k2*k2*w1)/(2*w1*w2*w12));
-                
-                %                 h12(s) = (1i*w12*g*g)/(sigma12^2-w12^2);
-                
-                c12(s) = ((1i*w12)/g)*h12(s)+(w1*w1+w2*w2+w1*w2)/(2*g)-...
-                    g*((k1*k2)/(2*w1*w2));
-                
-                e1(s) = exp(1i*(k1*x-w1*t));
-                e2(s) = exp(1i*(k2*x-w2*t));
-                
-                a1(s) = a(i)/2;
-                a2(s) = a(j)/2;
-                
-                eta2_temp(s) = a1(s)*a2(s)*c12(s)*e1(s)*e2(s);
-                
-                
+                if (k1 + k2) == 0,
+                    eta2_temp(s) = 0.;
+                else
+                    %                                 w12 = w(i) + w(j);
+                    w12 = w1 + w2;
+                    sigma12 = sqrt(g*abs(k1+k2)*tanh(abs(k1+k2)*h));
+                    %                 sigma12 = sqrt(g*abs(k1)+abs(k2)*tanh(abs(k1)+abs(k2)*h));
+
+    %                 chs12 = cosh(abs(k1+k2)*h*(1+s))
+                    h12(s) = (1i*w12*g*g)/(sigma12^2-w12^2)*...
+                        ((k1*k2)/(w1*w2)-(w1*w2 + w1*w1 + w2*w2)/(2*(g*g))+...
+                        (k1*k1*w2+k2*k2*w1)/(2*w1*w2*w12));
+
+                    %                 h12(s) = (1i*w12*g*g)/(sigma12^2-w12^2);
+
+                    c12(s) = ((1i*w12)/g)*h12(s)+(w1*w1+w2*w2+w1*w2)/(2*g)-...
+                        g*((k1*k2)/(2*w1*w2));
+
+                    e1(s) = exp(1i*(k1*x-w1*t+phas(i)));
+                    e2(s) = exp(1i*(k2*x-w2*t+phas(j)));
+
+                    a1(s) = a(i)/2;
+                    a2(s) = a(j)/2;
+
+                    eta2_temp(s) = a1(s)*a2(s)*c12(s)*e1(s)*e2(s);
+
+
+                end
+
             end
-            
+            %         h12
+            %         return
+            %             return
+            eta2_sum(i,j) = real(sum(eta2_temp(1:2)));
+            eta2_diff(i,j) = real(sum(eta2_temp(3:4)));
+            %         return
         end
-        %         h12
-        %         return
-        %             return
-        eta2_sum(i,j) = real(sum(eta2_temp(1:2)));
-        eta2_diff(i,j) = real(sum(eta2_temp(3:4)));
-        %         return
     end
+    eta2_sumsum(tt) = sum(sum(eta2_sum));
+    eta2_diffsum(tt) = sum(sum(eta2_diff));
+    eta2sum(tt) = sum(sum(eta2_sum+eta2_diff));
+    tt = tt + 1;
 end
+
+plot(time,eta2sum)
+return
 % figure('Position',[100 100 900 400])
 % subplot(1,2,1)
 % surf(k,k,eta2_sum)
@@ -82,9 +131,7 @@ end
 % surf(k,k,eta2_diff)
 % view(0,90),xlabel('k1'),ylabel('k2')
 % colorbar;
-eta2_sum = sum(sum(eta2_sum));
-eta2_diff = sum(sum(eta2_diff));
-eta2 = sum(sum(eta2_sum+eta2_diff));
+
 
 eta = sum(real(eta1))+eta2;
 

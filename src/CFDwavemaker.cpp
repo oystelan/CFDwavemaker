@@ -783,7 +783,7 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 						// Do nothing. default value is already a very high number
 						std::cout << "Bandwidth: off" << std::endl;
 					}
-					else if (!dummystr.compare(0, 3, "auto")) {
+					else if (!dummystr.compare(0, 4, "auto")) {
 						// Compute a decent bandwidth value. todo: make a function which does this
 						std::cout << "Bandwidth: auto" << std::endl;
 						inputdata.bw_auto_calc = true;

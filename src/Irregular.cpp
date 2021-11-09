@@ -140,7 +140,7 @@ int Irregular::bw_limiter(int i1) {
 
 void Irregular::calculate_bwindices() {
 	bwlim.clear();
-	for (int i = 0; i < nfreq * ndir -1 ; i++) {		
+	for (int i = 0; i < nfreq * ndir ; i++) {		
 		bwlim.push_back(bw_limiter(i));
 		//std::cout << "i: " << i << ", bwlim: " << bw_limiter(i) << ", omega: " << omega[i] << ", omegalim: " << omega[bw_limiter(i)-1] << std::endl;
 	}
@@ -152,14 +152,25 @@ double Irregular::eta2(double t, double xx, double yy) {
 
 	//double eta1_t = 0;
 	double eta2_t = 0;
-	for (int i = 0; i < nfreq*ndir - 1; i++) {
+	for (int i = 0; i < nfreq*ndir; i++) {
 		// Second order
 		int ci = i;
 		double phi_i = k[ci] * (cos(theta[ci] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[ci] 
 			+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[ci] * t + omega[ci] * tofmax + phase[ci];
 		double Rn = k[ci] * tanh(k[ci] * depth);
-			
-		eta2_t += 0.5 * A[ci] * A[ci] * k[ci] * cos(phi_i);
+
+		//double k_nm_plus = 2. * k[ci];
+		double gamma_nm = cos(theta[ci] - theta[ci]);
+		double k_nm_plus = sqrt(k[ci] * k[ci] + k[ci] * k[ci] + (2. * k[ci] * k[ci] * gamma_nm));
+
+		double D_nm_plus = (sqrt(Rn) + sqrt(Rn)) * (sqrt(Rn) * (k[ci] * k[ci] - Rn * Rn) + sqrt(Rn) * (k[ci] * k[ci] - Rn * Rn))
+			+ 2. * pow(sqrt(Rn) + sqrt(Rn), 2.) * (k[ci] * k[ci] - Rn * Rn) / (pow(sqrt(Rn) + sqrt(Rn), 2.) - k_nm_plus * tanh(k_nm_plus * depth));
+
+
+		double alpha_nm_plus = (D_nm_plus-(k[ci]*k[ci]-Rn*Rn))/sqrt(Rn*Rn) + (Rn + Rn);
+
+		
+		//eta2_t += 0.25 * A[ci] * A[ci] * alpha_nm_plus * cos(2*phi_i);
 
 		for (int m = i + 1; m < bwlim[i]; m++) {
 			int cm = m;	
@@ -183,9 +194,25 @@ double Irregular::eta2(double t, double xx, double yy) {
 			double alpha_nm_plus = (((omega[ci] / omega[cm]) + (omega[cm] / omega[ci])) + (G * G / (omega[ci] * omega[cm])) *
 				((D_nm_plus - k[ci] * k[cm] * (gamma_nm - tanh(k[ci] * depth) * tanh(k[cm] * depth))) / (omega[ci] * omega[cm])));
 
+			
 			double phi_m = k[cm] * (cos(theta[cm] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[cm] +
 				(mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[cm] * t + omega[cm] * tofmax + phase[cm];
 
+			
+			//alpha_nm_minus = 0;
+			//alpha_nm_plus = 0;
+			
+			// Trunction
+			/*
+			if ((k[cm] + k[ci]) > k[nfreq*ndir - 1]){
+				alpha_nm_plus = 0.;
+			}
+			
+			if ((k[ci] - k[cm]) < k[0]){
+				alpha_nm_minus = 0.;
+			} */
+			
+			
 			eta2_t += ((A[ci] * A[cm] * omega[ci] * omega[cm]) / (2. * G)) * (alpha_nm_minus * cos(phi_i - phi_m) + alpha_nm_plus * cos(phi_i + phi_m));
 		}
 	}
