@@ -23,7 +23,7 @@ public:
 		normalize = false;
 		mtheta = 0.;
 		extrapolation_met = 0;
-		order = 1;
+		order = 0;
 		tofmax = 0.;
 		fpoint[0] = 0.;
 		fpoint[1] = 0.;
@@ -43,7 +43,7 @@ public:
 	int nfreq, ndir;
 	bool normalize, sloping_bottom;
 	int extrapolation_met = 0; // 0 = exponential all components. 1 
-	int order = 1; // 1 = linear airy wave theory; 2= second order wave theory
+	int order; // 0 = linear airy wave theory; 2= second order wave theory
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl = 0.; // still water level
 	double dw_bandwidth = 100.; // default, frequencies will interact
@@ -72,6 +72,7 @@ public:
 	double u2(double t, double xx, double yy, double zz);
 	double v2(double t, double xx, double yy, double zz);
 	double w2(double t, double xx, double yy, double zz);
+	std::vector<double> uvw2(double t, double xx, double yy, double zz);
 
 	// gradients
 	double phi1_dxdz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component U */
