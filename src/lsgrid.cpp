@@ -425,9 +425,15 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 					double zpt0 = s2z(spt, eta0_temp, water_depth);
 					double zpt0max = std::max(0., zpt0 - swl);
 					double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
-					UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
-					UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
-					UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+					
+					//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
+					//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
+					//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+
+					std::vector<double> U2 = irregular.uvw2(t0, xpt, ypt, zpt0min);
+					UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+					UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+					UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
 				}
 			}
 		}
@@ -458,9 +464,14 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 						double zpt1max = std::max(0., zpt1 - swl);
 						double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
-						UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-						UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-						UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+						//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
+						//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
+						//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+
+						std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
+						UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
+						UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
+						UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
 					}
 				}
 			}
@@ -514,9 +525,14 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 						double zpt0max = std::max(0., zpt0 - swl);
 						double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
 
-						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
-						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
-						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+						//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
+						//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
+						//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+
+						std::vector<double> U2 = irregular.uvw2(t0, xpt, ypt, zpt0min);
+						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
 					}
 				}
 			}
@@ -549,9 +565,14 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 							double zpt1max = std::max(0., zpt1 - swl);
 							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+							//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
+							//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
+							//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+
+							std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
+							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
+							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
+							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
 						}
 					}
 				}
@@ -710,9 +731,14 @@ void lsGrid::update(Irregular& irregular, double t_target)
 							double zpt1max = std::max(0., zpt1 - swl);
 							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+							//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
+							//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
+							//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
+
+							std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
+							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
+							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
+							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
 						}
 					}
 				}

@@ -9,8 +9,8 @@
 double Irregular::eta(double t, double x, double y) {
 	switch(order){
 		case 2:
-			return eta2(t,x,y);
-			//return (swl + eta1(t, x, y) + eta2(t, x, y));
+			//return eta2(t,x,y);
+			return (swl + eta1(t, x, y) + eta2(t, x, y));
 	
 		default:
 			//std::cout << eta1(t, x, y) << std::endl;
@@ -24,9 +24,9 @@ double Irregular::u(double t, double x, double y, double z) {
 	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
-			return u2(t,x,y,z0);}
+			//return u2(t,x,y,z0);}
 			//std::cout << "ape" << std::endl;
-			//return (u1(t, x, y, z0) + u2(t, x, y, z0) + phi1_dxdz(t, x, y) * std::max(0., z - swl));}
+			return (u1(t, x, y, z0) + u2(t, x, y, z0) + phi1_dxdz(t, x, y) * std::max(0., z - swl));}
 			//std::vector<double> U = uvw2(t, x, y, z);
 			//return U[0];} 
 		case 1:
@@ -43,8 +43,8 @@ double Irregular::v(double t, double x, double y, double z) {
 	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
-			return v2(t,x,y,z0);}
-			//return (v1(t, x, y, z0) + v2(t, x, y, z0) + phi1_dydz(t, x, y) * std::max(0., z - swl)); }
+			//return v2(t,x,y,z0);}
+			return (v1(t, x, y, z0) + v2(t, x, y, z0) + phi1_dydz(t, x, y) * std::max(0., z - swl)); }
 			//std::vector<double> U = uvw2(t, x, y, z);
 			//return U[1];}  
 		case 1:
@@ -60,7 +60,8 @@ double Irregular::w(double t, double x, double y, double z) {
 	switch (order) {
 		case 2:
 			{double z0 = std::min(0., z - swl);
-			return w2(t,x,y,z0);}   
+			return (w1(t, x, y, z0) + w2(t, x, y, z0) + phi1_dzdz(t, x, y) * std::max(0., z - swl)); }
+			//return w2(t,x,y,z0);}   
 		case 1:
 			z = std::min(0., z - swl);
 			return (w1(t, x, y, z) + w2(t, x, y, z));
