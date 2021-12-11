@@ -46,7 +46,8 @@ public:
 	int order; // 0 = linear airy wave theory; 2= second order wave theory
 	double ampl, depth, mtheta, tofmax, fpoint[2];
 	double swl = 0.; // still water level
-	double dw_bandwidth = 100.; // default, frequencies will interact
+	double dw_bandwidth = 100.; // default, frequencies bandwidth will interact
+	double dw_cutoff = 100000.;
 
 	// Declaration of vectors to store spectral data components
 	std::vector<double> omega;
