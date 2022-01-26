@@ -1,0 +1,135 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+/// Example dict for Euler forcing for all four regions, where two are commented out for use of 2D propogating wave tutorial.
+/// Xe, Xw, Xn, Xs needs to be calculated / defined,whereas XE, XW, ZN, ZS can be loaded (domain boundaries). LAMBDA must also be specified / calcualted.
+
+// Numbers for propagating wave tutorial
+
+// Domain and lambda (=1/beta)
+
+XE              2700;
+XW              0;
+XN              -1;
+XS              1;
+LAMBDA          0.1;
+
+// Forcing zone specification	
+Xe              #calc "0.95*$XE";
+Xw              #calc "0.95*$XW";
+Xn              #calc "0.95*$XN";
+Xs              #calc "0.95*$XS";	
+
+
+
+
+optionEast
+{
+    type            EulerForcing;
+
+    selectionMode   all;
+
+    origin          ($:Xe 0 0);
+    direction       (1 0 0);
+    ramp
+    {
+        type        halfCosineRamp;
+        start       0;
+        duration    #calc "abs(0.5*($:Xe+$:XE))";
+    }
+
+    lambda          $:LAMBDA;
+
+    timeStart       0;
+    duration        1e6;
+}
+
+/*
+
+optionWest
+{
+    type            EulerForcing;
+
+    selectionMode   all;
+
+    origin          ($:Xw 0 0);
+    direction       (-1 0 0);
+    ramp
+    {
+        type        halfCosineRamp;
+        start       0;
+        duration    #calc "abs(0.5*($:Xw+$:XW))";
+    }
+
+    lambda          $:LAMBDA;
+
+    timeStart       0;
+    duration        1e6;
+}
+
+
+
+
+optionNorth
+{
+    type            EulerForcing;
+
+    selectionMode   all;
+
+    origin          (0 0 $:Zn);
+    direction       (0 0 -1);
+    ramp
+    {
+        type        halfCosineRamp;
+        start       0;
+        duration    #calc "abs(0.5*($:Zn+$:ZN))";
+    }
+
+    lambda          $:LAMBDA;
+
+    timeStart       0;
+    duration        1e6;
+}
+
+
+
+optionSouth
+{
+    type            EulerForcing;
+
+    selectionMode   all;
+
+    origin          (0 0 $:ZS);
+    direction       (0 0 1);
+    ramp
+    {
+        type        halfCosineRamp;
+        start       0;
+        duration    #calc "abs(0.5*($:Zs+$:ZS))";
+    }
+
+    lambda          $:LAMBDA;
+
+    timeStart       0;
+    duration        1e6;
+}
+
+*\
+
+
+//************************************************************************* //
