@@ -2,7 +2,7 @@
 This is a binary distribution as part the spectral_wave_data library.
 ---------------------------------------------------------------------
 
-spectral_wave_data version = 1.0.0-rc1
+spectral_wave_data version = 1.0.0-rc3
 
 Requirements:
 =============
