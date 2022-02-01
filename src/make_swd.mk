@@ -6,7 +6,7 @@ LDFLAGS := -L./ -L../swd/lib -L/cm/local/apps/gcc/10.2.0
 LIBS += -lm -lgfortran
 
 
-export PATH:=$(VTK_INCL):${PATH}
+#export PATH:=$(VTK_INCL):${PATH}
 
 TARGETS:= CFDwavemaker
 
@@ -23,14 +23,15 @@ all: $(TARGETS_SHARED_OMP_SWD) $(TARGETS_STATIC_OMP_SWD)
 
 clean:
 	rm -f $(OBJ) *f90.o *F90.o
-	cp ../swd/cpp/SpectralWaveData.cpp .
-	cp ../swd/inc/SpectralWaveData.h .
-	cp ../swd/inc/spectral_wave_data.h .
-
+	
 $(OBJ):: %.o : %.cpp	 
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS) 
 
-$(TARGETS_SHARED_OMP_SWD): $(OBJ) 
+$(TARGETS_SHARED_OMP_SWD): $(OBJ)
+	cp ../swd/cpp/SpectralWaveData.cpp .
+	cp ../swd/inc/SpectralWaveData.h .
+	cp ../swd/inc/spectral_wave_data.h .
+	cp ../swd/lib/libSpectralWaveData.a .
 	ar x libSpectralWaveData.a
 	$(CC) $(CCFLAGS) -shared -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@

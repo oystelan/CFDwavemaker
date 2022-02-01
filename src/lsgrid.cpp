@@ -399,8 +399,8 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 
 	double dd = omp_get_wtime();
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(1)
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -499,7 +499,7 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -609,7 +609,7 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -668,7 +668,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -737,7 +737,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		// Updating surface elevations
 		double dd = omp_get_wtime();
 		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
+		//omp_set_num_threads(omp_get_max_threads());
 #pragma omp parallel
 		{
 			// Main grid
@@ -816,7 +816,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 	// timestep T0.
 	try {
@@ -926,7 +926,7 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -1052,7 +1052,7 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 
 	double dd = omp_get_wtime();
 
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 	//omp_set_num_threads(1);
 
 	// TIME T0
@@ -1137,7 +1137,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -1228,7 +1228,7 @@ if (!disable_checkbounds){
 		// Updating surface elevations
 		double dd = omp_get_wtime();
 		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
+		//omp_set_num_threads(omp_get_max_threads());
 
 		try {
 			swd->UpdateTime(t0 + dt);

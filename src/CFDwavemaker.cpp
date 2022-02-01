@@ -1785,12 +1785,9 @@ int wave_Initialize()
 		if (!lineA.compare("@v213")) {
 			inputfile_version = 1;
 		}
-		else if (!lineA.compare("@v209")) {
-			inputfile_version = 0;
-		}
-		else if (!lineA.compare(0, 2, "@v")) {
-			std::cout << "Unknown version of input file specified: Currently supported are: @v209 and @v213" << std::endl;
-			exit(-1);
+		else {
+			inputfile_version = 1;
+			std::cout << "Version of inputfile not specified. assumed input given is compatible with the current version of CFDwavemaker (see manual)." << std::endl
 		}
 
 	}
@@ -1800,7 +1797,7 @@ int wave_Initialize()
 		int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, ramp);
 	}
 	else {
-		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.6." << std::endl;
+		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.3 or newer" << std::endl;
 		exit(-1);
 	}
 
