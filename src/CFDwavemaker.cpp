@@ -1775,6 +1775,7 @@ int wave_Initialize()
 	}
 	fid.close();
 
+	/*
 	std::istringstream buf;
 	std::istringstream f(res);
 	int inputfile_version = 0; // 0 = version 2 input format , 1 = version 2009 (new)
@@ -1800,6 +1801,8 @@ int wave_Initialize()
 		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.3 or newer" << std::endl;
 		exit(-1);
 	}
+	*/
+	int i = process_inputdata_v3(res, irregular, stokes5, wavemaker, sgrid, ramp);
 
 	CFDwmInit = true;
 	return 0;
