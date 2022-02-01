@@ -1787,7 +1787,7 @@ int wave_Initialize()
 		}
 		else {
 			inputfile_version = 1;
-			std::cout << "Version of inputfile not specified. assumed input given is compatible with the current version of CFDwavemaker (see manual)." << std::endl
+			std::cout << "Version of inputfile not specified. assumed input given is compatible with the current version of CFDwavemaker (see manual)." << std::endl;
 		}
 
 	}
