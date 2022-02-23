@@ -1088,6 +1088,13 @@ int process_inputdata_v3(std::string res, Irregular& irreg, Stokes5& stokes, Wav
 					buf.clear();
 					std::cout << "Name of velocity scalar field: " << vtkreader.Uname << std::endl;
 				}
+				if (!lineA.compare(0, 8, "t_start")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.t_start;
+					buf.clear();
+					std::cout << "User specified start time (t0): " << vtkreader.Uname << std::endl;
+		}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
