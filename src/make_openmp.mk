@@ -1,4 +1,4 @@
-CC      := g++
+CC      := c++
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp
 LIBS += -lm 
 BUILD_DIR += ../builds/linux64/
@@ -20,7 +20,8 @@ clean:
 
 openmp: $(TARGETS_SHARED_OMP) $(TARGETS_STATIC_OMP)
 
-$(OBJ):: %.o : %.cpp	 
+$(OBJ):: %.o : %.cpp
+	@mkdir -p $(BUILD_DIR)
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS)
 
 # build with openmp support 

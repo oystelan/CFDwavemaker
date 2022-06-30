@@ -33,7 +33,8 @@ clean:
 	cp ../swd/inc/spectral_wave_data.h .
 	cp ../swd/lib/libSpectralWaveData.a .
 
-$(OBJ):: %.o : %.cpp	 
+$(OBJ):: %.o : %.cpp
+	@mkdir -p $(BUILD_DIR)
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS)
 
 $(TARGETS_SHARED_OMP_ALL): $(OBJ)

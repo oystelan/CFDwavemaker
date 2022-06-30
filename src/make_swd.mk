@@ -2,7 +2,7 @@ BUILD_DIR += ../builds/linux64/
 SWD_INCL = ../swd/inc
 CC      := c++
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
-LDFLAGS := -L./ -L../swd/lib -L/cm/local/apps/gcc/10.2.0
+LDFLAGS := -L./ -L../swd/lib
 LIBS += -lm -lgfortran
 
 
@@ -23,8 +23,9 @@ all: $(TARGETS_SHARED_OMP_SWD) $(TARGETS_STATIC_OMP_SWD)
 
 clean:
 	rm -f $(OBJ) *f90.o *F90.o
-	
-$(OBJ):: %.o : %.cpp	 
+
+$(OBJ):: %.o : %.cpp
+	@mkdir -p $(BUILD_DIR)
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS) 
 
 $(TARGETS_SHARED_OMP_SWD): $(OBJ)

@@ -1,6 +1,7 @@
 MAKE_DIR = $(PWD)
 
-.PHONY: clean all
+.DEFAULT_GOAL := default
+.PHONY: default
 
 clean:
 	@$(MAKE) -f make_openmp.mk clean
@@ -8,11 +9,11 @@ clean:
 	@$(MAKE) -f make_all.mk clean
 
 # build CFDwavemaker_swd_openmp (base)
-openmp:
+basic:
 	@$(MAKE) -f make_openmp.mk
 
 # build CFDwavemaker_swd_openmp (base + swd)
-swd:
+default:
 	@$(MAKE) -f make_swd.mk
 
 # build entire CFDwavemaker_all (base + swd + vtk)
