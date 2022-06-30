@@ -1103,6 +1103,13 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf.clear();
 					std::cout << "Name of velocity scalar field: " << vtkreader.Uname << std::endl;
 				}
+				if (!lineA.compare(0, 7, "t_start")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> vtkreader.t_start;
+					buf.clear();
+					std::cout << "User specified start time (t0): " << vtkreader.Uname << std::endl;
+		}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
@@ -1795,6 +1802,7 @@ int wave_Initialize()
 	}
 	fid.close();
 
+	/*
 	std::istringstream buf;
 	std::istringstream f(res);
 	int inputfile_version = 0; // 0 = version 2 input format , 1 = version 2009 (new)
@@ -1805,12 +1813,9 @@ int wave_Initialize()
 		if (!lineA.compare("@v213")) {
 			inputfile_version = 1;
 		}
-		else if (!lineA.compare("@v209")) {
-			inputfile_version = 0;
-		}
-		else if (!lineA.compare(0, 2, "@v")) {
-			std::cout << "Unknown version of input file specified: Currently supported are: @v209 and @v213" << std::endl;
-			exit(-1);
+		else {
+			inputfile_version = 1;
+			std::cout << "Version of inputfile not specified. assumed input given is compatible with the current version of CFDwavemaker (see manual)." << std::endl;
 		}
 
 	}
@@ -1823,6 +1828,8 @@ int wave_Initialize()
 		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.6." << std::endl;
 		exit(-1);
 	}
+	*/
+	int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, ramp);
 
 	CFDwmInit = true;
 	return 0;

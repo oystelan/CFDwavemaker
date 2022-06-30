@@ -1,4 +1,4 @@
-# CFDwavemaker v2.1.5
+# CFDwavemaker v2.1.6
 wave kinematics package for CFD initialization of CFD domains or boundaries.
 The code supports OpenMP and has some special features for fast initialization of large domains built in.
 
@@ -10,7 +10,8 @@ Supported wave theories:
 - second order wave theory (Sharma & Dean, with taylor expansion above z=0) support for irregular & short crested waves 
 - Stokes 5th regular waves (long crested)
 - wave maker theory (piston type wave maker), reading paddle motion from input file (long crested)
-- Spectral-wave-data library, which allows for extension of 
+- Spectral-wave-data library, useful extension to read higher order spectral method (HOSM) kinematics
+- VTK kinematics data: read kinematics stored in VTK format (From other CFD solver or pretty much anything). 
 
 outputs: 
 - surface elevation at any position (x,y)
@@ -24,10 +25,15 @@ Special:
 
 1. navigate into the folder src/
 2. run make and the serial version of CFDwavemaker will be built. Alternatively provide an alternative build option:
-    - make openmp
-    - make openmp_swd
+    - "make" or "make default" (This will make the default build, which contains the built-in kinematics library + the SWD library extension)
+    - "make basic"
+    - "make all" (Builds the complete library, including the vtk extension. This requires that the vtk library has been installed and compiled, and that the make files are updated according to the vtk version you have installed. A bit complicated to link, so stay away from this if you dont really need it.)
 
-## Version log (a coarse one)
+## Version log (highlights only)
+
+Version 2.1.6 release:
+- VTK extension.
+- Some minor bugfixes in second order theory related to intermediate water depth usage.
 
 Version 2.1.5 release:
 - added probes as output such that x,y,z coordinates may be specified to dump kinematics to file.

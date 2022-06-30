@@ -399,8 +399,8 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 
 	double dd = omp_get_wtime();
 
-	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(1)
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -499,7 +499,7 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -609,7 +609,7 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -622,10 +622,28 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 				double ypt = domain[2] + dy * j;
 
 				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-				ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+				//ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 
 			}
 		}
+		if (init_only){
+		  ETA1 = ETA0;
+		}
+		else{
+#pragma omp for collapse(2)
+                for (int i = 0; i < nx; i++) {
+
+                        for (int j = 0; j < ny; j++) {
+                                double xpt = domain[0] + dx * i;
+                                double ypt = domain[2] + dy * j;
+
+                                //ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+                                ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+
+                        }
+                }
+		}
+
 	}
 	dd = omp_get_wtime() - dd;
 
@@ -650,7 +668,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -662,14 +680,35 @@ void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, doub
 				double ypt = domain[2] + dy * j;
 				if (!IGNORE[i * ny + j]) {
 					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-					ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+					//ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
 				}
 				else {
 					ETA0[i * ny + j] = swl;
-					ETA1[i * ny + j] = swl;
+					//ETA1[i * ny + j] = swl;
 				}
 			}
 		}
+		if (init_only) {
+		  ETA1 = ETA0;
+		}
+		else{
+#pragma omp for collapse(2)
+                for (int j = 0; j < ny; j++) {
+                        for (int i = 0; i < nx; i++) {
+                                double xpt = domain[0] + dx * i;
+                                double ypt = domain[2] + dy * j;
+                                if (!IGNORE[i * ny + j]) {
+				  //ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
+                                        ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+                                }
+                                else {
+				  //ETA0[i * ny + j] = swl;
+                                        ETA1[i * ny + j] = swl;
+                                }
+                        }
+                }
+		}
+
 	}
 	dd = omp_get_wtime() - dd;
 
@@ -698,7 +737,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		// Updating surface elevations
 		double dd = omp_get_wtime();
 		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
+		//omp_set_num_threads(omp_get_max_threads());
 #pragma omp parallel
 		{
 			// Main grid
@@ -777,7 +816,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 	// timestep T0.
 	try {
@@ -824,6 +863,12 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	}
 
 	// timestep T1.
+	if (init_only) {
+                UX1 = UX0;
+                UY1 = UY0;
+                UZ1 = UZ0;
+        }
+	else{
 
 	try {
 		swd->UpdateTime(t0+dt);
@@ -859,7 +904,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 			}
 		}
 	} // End parallel initialization
-
+	}
 	if (dump_vtk) {
 		write_vtk(false);
 		update_count++;
@@ -881,7 +926,7 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	double dd = omp_get_wtime();
 
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
 	{
@@ -927,7 +972,17 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 				}
 			}
 		}
+
 		// timestep T1.
+		 // timestep T1.
+		if (init_only) {
+		  UX1 = UX0;
+		  UY1 = UY0;
+		  UZ1 = UZ0;
+		}
+		else {
+
+
 #pragma omp master
 		try {
 			swd->UpdateTime(t0 + dt);
@@ -937,7 +992,7 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 			// If we will try again with a new value of t
 			// we first need to call: swd.ExceptionClear()
 			exit(EXIT_FAILURE);  // In this case we just abort.
-		}
+			}
 
 		// Main grid
 #pragma omp for collapse(2)
@@ -968,6 +1023,7 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 				}
 			}
 		}
+		}
 	} // End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
@@ -996,7 +1052,7 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 
 	double dd = omp_get_wtime();
 
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 	//omp_set_num_threads(1);
 
 	// TIME T0
@@ -1026,8 +1082,13 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 
 		}
 	}
+	
 
 	// Time T1
+	if (init_only) {
+	  ETA1 = ETA0;
+	}
+	else{
 	try {
 		swd->UpdateTime(t0 + dt);
 	}
@@ -1053,6 +1114,7 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 			}
 		}
 	}
+	}
 	dd = omp_get_wtime() - dd;
 
 	std::cout << "Surface Elevation generated successfully. ";
@@ -1075,7 +1137,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 
 	double dd = omp_get_wtime();
 	//omp_set_num_threads(1);
-	omp_set_num_threads(omp_get_max_threads());
+	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel
 	{
@@ -1104,6 +1166,10 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 				}
 			}
 		}
+		if (init_only){
+		  ETA1 = ETA0;
+		}
+		else{
 #pragma omp master
 		try {
 			swd->UpdateTime(t0 + dt);
@@ -1128,6 +1194,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 				}
 			}
 		}
+	}
 	}
 	dd = omp_get_wtime() - dd;
 
@@ -1161,7 +1228,7 @@ if (!disable_checkbounds){
 		// Updating surface elevations
 		double dd = omp_get_wtime();
 		//omp_set_num_threads(1);
-		omp_set_num_threads(omp_get_max_threads());
+		//omp_set_num_threads(omp_get_max_threads());
 
 		try {
 			swd->UpdateTime(t0 + dt);

@@ -1,0 +1,4 @@
+levelSet_addon.C
+setWavesCFDwavemaker.C
+
+EXE = $(FOAM_APPBIN)/setWavesCFDwavemaker

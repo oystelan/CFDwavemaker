@@ -68,6 +68,10 @@ def clean_up(mydll):
 print(init_dll(mydll))
 
 
+clean_up(mydll)
+
+exit()
+
 time = np.arange(0,20,0.1)
 
 

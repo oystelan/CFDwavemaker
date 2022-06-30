@@ -19,7 +19,7 @@ temp = os.path.dirname(temp)
 print(temp)
 #lib = CDLL("./comflow_wavemaker.so")
 
-mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_vtk_openmp.so")     
+mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_all_openmp.so")     
 
 #exit()
 
@@ -68,44 +68,51 @@ def clean_up(mydll):
 print(init_dll(mydll))
 
 
-clean_up(mydll)
-
-exit()
-
-time = np.arange(0,20,0.1)
 
 
+
+#time = np.arange(10, 30., 0.05)
+
+zz = np.arange(-35.7596, -35., 1.)
+t = 0.0
 ww = []
-ww2 = []
 u = []
+#u2 = []
+#u3 = []
 v = []
 w = []
 
-for t in time:
-    print(waveelev(mydll,t,-200,0))
+x = 25.
+y = 375.
+#z = -250.
 
-    ww.append(waveelev(mydll,t,-200,0))
-    ww2.append(waveelev(mydll,t,-200.,3.))
-    u.append(velocityX(mydll,t,-200.,0.,-5.))
-    v.append(velocityY(mydll,t,-200.,0.,-5.))
-    w.append(velocityZ(mydll,t,-200.,0.,-5.))
+#for t in time:
+for z in zz:    
+    #print(waveelev(mydll,t,x,y))
+
+    ww.append(waveelev(mydll,t,x,y))
+    u.append(velocityX(mydll,t,x,y,z))
+    #u2.append(velocityX(mydll,t,x,y,z-20.))
+    #u3.append(velocityX(mydll,t,x,y,z-40.))
+    v.append(velocityY(mydll,t,x,y,z))
+    w.append(velocityZ(mydll,t,x,y,z))
+    print("z:", z, " u: ",velocityX(mydll,t,x,y,z), "elev: ", waveelev(mydll,t,x,y), 'veloy: ',velocityY(mydll,t,x,y,z), 'veloz: ',velocityZ(mydll,t,x,y,z))
     
 
-plt.plot(time, ww, label="x=-200, y=0")
-plt.plot(time, ww2, label="x=-150, y=5.")
-plt.legend()
-plt.grid(True)
-plt.savefig("./result_eta.png")
+
+
 
 plt.clf()
-plt.plot(time,u, label='u')
-plt.plot(time,v, label='v')
-plt.plot(time,w, label='w')
+plt.plot(u,zz, label='u')
+plt.plot(v,zz, label='v')
+plt.plot(w,zz, label='w')
+#plt.plot(time, ww, label="eta")
 plt.legend()
 plt.grid(True)
-plt.savefig("./result_u.png")
+#plt.show()
+plt.savefig("./result_u_w_eta.png")
 
 
-
+clean_up(mydll)
 
 

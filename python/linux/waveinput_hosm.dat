@@ -1,45 +1,27 @@
-@v2009
-# Wavedata CFDwavemaker2
+@v213
+# CFDwavemaker SWD example 1: irregular 5th order long crested wave
 
 [wave type]
 swd
 
 [general input data]
-depth 21.00
+depth 300.00
 mtheta 0.0000
 
 [swd wave properties]
-swdfile  hosm_out.swd
-# Relation between SWD and application coordinates. beta in degree. These all have default value 0.0
-# See also origin above for defining the still water position
-x0 0.0
-y0 0.0
-t0 0.0
-beta 0.0
-# Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
-nsumx -1
-nsumy -1
-impl 0
-ipol 0
-norder 0
-dc_bias false
-
-[ramps]
-# ramp_type    enable       rampup_start rampup_end
-time_rampup    0            0.0000       1.0
-# you do not need to specify all ramps, only the once you need.
+swdfile  fenton_h1.2_d1_l2.swd
 
 [lsgrid]
 #         XMIN   XMAX   YMIN   YMAX
-bounds  -200.00 200.00 0.00 0.00
-nx  100
+bounds  -200.00 -150.00 0.00 6.00
+nx  1
 ny  1
 nl  16
 t0  0.0
-dt  1.0
+dt  0.2
 stretch_params 0.7   1.5
 #                 xmin     xmax   ymin   ymax
-ignore_subdomain -100.00 100.00 -150. 150.
+#ignore_subdomain -300.00 100.00 -1. 1.
 ignore_at_init 1
 
 [vtk output]
