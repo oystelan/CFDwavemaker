@@ -44,7 +44,7 @@ public:
 	bool normalize, sloping_bottom;
 	int extrapolation_met = 0; // 0 = exponential all components. 1 
 	int order; // 0 = linear airy wave theory; 2= second order wave theory
-	double ampl, depth, mtheta, tofmax, fpoint[2];
+	double ampl, depth, mtheta, tofmax, fpoint[2], rho, g;
 	double swl = 0.; // still water level
 	double dw_bandwidth = 100.; // default, frequencies bandwidth will interact
 	double dw_cutoff = 100000.;
