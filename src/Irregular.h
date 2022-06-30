@@ -7,8 +7,6 @@
 #ifndef PI
 #define PI 3.1415926535897
 #endif
-#define G 9.81
-#define RHO 1025.0
 
 class Irregular {
 private:
@@ -30,6 +28,8 @@ public:
 		swl = 0.;
 		depth = 300.;
 		ndir = 1;
+		g = 9.81;
+		rho = 1025.0;
 
 	};
 

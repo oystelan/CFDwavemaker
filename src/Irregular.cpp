@@ -216,7 +216,7 @@ double Irregular::u1(double t, double xx, double yy, double zz) {
 	//(cosh(k[i] * (zz + depth)) / sinh(k[i] * depth))
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		usum +=  A[i] * G * k[i] / omega[i] * profileX(i, xx, yy, zz)
+		usum +=  A[i] * g * k[i] / omega[i] * profileX(i, xx, yy, zz)
 			* cos(theta[i] + (mtheta * PI / 180.)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.))
 				* (xx - fpoint[0]) + sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
@@ -234,7 +234,7 @@ double Irregular::v1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		vsum += A[i] * G * k[i] / omega[i] * profileX(i, xx, yy, zz)
+		vsum += A[i] * g * k[i] / omega[i] * profileX(i, xx, yy, zz)
 			* sin(theta[i] + (mtheta * PI / 180.)) * cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0])
 				+ sin(theta[i] + (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
@@ -252,7 +252,7 @@ double Irregular::w1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		wsum += A[i] * G * k[i] / omega[i] * profileZ(i, xx, yy, zz)
+		wsum += A[i] * g * k[i] / omega[i] * profileZ(i, xx, yy, zz)
 			* sin(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] + (mtheta 
 				* PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
@@ -275,7 +275,7 @@ double Irregular::u2(double t, double xx, double yy, double zz) {
 
 		// Diagonal terms
 		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
-		double AA = 0.25*(A[i] * G/ omega[i])*(A[i] * G / omega[i])*(D_nn_plus/(2*omega[i]));
+		double AA = 0.25*(A[i] * g/ omega[i])*(A[i] * g / omega[i])*(D_nn_plus/(2*omega[i]));
 		usum2 += AA*(2*k[i]*cos(thi)) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth);
 
 		// Off-diagonals
@@ -300,7 +300,7 @@ double Irregular::u2(double t, double xx, double yy, double zz) {
 
 			double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) + ((Rsn - Rsm) * (-Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i]*k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
 
-			double AA = 0.5*(A[i] * G / omega[i]) * (A[m] * G / omega[m]);
+			double AA = 0.5*(A[i] * g / omega[i]) * (A[m] * g / omega[m]);
 			double BB = (D_nm_plus/(omega[i]+omega[m]));
 			double coshcosh_plus = cosh(k_nm_plus*(zz+depth))/cosh(k_nm_plus*depth);
 
@@ -335,7 +335,7 @@ double Irregular::v2(double t, double xx, double yy, double zz) {
 
 		// Diagonal terms
 		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
-		double AA = 0.25*(A[i] * G/ omega[i])*(A[i] * G / omega[i])*(D_nn_plus/(2*omega[i]));
+		double AA = 0.25*(A[i] * g/ omega[i])*(A[i] * g / omega[i])*(D_nn_plus/(2*omega[i]));
 		vsum2 += AA*(2*k[i]*sin(thi)) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); 
 
 		for (int m = i + 1; m < nfreq * ndir; m++) {
@@ -359,7 +359,7 @@ double Irregular::v2(double t, double xx, double yy, double zz) {
 
 			double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) + ((Rsn - Rsm) * (-Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i]*k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
 
-			double AA = 0.5*(A[i] * G / omega[i]) * (A[m] * G / omega[m]);
+			double AA = 0.5*(A[i] * g / omega[i]) * (A[m] * g / omega[m]);
 			double BB = (D_nm_plus/(omega[i]+omega[m]));
 			double coshcosh_plus = cosh(k_nm_plus*(zz+depth))/cosh(k_nm_plus*depth);
 			
@@ -395,7 +395,7 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 
 		// Diagonal terms
 		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
-		double AA = 0.25*(A[i] * G/ omega[i])*(A[i] * G / omega[i])*(D_nn_plus/(2*omega[i]));
+		double AA = 0.25*(A[i] * g/ omega[i])*(A[i] * g / omega[i])*(D_nn_plus/(2*omega[i]));
 		wsum2 += AA* 2*k[i] * sin(2*phi_i) * sinh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); 
 
 		for (int m = i + 1; m < nfreq * ndir; m++) {
@@ -419,7 +419,7 @@ double Irregular::w2(double t, double xx, double yy, double zz) {
 
 			double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) + ((Rsn - Rsm) * (-Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i]*k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
 
-			double AA = 0.5*(A[i] * G / omega[i]) * (A[m] * G / omega[m]);
+			double AA = 0.5*(A[i] * g / omega[i]) * (A[m] * g / omega[m]);
 			double BB = (D_nm_plus/(omega[i]+omega[m]));
 			
 			double sinhcosh_plus = sinh(k_nm_plus*(zz+depth))/cosh(k_nm_plus*depth);
@@ -456,7 +456,7 @@ std::vector<double> Irregular::uvw2(double t, double xx, double yy, double zz) {
 		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
 		// Sum term
 
-		double AA = 0.25*(A[i] * G/ omega[i])*(A[i] * G / omega[i])*(D_nn_plus/(2*omega[i]));
+		double AA = 0.25*(A[i] * g/ omega[i])*(A[i] * g / omega[i])*(D_nn_plus/(2*omega[i]));
 		usum2 += AA*(2*k[i]*cos(thi)) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth);
 		vsum2 += AA*(2*k[i]*sin(thi)) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); 		
 		wsum2 += AA* 2*k[i] * sin(2*phi_i) * sinh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); 
@@ -484,7 +484,7 @@ std::vector<double> Irregular::uvw2(double t, double xx, double yy, double zz) {
 
 			double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) + ((Rsn - Rsm) * (-Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i]*k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
 
-			double AA = 0.5*(A[i] * G / omega[i]) * (A[m] * G / omega[m]);
+			double AA = 0.5*(A[i] * g / omega[i]) * (A[m] * g / omega[m]);
 			double BB = (D_nm_plus/(omega[i]+omega[m]));
 			
 			double coshcosh_plus = cosh(k_nm_plus*(zz+depth))/cosh(k_nm_plus*depth);
@@ -526,7 +526,7 @@ double Irregular::dp1(double t, double xx, double yy, double zz) {
 
 	for (int i = 0; i < ndir * nfreq; i++) {
 		phi = omega[i] * tofmax + phase[i];
-		psum += A[i] * RHO * G * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth)) 
+		psum += A[i] * rho * g * (cosh(k[i] * (zz + depth)) / cosh(k[i] * depth)) 
 			* cos(k[i] * (cos(theta[i] + (mtheta * PI / 180.)) * (xx - fpoint[0]) + sin(theta[i] 
 				+ (mtheta * PI / 180.)) * (yy - fpoint[1])) - omega[i] * t + phi);
 	}
