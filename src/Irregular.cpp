@@ -157,51 +157,59 @@ void Irregular::calculate_bwindices() {
 
 /* Second order wave elevation */
 double Irregular::eta2(double t, double xx, double yy) {
-
+	double kmax = *max_element(k.begin(), k.end());
 	//double eta1_t = 0;
 	double eta2_t = 0;
 	for (int i = 0; i < nfreq*ndir; i++) {
-		double thi = theta[i]+ (mtheta * PI / 180.);
-		double phi_i = k[i] * (cos(thi) * (xx - fpoint[0]) + sin(thi) * (yy - fpoint[1])) - omega[i] * t + omega[i] * tofmax + phase[i];
-		double Rn = k[i] * tanh(k[i] * depth);
-		double Rsn = sqrt(Rn);
+		if (omega[i] <= dw_cutoff) {
+			double thi = theta[i] + (mtheta * PI / 180.);
+			double phi_i = k[i] * (cos(thi) * (xx - fpoint[0]) + sin(thi) * (yy - fpoint[1])) - omega[i] * t + omega[i] * tofmax + phase[i];
+			double Rn = k[i] * tanh(k[i] * depth);
+			double Rsn = sqrt(Rn);
 
-		// Diagonal terms
-		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
-		double alpha_nn_plus = (D_nn_plus-(k[i] * k[i] - Rn * Rn))/Rn + 2*Rn;
+			// Diagonal terms
+			double D_nn_plus = (6. * Rsn * Rsn * (k[i] * k[i] - Rn * Rn)) / (2. * Rsn * Rsn - k[i] * tanh(2. * k[i] * depth));
+			double alpha_nn_plus = (D_nn_plus - (k[i] * k[i] - Rn * Rn)) / Rn + 2. * Rn;
 
-		eta2_t += 0.25 * A[i] * A[i] * alpha_nn_plus * cos(2*phi_i);
+			if (2 * k[i] <= kmax) {
+				eta2_t += 0.25 * A[i] * A[i] * alpha_nn_plus * cos(2 * phi_i);
+			}
 
-		// Off-diagonal (sum over half only due to symmetry)
-		for (int m = i + 1; m < nfreq*ndir; m++) {
-			double thm = theta[m] + (mtheta * PI / 180.);
-			
-			double phi_m = k[m] * (cos(thm) * (xx - fpoint[0]) + sin(thm) * (yy - fpoint[1])) - omega[m] * t + omega[m] * tofmax + phase[m];
+			// Off-diagonal (sum over half only due to symmetry)
+			for (int m = i + 1; m < nfreq * ndir; m++) {
+				
+				if ((omega[m] <= dw_cutoff) && abs(omega[i] - omega[m]) <= dw_bandwidth) {
+					double thm = theta[m] + (mtheta * PI / 180.);
 
-			double gamma_nm = cos(thi - thm);
-			double k_nm_plus = sqrt(k[i] * k[i] + k[m] * k[m] + (2. * k[i] * k[m] * gamma_nm));
-			double k_nm_minus = sqrt(k[i] * k[i] + k[m] * k[m] - (2. * k[i] * k[m] * gamma_nm));
+					double phi_m = k[m] * (cos(thm) * (xx - fpoint[0]) + sin(thm) * (yy - fpoint[1])) - omega[m] * t + omega[m] * tofmax + phase[m];
 
-			double Rm = k[m] * tanh(k[m] * depth);
+					double gamma_nm = cos(thi - thm);
+					double k_nm_plus = sqrt(k[i] * k[i] + k[m] * k[m] + (2. * k[i] * k[m] * gamma_nm));
+					double k_nm_minus = sqrt(k[i] * k[i] + k[m] * k[m] - (2. * k[i] * k[m] * gamma_nm));
 
-			double Rsm = sqrt(Rm);
-			
-			double Rsnm2plus = pow(Rsn + Rsm, 2.);
-			double Rsnm2minus = pow(Rsn - Rsm, 2.);
+					double Rm = k[m] * tanh(k[m] * depth);
 
-			double D_nm_plus = (2. * Rsnm2plus * (k[i] * k[m] * gamma_nm - Rn * Rm)) / (Rsnm2plus - k_nm_plus * tanh(k_nm_plus * depth)) + 
-			((Rsn + Rsm) * (Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i] * k[i] - Rn * Rn))) / (Rsnm2plus - k_nm_plus * tanh(k_nm_plus * depth));
+					double Rsm = sqrt(Rm);
 
-			double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) + ((Rsn - Rsm) * (-Rsn*(k[m]*k[m] - Rm * Rm) + Rsm*(k[i]*k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
+					double Rsnm2plus = pow(Rsn + Rsm, 2.);
+					double Rsnm2minus = pow(Rsn - Rsm, 2.);
 
-			double alpha_nm_plus = (D_nm_plus - (k[i]*k[m]* gamma_nm - Rn*Rm)) / sqrt(Rn*Rm) + (Rn + Rm);
 
-			double alpha_nm_minus = (D_nm_minus - (k[i]*k[m]* gamma_nm + Rn*Rm)) / sqrt(Rn*Rm) + (Rn + Rm);
+					if ((k[i] + k[m]) <= kmax) {
+						double D_nm_plus = (2. * Rsnm2plus * (k[i] * k[m] * gamma_nm - Rn * Rm)) / (Rsnm2plus - k_nm_plus * tanh(k_nm_plus * depth)) +
+							((Rsn + Rsm) * (Rsn * (k[m] * k[m] - Rm * Rm) + Rsm * (k[i] * k[i] - Rn * Rn))) / (Rsnm2plus - k_nm_plus * tanh(k_nm_plus * depth));
+						double alpha_nm_plus = (D_nm_plus - (k[i] * k[m] * gamma_nm - Rn * Rm)) / sqrt(Rn * Rm) + (Rn + Rm);
+						eta2_t += 0.5 * A[i] * A[m] * (alpha_nm_plus * cos(phi_i + phi_m)); // sum term
+					}
+					if (k[i] != k[m]) {
+						double D_nm_minus = (2. * Rsnm2minus * (k[i] * k[m] * gamma_nm + Rn * Rm)) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth)) 
+							+ ((Rsn - Rsm) * (-Rsn * (k[m] * k[m] - Rm * Rm) + Rsm * (k[i] * k[i] - Rn * Rn))) / (Rsnm2minus - k_nm_minus * tanh(k_nm_minus * depth));
+						double alpha_nm_minus = (D_nm_minus - (k[i] * k[m] * gamma_nm + Rn * Rm)) / sqrt(Rn * Rm) + (Rn + Rm);
+						eta2_t += 0.5 * A[i] * A[m] * (alpha_nm_minus * cos(phi_i - phi_m)); // difference term
+					}
+				}
 
-			eta2_t += 0.5* A[i] * A[m]  * (alpha_nm_plus * cos(phi_i + phi_m)); // sum term
-
-			eta2_t += 0.5* A[i] * A[m]  * (alpha_nm_minus * cos(phi_i - phi_m)); // difference term
-            
+			}
 		}
 	}
 

@@ -183,7 +183,6 @@ int numparams(std::string str)
 	return count;
 }
 
-
 /* main input file reader function*/
 int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp) {
 	std::string lineA, dummystr, lineP;
@@ -338,6 +337,13 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf.clear();
 					std::cout << "Second order velocity extrapolation method for z > swl: " << irreg.extrapolation_met << std::endl;
 				}
+				if (!lineA.compare(0, 6, "cutoff")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> irreg.dw_cutoff;
+					buf.clear();
+					std::cout << "Second order high-frequency cut-off set to: " << irreg.dw_cutoff << std::endl;
+				}
 				if (!lineA.compare(0, 9, "bandwidth")) {
 					buf.str(lineA);
 					buf >> dummystr;
@@ -347,7 +353,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 						// Do nothing. default value is already a very high number
 						std::cout << "Bandwidth: off" << std::endl;
 					}
-					else if (!dummystr.compare(0, 3, "auto")) {
+					else if (!dummystr.compare(0, 4, "auto")) {
 						// Compute a decent bandwidth value. todo: make a function which does this
 						std::cout << "Bandwidth: auto" << std::endl;
 						inputdata.bw_auto_calc = true;
@@ -1809,16 +1815,12 @@ int wave_Initialize()
 
 	}
 
-	if (inputfile_version == 0) {
-		std::cout << "Reading old input file version2 format v.2.0.9(@v209). This file format is depricated and will be removed in a future version." << std::endl;
-		int i = process_inputdata_v2(res, irregular, stokes5, wavemaker, sgrid, ramp);
-	}
-	else if (inputfile_version == 1) {
+	if (inputfile_version == 1) {
 		std::cout << "Reading new input file version2 format v2.1.3 or newer (@v213)" << std::endl;
 		int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, ramp);
 	}
 	else {
-		std::cout << "Could not locate or input file unrecognizable. exiting." << std::endl;
+		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.6." << std::endl;
 		exit(-1);
 	}
 
