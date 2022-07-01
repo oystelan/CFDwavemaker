@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "srasim_docs"
+version = "1.0.1"
+description = "srasim docs"
+authors = ["Øystein Lande <Oystein.Lande@dnv.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8.1"
+sphinx = ">=3.5"
+sphinxcontrib-bibtex = ">=1.0.0"
+sphinx_rtd_theme = ">=0.5.0"
+
+[tool.poetry.dev-dependencies]
+setuptools = "^56.0.0"
+setuptools-scm = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
