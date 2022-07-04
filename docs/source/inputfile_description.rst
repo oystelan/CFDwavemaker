@@ -21,14 +21,14 @@ All keywords available in CFDwavemaker (and what they do) are described in secti
 Version
 -------
 
-CFDwavemaker has been developed over many years of iteration where new functionalities and improvements have been added along the way. The input format introduced in versiion 2.*.* is quite different from the original input fileformat. A cleanup was neccessary and therefore the support for old input files (pre v2) have been discontinued. Two versions are now supported:
+CFDwavemaker has been developed over many years of iteration where new functionalities and improvements have been added along the way. The input format introduced in versiion 2.*.* is quite different from the original input fileformat. A cleanup was neccessary and therefore the support for old input files (pre v2) have been discontinued. 
+The input file has the CFDwavemaker version always defined in the first line.
 
-- **@v201** which is this initial implementation
-- **@v213** up-to-date format, as described in the section below. 
+Example: **@v213**
 
 .. note::
 
-  Please make sure to clearly specify the input file format version in the first line of the input file adding either: @v213 or @v201 in the first line. If this is omitted, the program will assume you are using @v201. 
+  Please make sure to clearly specify the input file format version in the first line of the input file. if the version is not found or if the version is too old, CFDwavemaker will stop running. Older versions of CFDwavemaker (pre v2.1.3) is not recommended to use anymore.
 
 Wave types
 ----------
@@ -39,8 +39,10 @@ CFDwavemaker currently support the following wave theories. Which branch of wave
 2. ``regular`` - Stokes regular wave theory (up to 5th order)
 3. ``wavemaker`` - Wave maker theory
 4. ``swd`` - `Spectral-Wave-Data`_ (swd) is an external library for generating  through DNVGLs HOSM wave model
+5. ``vtk`` - `VTK library`_ is another external library which is supported by most CFD programs. By building and linking this with CFDwavemaker, kinematics can be imported from any program capable of writing vtk files.
 
 .. _`Spectral-Wave-Data`: http://https://github.com/SpectralWaveData
+.. _`VTK library`: http://www.vtk.org 
 
 In general, the most effort has been put into second order irregular wave theory, which is why this library was made in the first place. More wave theories may be added in the future.
 
@@ -54,7 +56,7 @@ To chose one of the above use the following code word
 
 General input data
 ------------------
-Some data are mandatory for all wave types. These parameters are specified under the tag **[general input data]**.
+Some data are mandatory for all wave types. These parameters are specified under the keyword **[general input data]**.
 
 
 .. list-table::
@@ -77,6 +79,12 @@ Some data are mandatory for all wave types. These parameters are specified under
       - no
     * - ``amplify``
       - Used to amplify the spectral parameters. can be used to scale all amplitudes of a wave spectrum. Default value = 1.
+      - no
+    * - ``gravity``
+      - gravity, which by default is set to 9.81 m/s^2
+      - no
+    * - ``rho``
+      - water density, which by default is set to 1025 kg/m^3
       - no
 
 
@@ -499,7 +507,7 @@ An example of the required input parameters which needs to be specified in *wave
 
 - Water depth specified in the swd file will overrule the specified water depth given in **[general input data]** (see :numref:`inputfile_description:General input data`).
 - Like irregular second order wave theory, the grid interpolation schemes presented in :numref:`inputfile_description:Grid interpolation schemes` are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.
-- The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see :numref:`coordinate_system:General input data`). To change reference position, see :numref:`inputfile_description:Wave reference point` and ``swl`` in :numref:`inputfile_description:General input data`.
+- The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see :numref:`inputfile_description:General input data`). To change reference position, see :numref:`inputfile_description:Wave reference point` and ``swl`` in :numref:`inputfile_description:General input data`.
 
 Grid interpolation schemes
 --------------------------

@@ -41,3 +41,20 @@ Constructive feedback or suggestions of improvements are always welcome. If you 
 Bug reporting
 -------------
 Bug in the code you say? `let me know about it <mailto:oystelan@gmail.com>`_. 
+
+Reference to CFDwavemaker
+-------------------------
+
+The code is open source and free to use by anyone. If you find the code useful and decide to used it in projects or publications, make sure to reference to
+
+.. code-block:: none
+
+   @inproceedings{landeCFDwavemaker,
+      title={CFDWAVEMAKER: An open-source library for efficient generation of higher order wave kinematics},
+      author={Lande, Oystein and Helmers, Jens Bloch},
+      booktitle={International Conference on Offshore Mechanics and Arctic Engineering},
+      volume={57656},
+      pages={V03AT02A029},
+      year={2022},
+      organization={American Society of Mechanical Engineers}
+   }

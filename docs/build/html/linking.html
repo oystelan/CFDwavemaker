@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3. Linking to your software &mdash; CFDwavemaker v2.1.6 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="4. Input file format" href="inputfile_description.html" />
+    <link rel="prev" title="2. Build from source" href="build.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html">
+            <img src="_static/logo3.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2.1.6
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Table of Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="download.html">1. Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">2. Build from source</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Linking to your software</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general">3.1. General</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-with-c-c">3.2. Linking with C/C++</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-python">3.3. Linking up with Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-comflow">3.4. Linking up with ComFLOW</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-basilisk-or-c">3.5. Linking up with Basilisk (or C)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#static-linking">3.5.1. Static linking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dynamic-linking">3.5.2. Dynamic linking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-up-with-openfoam">3.6. Linking up  with OpenFOAM</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_description.html">4. Input file format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inputfile_examples.html">5. Example of usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="definitions.html">6. Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory.html">7. Wave theories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todolist.html">8. Todo-list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">9. License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">10. References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CFDwavemaker</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><span class="section-number">3. </span>Linking to your software</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/linking.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="linking-to-your-software">
+<h1><span class="section-number">3. </span>Linking to your software<a class="headerlink" href="#linking-to-your-software" title="Permalink to this heading"></a></h1>
+<p>Feedback has thought me that what people often find difficult is to link the library to their software of choice.
+To hopefully help with this, a few examples of linking are provided below.</p>
+<section id="general">
+<h2><span class="section-number">3.1. </span>General<a class="headerlink" href="#general" title="Permalink to this heading"></a></h2>
+<p>If you have built the library (or downloaded the binaries), there are only 2 files you really need:</p>
+<ul class="simple">
+<li><p><cite>CFDwavemaker.h</cite>: header file, tells you which functions are available</p></li>
+<li><p><cite>libCFDwavemaker_swd_openmp.a(or .so)</cite>: the actually library</p></li>
+</ul>
+<p>The file with the extension .a is the static link library, while the .so file is the dynamic link library.
+<cite>CFDwavemaker.h</cite> is found in the ./src/ directory, while the libraries are found in the ./build/linux64 library.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Depending on which version of the library you have built, name of the .so/.a file will differ. To elaborate:</p>
+<ul class="simple">
+<li><p>libCFDwavemaker_swd_openmp is the default build (built with swd extension, using openmp parallelization)</p></li>
+<li><p>libCFDwavemaker_openmp is the basic build (built without swd extension (core library only), using openmp parallelization)</p></li>
+<li><p>libCFDwavemaker_all_openmp is the complete build (built with swd and vtk extensions, using openmp parallelization)</p></li>
+</ul>
+</div>
+</section>
+<section id="linking-with-c-c">
+<h2><span class="section-number">3.2. </span>Linking with C/C++<a class="headerlink" href="#linking-with-c-c" title="Permalink to this heading"></a></h2>
+<p>Linking up the CFDwavemaker to any C/C++ based code is fairly straight forward, and is done in exactly the same way as any other library you might want to add to your program.
+Essentially you need to do a couple of things:</p>
+<ul class="simple">
+<li><p>make sure to add “#include CFDwavemaker.h” somewhere in the top of your program</p></li>
+<li><p>be sure to link up either the dynamic or the static library duing linking. If the libCFDwavemaker_openmp.so file is located in the same directory as your program, then adding a “-lCFDwavemaker_openmp” in your linking statement of your make file should do the job.</p></li>
+<li><p>if your compiling a native C program, then make sure to add “-lstdc++” when linking.</p></li>
+</ul>
+<p>A simple example is shown below, where</p>
+</section>
+<section id="linking-up-with-python">
+<h2><span class="section-number">3.3. </span>Linking up with Python<a class="headerlink" href="#linking-up-with-python" title="Permalink to this heading"></a></h2>
+<p>Occationally it may be useful generate kinematics data for other reasons than pushing it into a CFD solver. In this case python is a good and easy alternative, using the ctypes package. An example is given below.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span><span class="o">*</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c1"># give location of dll</span>
+<span class="c1">#mydll = cdll.comflow</span>
+<span class="n">temp</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="n">temp</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+<span class="n">temp</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+
+<span class="c1"># we load the shared library</span>
+<span class="n">mydll</span> <span class="o">=</span> <span class="n">cdll</span><span class="o">.</span><span class="n">LoadLibrary</span><span class="p">(</span><span class="s2">&quot;libCFDwavemaker_openmp.so&quot;</span><span class="p">)</span>
+
+<span class="c1"># and define the functions which CFDwavemaker.h tells us are in the library</span>
+<span class="k">def</span> <span class="nf">init_dll</span><span class="p">(</span><span class="n">mydll</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">Init</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_int</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c_double</span><span class="p">),</span><span class="n">POINTER</span><span class="p">(</span><span class="n">c_double</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">clean_up</span><span class="p">(</span><span class="n">mydll</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">Cleanup</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_int</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">wave_VeloX</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">wave_VeloX</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">wave_VeloY</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">wave_VeloY</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">wave_VeloZ</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">wave_VeloZ</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">z</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">wave_SurfElev</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
+        <span class="n">aa</span> <span class="o">=</span> <span class="n">mydll</span><span class="o">.</span><span class="n">wave_SurfElev</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">restype</span> <span class="o">=</span> <span class="n">c_double</span>
+        <span class="n">aa</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">,</span><span class="n">c_double</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">aa</span><span class="p">(</span><span class="n">c_double</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="n">c_double</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+<span class="c1"># All done. lets test:</span>
+
+<span class="c1"># we start by initializing (reads data from waveinput.dat)</span>
+<span class="n">init_dll</span><span class="p">(</span><span class="n">mydll</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="mf">4.8</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mf">0.23</span>
+<span class="n">z</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.05</span>
+
+
+<span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="n">elev</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">v</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">w</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">time</span><span class="p">:</span>
+        <span class="n">elev</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wave_SurfElev</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+        <span class="n">u</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wave_VeloX</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">))</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wave_VeloY</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">))</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wave_VeloZ</span><span class="p">(</span><span class="n">mydll</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">))</span>
+
+
+<span class="c1"># now, lets view the resulting surface elevation</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">elev</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;surface elevation&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time [sec]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Surface elevation [m]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;./result_eta.png&quot;</span><span class="p">)</span>
+
+<span class="c1"># and also the wave kinematics</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="n">u</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="n">v</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;v&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="n">w</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time [sec]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;particle velocity [m/s]&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;./result_uvw.png&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># all done. remember to clean up after us.</span>
+<span class="n">clean_up</span><span class="p">(</span><span class="n">mydll</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="linking-up-with-comflow">
+<h2><span class="section-number">3.4. </span>Linking up with ComFLOW<a class="headerlink" href="#linking-up-with-comflow" title="Permalink to this heading"></a></h2>
+<p><a class="reference external" href="http://www.math.rug.nl/~veldman/comflow/comflow.html">ComFLOW</a> is a Volume-of-fluids (VOF) Navier-Stokes solver for free-surface flow, and is an excellent CFD solver for modelling free surface waves. External libraries such as CFDwavemaker may be linked to the solver for providing kinematics using a predefined extern C function. These functions are available in CFDwavemaker, and therefore it is straight forward to use the library with ComFLOW once the shared library has been built. The instructions on how to do so is given below.</p>
+<ol class="arabic simple">
+<li><p>Start by copying the CFDwavemaker.so library to some place ComFLOW can locate it. A good location is among the external library files located in the directory <cite>$(COMFLOW_INSTALL_DIR)/lib/linux/</cite></p></li>
+<li><p>In your <cite>comflow.cfi</cite> file (main control file for comflow simulation) specify that the external library should be used as show in the example xml code (extract from a <cite>comflow.cfi</cite> file) below.</p></li>
+<li><p>Your done. Now you should be able to run ComFLOW using CFDwavemaker for initialization. Remember to provide <cite>waveinput.dat</cite> file in you comflow run folder when starting a simulation (one level up of the input_files folder).</p></li>
+</ol>
+<div class="highlight-xml notranslate"><div class="highlight"><pre><span></span>    ...
+
+    <span class="cm">&lt;!-- WAVES: Definition of incoming/initial wave field and current --&gt;</span>
+  <span class="nt">&lt;waves</span> <span class="na">start_with_still_water=</span><span class="s">&quot;true&quot;</span> <span class="na">initialize_fs=</span><span class="s">&quot;true&quot;</span> <span class="na">mean_depth=</span><span class="s">&quot;1.2&quot;</span><span class="nt">&gt;</span>
+
+  <span class="cm">&lt;!-- MODEL: Definition of wave model --&gt;</span>
+       <span class="nt">&lt;model</span> <span class="na">model=</span><span class="s">&quot;none&quot;</span><span class="nt">/&gt;</span>
+
+  <span class="cm">&lt;!-- CURRENT: Current --&gt;</span>
+       <span class="nt">&lt;current</span> <span class="na">magnitude=</span><span class="s">&quot;0.&quot;</span> <span class="na">angle=</span><span class="s">&quot;0.&quot;</span><span class="nt">/&gt;</span>
+
+  <span class="cm">&lt;!-- RAMPING: Ramping for smooth startup of a simulation --&gt;</span>
+       <span class="nt">&lt;ramping</span> <span class="na">ramptype=</span><span class="s">&quot;0&quot;</span> <span class="na">rampfs=</span><span class="s">&quot;1&quot;</span> <span class="na">ramp1=</span><span class="s">&quot;0.&quot;</span> <span class="na">ramp2=</span><span class="s">&quot;0.&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/waves&gt;</span>
+    <span class="cm">&lt;!-- COUPLING: Settings for coupling to a.o. moving objects (prescribed and</span>
+<span class="cm">  interactive motions), XMF mooring module, external solutions (e.g. other</span>
+<span class="cm">  ComFLOW simulations), ... --&gt;</span>
+  <span class="nt">&lt;coupling&gt;</span>
+
+  <span class="cm">&lt;!-- EXTERNAL_SOLUTION: Settings for coupling to a shared library --&gt;</span>
+       <span class="nt">&lt;external_solution</span> <span class="na">dllfile=</span><span class="s">&quot;CFDwavemaker_omp.so&quot;</span> <span class="na">initialize=</span><span class="s">&quot;true&quot;</span> <span class="na">ramp=</span><span class="s">&quot;false&quot;</span><span class="nt">/&gt;</span>
+
+<span class="nt">&lt;/coupling&gt;</span>
+
+...
+</pre></div>
+</div>
+<p>If you wish to use CFDwavemaker for providing waves at the boundary, this is done by altering the <cite>comflow.cfi</cite> file. Reference is made to the <a class="reference external" href="http://poseidon.housing.rug.nl/sphinx/">ComFLOW manual</a>.</p>
+</section>
+<section id="linking-up-with-basilisk-or-c">
+<h2><span class="section-number">3.5. </span>Linking up with Basilisk (or C)<a class="headerlink" href="#linking-up-with-basilisk-or-c" title="Permalink to this heading"></a></h2>
+<p><a class="reference external" href="http://www.basilisk.fr">Basilisk</a> is an open source library for the solution of partial differential equations on adaptive Cartesian meshes. The code is built in C (C99) with more than a few improvements to syntax (refered to as <cite>Basilisk C</cite>), making it efficient and fairly easy to use and understand.
+Linking CFDwavemaker to this library is straight forward, since it is built on the same programming language (almost).</p>
+<section id="static-linking">
+<h3><span class="section-number">3.5.1. </span>Static linking<a class="headerlink" href="#static-linking" title="Permalink to this heading"></a></h3>
+</section>
+<section id="dynamic-linking">
+<h3><span class="section-number">3.5.2. </span>Dynamic linking<a class="headerlink" href="#dynamic-linking" title="Permalink to this heading"></a></h3>
+</section>
+</section>
+<section id="linking-up-with-openfoam">
+<h2><span class="section-number">3.6. </span>Linking up  with OpenFOAM<a class="headerlink" href="#linking-up-with-openfoam" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="build.html" class="btn btn-neutral float-left" title="2. Build from source" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="inputfile_description.html" class="btn btn-neutral float-right" title="4. Input file format" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1802,7 +1802,7 @@ int wave_Initialize()
 	}
 	fid.close();
 
-	/*
+	
 	std::istringstream buf;
 	std::istringstream f(res);
 	int inputfile_version = 0; // 0 = version 2 input format , 1 = version 2009 (new)
@@ -1810,25 +1810,20 @@ int wave_Initialize()
 	while (!f.eof()) {
 		getline(f, lineA);
 		trim(lineA);
-		if (!lineA.compare("@v213")) {
-			inputfile_version = 1;
+		if (lineA.substr(0,2).compare("@v")) {
+			std::cout << "Please specified version at the first line of input file (hint: @v213)" << std::endl;
+			exit(0);
 		}
-		else {
-			inputfile_version = 1;
-			std::cout << "Version of inputfile not specified. assumed input given is compatible with the current version of CFDwavemaker (see manual)." << std::endl;
+		if (!stoi(lineA.substr(2,3)) >= 213 ) {
+			std::cout << "Your input file is too old. Please update according to the latest manual of CFDwavemaker." << std::endl;
+			exit(0);
 		}
+
 
 	}
 
-	if (inputfile_version == 1) {
-		std::cout << "Reading new input file version2 format v2.1.3 or newer (@v213)" << std::endl;
-		int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, ramp);
-	}
-	else {
-		std::cout << "Old or outdated input format. please update waveinput.dat file according to manual for CFDwavemaker v.2.1.6." << std::endl;
-		exit(-1);
-	}
-	*/
+	
+
 	int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, ramp);
 
 	CFDwmInit = true;
