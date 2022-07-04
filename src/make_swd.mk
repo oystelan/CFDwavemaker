@@ -3,7 +3,7 @@ SWD_INCL = ../swd/inc
 CC      := c++
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
 LDFLAGS := -L./ -L../swd/lib
-LIBS += -lm -lgfortran
+LIBS += -lm -lgfortran -lfftw3
 
 
 #export PATH:=$(VTK_INCL):${PATH}

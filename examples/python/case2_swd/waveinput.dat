@@ -1,0 +1,29 @@
+@v213
+# CFDwavemaker SWD example 1: irregular 5th order long crested wave
+
+[wave type]
+swd
+
+[general input data]
+depth 300.00
+mtheta 0.0000
+
+[swd wave properties]
+swdfile  fenton_h1.2_d1_l2.swd
+
+[lsgrid]
+#         XMIN   XMAX   YMIN   YMAX
+bounds  -200.00 -150.00 0.00 6.00
+nx  1
+ny  1
+nl  16
+t0  0.0
+dt  0.2
+stretch_params 0.7   1.5
+#                 xmin     xmax   ymin   ymax
+#ignore_subdomain -300.00 100.00 -1. 1.
+ignore_at_init 1
+
+[vtk output]
+storage_path ./vtk/
+filename kinematics
