@@ -11,6 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Extract tag name
+      id: tag
+    - uses: actions/github-script@0.2.0
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          return context.payload.ref.replace(/\/refs\/tags\//, '');
+    - name: Echo
+      run: echo ${{ steps.tag.outputs.result }}
+
     - uses: actions/checkout@v3
 #    - name: configure
 #      run: ./configure
@@ -19,15 +29,6 @@ jobs:
     - name: make
       working-directory: ./src
       run: make
-    - name: Extract tag name
-      id: tag
-    - uses: actions/github-script@0.2.0
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          return context.payload.ref.replace(/\/refs\/tags\//, '');
-      - name: Echo
-        run: echo ${{ steps.tag.outputs.result }}
     - name: create binary tar.gz
       run: |
         mkdir release
