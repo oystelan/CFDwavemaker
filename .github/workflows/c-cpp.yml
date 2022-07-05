@@ -21,12 +21,12 @@ jobs:
       working-directory: ./src
       run: make
     - name: create binary tar.gz
-      run: mkdir release
-           cp ./builds/linux64/libCFDwavemaker_swd_openmp.a ./release/.
-           cp ./builds/linux64/libCFDwavemaker_swd_openmp.so ./release/.
-           cp ./src/CFDwavemaker.h ./release/.
-           tar -zcvf cfdwavemaker_binary_release.tar.gz release
-           
+      run: |
+        mkdir release
+        cp ./builds/linux64/libCFDwavemaker_swd_openmp.a ./release/.
+        cp ./builds/linux64/libCFDwavemaker_swd_openmp.so ./release/.
+        cp ./src/CFDwavemaker.h ./release/.
+        tar -zcvf cfdwavemaker_binary_release.tar.gz release   
 #    - name: make check
 #      run: make check
 #    - name: make distcheck
