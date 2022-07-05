@@ -11,39 +11,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Extract tag name
-      id: tag
-    - uses: actions/github-script@0.2.0
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          return context.payload.ref.replace(/\/refs\/tags\//, '');
-    - name: Echo
-      run: echo ${{ steps.tag.outputs.result }}
+      - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            return context.payload.ref.replace(/\/refs\/tags\//, '');
+      - name: Echo
+        run: echo ${{ steps.tag.outputs.result }}
 
-    - uses: actions/checkout@v3
-#    - name: configure
-#      run: ./configure
-    - name: install fftw3 (dependency)
-      run: sudo apt-get install fftw3 libfftw3-dev
-    - name: make
-      working-directory: ./src
-      run: make
-    - name: create binary tar.gz
-      run: |
-        mkdir release
-        cp ./builds/linux64/libCFDwavemaker_swd_openmp.a ./release/.
-        cp ./builds/linux64/libCFDwavemaker_swd_openmp.so ./release/.
-        cp ./src/CFDwavemaker.h ./release/.
-        tar -zcvf cfdwavemaker_bin_${{github.ref_name}}.tar.gz release
+      - uses: actions/checkout@v3
+  #    - name: configure
+  #      run: ./configure
+      - name: install fftw3 (dependency)
+        run: sudo apt-get install fftw3 libfftw3-dev
+      - name: make
+        working-directory: ./src
+        run: make
+      - name: create binary tar.gz
+        run: |
+          mkdir release
+          cp ./builds/linux64/libCFDwavemaker_swd_openmp.a ./release/.
+          cp ./builds/linux64/libCFDwavemaker_swd_openmp.so ./release/.
+          cp ./src/CFDwavemaker.h ./release/.
+          tar -zcvf cfdwavemaker_bin_${{github.ref_name}}.tar.gz release
+          
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
         
-    - uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-      
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
-        prerelease: true
-        title: "Development Build"
-        files: |
-          LICENSE.txt
-          cfdwavemaker_bin_${{github.ref_name}}.tar.gz
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            LICENSE.txt
+            cfdwavemaker_bin_${{github.ref_name}}.tar.gz
