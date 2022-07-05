@@ -1,4 +1,4 @@
-# CFDwavemaker v2.1.6
+# CFDwavemaker
 wave kinematics package for CFD initialization of CFD domains or boundaries.
 The code supports OpenMP and has some special features for fast initialization of large domains built in.
 
