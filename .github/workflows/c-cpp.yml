@@ -20,7 +20,7 @@ jobs:
       working-directory: ./src
       run: make
     - name: get tag and store release version
-      run: echo "GIT_TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
+      run: echo "RELEASE_VERSIONG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
       #run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
     - name: create binary tar.gz
       run: |
