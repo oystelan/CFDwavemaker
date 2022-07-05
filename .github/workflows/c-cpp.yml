@@ -19,20 +19,23 @@ jobs:
     - name: make
       working-directory: ./src
       run: make
+    - name: get tag and store release version
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
     - name: create binary tar.gz
       run: |
         mkdir release
         cp ./builds/linux64/libCFDwavemaker_swd_openmp.a ./release/.
         cp ./builds/linux64/libCFDwavemaker_swd_openmp.so ./release/.
         cp ./src/CFDwavemaker.h ./release/.
-        tar -zcvf cfdwavemaker_binary_release.tar.gz release
-
+        tar -zcvf cfdwavemaker_bin_${{ env.RELEASE_VERSION }}.tar.gz release
+        
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
+      
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "latest"
         prerelease: true
         title: "Development Build"
         files: |
           LICENSE.txt
-          cfdwavemaker_binary_release.tar.gz
+          cfdwavemaker_bin_${{ env.RELEASE_VERSION }}.tar.gz
