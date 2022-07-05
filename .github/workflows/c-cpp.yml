@@ -19,6 +19,11 @@ jobs:
     - name: make
       working-directory: ./src
       run: make
+    - name: create tag
+      run: |
+        echo "GIT_TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
+        echo $GIT_TAG
+        echo ${{ env.GIT_TAG }}
     - name: create binary tar.gz
       run: |
         mkdir release
