@@ -19,11 +19,15 @@ jobs:
     - name: make
       working-directory: ./src
       run: make
-    - name: create tag
-      run: |
-        echo "GIT_TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
-        echo $GIT_TAG
-        echo ${{ env.GIT_TAG }}
+    - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            return context.payload.ref.replace(/\/refs\/tags\//, '');
+      - name: Echo
+        run: echo ${{ steps.tag.outputs.result }}
     - name: create binary tar.gz
       run: |
         mkdir release
