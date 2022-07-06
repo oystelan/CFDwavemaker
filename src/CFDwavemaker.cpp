@@ -820,8 +820,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					skip_getline = true;
 					break;
 				}
-			}
-			
+			}		
 		}
 
 
@@ -1214,7 +1213,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 
 		std::cout << inputdata.swdFileName.c_str() << std::endl;
 		// Initialize spectral wave data
-		swd = new SpectralWaveData(inputdata.swdFileName.c_str(), inputdata.x_pos, inputdata.y_pos, inputdata.tofmax, inputdata.mtheta, inputdata.rho, inputdata.nsumx, inputdata.nsumy, inputdata.impl, inputdata.ipol);
+		swd = new SpectralWaveData(inputdata.swdFileName.c_str(), inputdata.x_pos, inputdata.y_pos, inputdata.tofmax, inputdata.mtheta, inputdata.rho, inputdata.nsumx, inputdata.nsumy, inputdata.impl, inputdata.ipol, inputdata.norder, inputdata.dc_bias);
 
 		std::string cid = swd->GetChr("cid");
 
