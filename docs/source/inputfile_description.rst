@@ -438,15 +438,6 @@ Example 1:
   0.0200  0.0002159  0.0008472
   ...
 
-Hinched wavemaker theory
-........................
-
-Implementation ongoing.
-
-Dual-hinched wavemaker theory
-.............................
-
-Implementation ongoing.
 
 Spectral wave data (SWD) specification
 --------------------------------------
@@ -509,6 +500,53 @@ An example of the required input parameters which needs to be specified in *wave
 - Like irregular second order wave theory, the grid interpolation schemes presented in :numref:`inputfile_description:Grid interpolation schemes` are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.
 - The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see :numref:`inputfile_description:General input data`). To change reference position, see :numref:`inputfile_description:Wave reference point` and ``swl`` in :numref:`inputfile_description:General input data`.
 
+VTK library kinematics
+----------------------
+
+The `VTK (Visialization Toolkit) library`_ is open-source and a widely used library in the CFD industry. It support a wide range of formats which covers pretty much all thinkable grid types used by CFD solvers. Compiling CFDwavemaker with this extension library therefore expands its usage, and enables CFDwavemaker to read kinematics from most wave models, as long as they can export their result into one of the hundres of formats that VTK supports.
+
+That being said, the many formats supported in the VTK library has different functions for loading and extracting data. Hence, supporting them all implies a lot of coding. For now, the structuredXMLGrid format (.vts) is supported, which is an ideal format for storing eulerian and lagrangian mesh data on a cartisian grid. More formats, like the octree-format (.htg) or the versatile UnstructuredXML format (.vtu), will surely be implemented in the future as the need arises.
+
+.. _`VTK (Visialization Toolkit) library`: http://www.vtk.org
+
+The input format in the waveinput.dat file is fairly simple. First, **[wave type]** must to be set too `vtk`. The keyword for providing additional required vtk properties is specified under the keyword **[vtk input]**. The following list of properties shall/may be specified
+
+.. list-table::
+    :widths: 20 70 10
+
+    * - **name**
+      - **description**
+      - **mandatory**
+    * - ``storage_path``
+      - Absolute or relative path to the folder containing the .vts files.
+      - yes
+    * - ``filename``
+      - string containing reoccuring characters in all vtk files. These may typically be named sim0000.vts, sim0001.vts, sim0002.vts, etc... then you can either specify `filename sim` or `filename .vts`. Both will work. This is convenient and useful to ensure that the right files are read (in the case folder containing other files)
+      - yes
+    * - ``name_velocity_field``
+      - Name of the vector field variable which contain kinematics (u,v,w). This may vary depending on what code was used to output the data. 
+      - yes
+
+.. note::
+
+  The .vts format was implemented to specifically read kinematics from a multilayer solver, on a vertical lagrangian grid. This means that the free surface is given by the grid itself, and not a volume fraction (as the example given in :numref:`vertical_lagrangian_grid`). Reading multiphase data separated by volume fraction field data is surely something which will be added, but not yet done.
+
+An example of reading kinematics input from .vts files are given below
+
+.. code-block:: none
+
+    @v213
+    # wave kinematics read from vtk files
+    [wave type]
+    vtk
+
+    [vtk input]
+    storage_path ../subdomain/
+    filename subdomain
+    name_velocity_field Velocity
+
+
+
 Grid interpolation schemes
 --------------------------
 
@@ -535,6 +573,7 @@ The Lagrangian-Stretched grid (in short LSgrid) is just that! A mesh structure o
 LSgrid uses sigma transforms in combination with a stretching factor, giving high resolution in z direction at the surface, and lower at depth. The upper layer of the LSgrid will always be at the free surface, and the bottom layer will always be at the sea bed, such that all points of the mesh covers the fluid only. An example snapshot of such a grid is shown in the figure below.
 This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum number of points. The time interpolation is linear. To specify the use of a lagrangian streched grid interpolation scheme, the keyword **[lsgrid]** is used.
 
+.. _vertical_lagrangian_grid:
 .. figure:: images/lsgrid2.png
 	:alt: Lagrangian stretched mesh underneath an irregular wave event.
 
