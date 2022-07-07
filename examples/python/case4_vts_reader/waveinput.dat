@@ -1,0 +1,9 @@
+@v213
+# wave kinematics read from vtk files
+[wave type]
+vtk
+
+[vtk input]
+storage_path ./vtkfiles/
+filename subdomain
+name_velocity_field Velocity

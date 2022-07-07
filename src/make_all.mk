@@ -1,13 +1,20 @@
+# Compiler
 CC      := c++
-VTK_DIR= /home/oland/programs/vtk/install_vtk9.1.0
+# VTK input
+VTK_VERSION=9.2
+VTK_VERSION_LONG=9.2.0
+VTK_DIR= /home/oystein/programs/vtk-${VTK_VERSION_LONG}_build
+VTK_INCL = $(VTK_DIR)/include/vtk-${VTK_VERSION}
+VTK_LIBS = $(VTK_DIR)/lib
+
 SWD_INCL = ../swd/inc
-VTK_INCL = $(VTK_DIR)/include/vtk-9.1
+
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL) -DVTK_enable=1 -I$(VTK_INCL) 
 LDFLAGS := -L./ -L../swd/lib 
 LIBS += -lm -lgfortran -lfftw3
 BUILD_DIR += ../builds/linux64/
 # -D_GLIBCXX_USE_CXX11_ABI=0
-VTK_LIBS = $(VTK_DIR)/lib64
+
 
 
 export PATH:=$(VTK_INCL):${PATH}
@@ -39,7 +46,7 @@ $(OBJ):: %.o : %.cpp
 
 $(TARGETS_SHARED_OMP_ALL): $(OBJ)
 	ar x libSpectralWaveData.a
-	$(CC) $(CCFLAGS) -shared -fopenmp -fPIC -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS) -Wl,-rpath $(VTK_LIBS)/libvtkIOImport-9.1.a $(VTK_LIBS)/libvtkFiltersGeneric-9.1.a $(VTK_LIBS)/libvtkIOXML-9.1.a $(VTK_LIBS)/libvtkIOXMLParser-9.1.a $(VTK_LIBS)/libvtkexpat-9.1.a $(VTK_LIBS)/libvtkIOCore-9.1.a $(VTK_LIBS)/libvtklz4-9.1.a $(VTK_LIBS)/libvtklzma-9.1.a $(VTK_LIBS)/libvtklibharu-9.1.a $(VTK_LIBS)/libvtkzlib-9.1.a $(VTK_LIBS)/libvtkFiltersCore-9.1.a $(VTK_LIBS)/libvtkCommonExecutionModel-9.1.a $(VTK_LIBS)/libvtkCommonDataModel-9.1.a $(VTK_LIBS)/libvtkCommonSystem-9.1.a $(VTK_LIBS)/libvtkCommonMisc-9.1.a $(VTK_LIBS)/libvtkCommonTransforms-9.1.a $(VTK_LIBS)/libvtkCommonMath-9.1.a $(VTK_LIBS)/libvtkCommonCore-9.1.a $(VTK_LIBS)/libvtkloguru-9.1.a $(VTK_LIBS)/libvtksys-9.1.a $(VTK_LIBS)/libvtkpugixml-9.1.a -ldl -pthread  
+	$(CC) $(CCFLAGS) -shared -fopenmp -fPIC -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS) -Wl,-rpath $(VTK_LIBS)/libvtkIOImport-${VTK_VERSION}.a $(VTK_LIBS)/libvtkFiltersGeneric-${VTK_VERSION}.a $(VTK_LIBS)/libvtkIOXML-${VTK_VERSION}.a $(VTK_LIBS)/libvtkIOXMLParser-${VTK_VERSION}.a $(VTK_LIBS)/libvtkexpat-${VTK_VERSION}.a $(VTK_LIBS)/libvtkIOCore-${VTK_VERSION}.a $(VTK_LIBS)/libvtklz4-${VTK_VERSION}.a $(VTK_LIBS)/libvtklzma-${VTK_VERSION}.a $(VTK_LIBS)/libvtklibharu-${VTK_VERSION}.a $(VTK_LIBS)/libvtkzlib-${VTK_VERSION}.a $(VTK_LIBS)/libvtkFiltersCore-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonExecutionModel-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonDataModel-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonSystem-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonMisc-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonTransforms-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonMath-${VTK_VERSION}.a $(VTK_LIBS)/libvtkCommonCore-${VTK_VERSION}.a $(VTK_LIBS)/libvtkloguru-${VTK_VERSION}.a $(VTK_LIBS)/libvtksys-${VTK_VERSION}.a $(VTK_LIBS)/libvtkpugixml-${VTK_VERSION}.a -ldl -pthread  
 	chmod 775 $(BUILD_DIR)lib$@
 
 $(TARGETS_STATIC_OMP_ALL): EXTRA_FLAGS = -ldl -pthread -fopenmp
@@ -48,5 +55,30 @@ $(TARGETS_STATIC_OMP_ALL): $(OBJ)
 	ar rvs -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o
 	chmod 775 $(BUILD_DIR)lib$@
 	export PATH=$(PATH):$(VTK_LIBS)
-	ar -M <all_static_cluster.mri
+	echo "open ../builds/linux64/libCFDwavemaker_all_openmp.a" > temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkIOCore-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkFiltersCore-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkIOXML-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkIOXMLParser-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtklz4-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtklzma-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonExecutionModel-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonDataModel-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonSystem-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonMisc-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonTransforms-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkCommonMath-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkCommonCore-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkloguru-${VTK_VERSION}.a" >> temp.mri    
+	echo "addlib ${VTK_LIBS}/libvtksys-${VTK_VERSION}.a" >> temp.mri  
+	echo "addlib ${VTK_LIBS}/libvtkzlib-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkIOImport-${VTK_VERSION}.a" >> temp.mri     
+	echo "addlib ${VTK_LIBS}/libvtkFiltersGeneric-${VTK_VERSION}.a" >> temp.mri 
+	echo "addlib ${VTK_LIBS}/libvtkFiltersParallel-${VTK_VERSION}.a" >> temp.mri  
+	echo "addlib ${VTK_LIBS}/libvtkexpat-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtkpugixml-${VTK_VERSION}.a" >> temp.mri   
+	echo "save" >> temp.mri
+	echo "end" >> temp.mri
+	ar -M <temp.mri
+	rm temp.mri
 

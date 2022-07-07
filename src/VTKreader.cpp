@@ -270,7 +270,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 				seabed = pNew[1];
 				dataset1->GetPoint(i, nl - 1, 0, pNew);
 				welev = pNew[1];
-				betah[k * nx  + i] = welev == seabed ? double(k)/nl : 1 + z2s(z, welev, -seabed);
+				betah[k * nx  + i] = welev == seabed ? 0. : 1 + z2s(z, welev, -seabed);
 				//cout << "seabed:" << seabed << " welev: " << welev << " betah:" << betah[k * nx  + i]<< endl;
 			}
 		}
@@ -292,7 +292,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 					dataset1->GetPoint(i, j, nl - 1, pNew);
 					welev = pNew[2];
 					
-					betah[k * ny * nx + j * nx + i] = welev == seabed ? double(k)/nl : 1. + z2s(z, welev, -seabed);
+					betah[k * ny * nx + j * nx + i] = welev == seabed ? 0. : 1. + z2s(z, welev, -seabed);
 					//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " betah:" << betah[k * ny * nx + j * nx + i] << endl;
 				}
 			}
@@ -501,26 +501,27 @@ double* VTKreader::trilinear_interpolation(double* res, double tpt, double xpt, 
 	dataset0->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), 0, pNew);
 	C11 = pNew[2];
 
-	dataset1->GetPoint(nxp, nyp, 0, pNew);
+	// No point in calculating seabed twice, since seabed is fixed in time.
+	/*dataset1->GetPoint(nxp, nyp, 0, pNew);
 	D00 = pNew[2];
 	dataset1->GetPoint(nxp, clip(nyp + 1, 0, ny - 1), 0, pNew);
 	D01 = pNew[2];
 	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), nyp, 0, pNew);
 	D10 = pNew[2];
 	dataset1->GetPoint(clip(nxp + 1, 0, nx - 1), clip(nyp + 1, 0, ny - 1), 0, pNew);
-	D11 = pNew[2];
+	D11 = pNew[2];*/
 
 	C0 = C00 * (1. - xd) + C10 * xd;
 	C1 = C01 * (1. - xd) + C11 * xd;
-	D0 = D00 * (1. - xd) + D10 * xd;
-	D1 = D01 * (1. - xd) + D11 * xd;
+	//D0 = D00 * (1. - xd) + D10 * xd;
+	//D1 = D01 * (1. - xd) + D11 * xd;
 
 	double zb0 = C0 * (1. - yd) + C1 * yd;
-	double zb1 = D0 * (1. - yd) + D1 * yd;
+	//double zb1 = D0 * (1. - yd) + D1 * yd;
 
 	// set seabed elevation for point
-	res[1] =  zb0 * (1. - td) + zb1 * td;
-
+	//res[1] =  zb0 * (1. - td) + zb1 * td;
+	res[1] = zb0;
 
 	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
 
@@ -585,35 +586,35 @@ double* VTKreader::trilinear_interpolation(double* res, double tpt, double xpt, 
 
 	// Trilinear interpolation.
 	double D000[24];
-	temp = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + nxp);
+	temp = U1->GetTuple3(nsp1 * ny * nx + nyp * nx + nxp);
 	D000[0] = temp[0];
 	D000[1] = temp[1];
 	D000[2] = temp[2];
-	temp = U1->GetTuple3(nsp0 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	temp = U1->GetTuple3(nsp1 * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
 	D000[3] = temp[0];
 	D000[4] = temp[1];
 	D000[5] = temp[2];
-	temp = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	temp = U1->GetTuple3(nsp1 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
 	D000[6] = temp[0];
 	D000[7] = temp[1];
 	D000[8] = temp[2];
-	temp = U1->GetTuple3(nsp0 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	temp = U1->GetTuple3(nsp1 * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
 	D000[9] = temp[0];
 	D000[10] = temp[1];
 	D000[11] = temp[2];
-	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
+	temp = U1->GetTuple3(clip(nsp1 + 1, 0, nl - 1) * ny * nx + nyp * nx + nxp);
 	D000[12] = temp[0];
 	D000[13] = temp[1];
 	D000[14] = temp[2];
-	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
+	temp = U1->GetTuple3(clip(nsp1 + 1, 0, nl - 1) * ny * nx + nyp * nx + clip(nxp + 1, 0, nx - 1));
 	D000[15] = temp[0];
 	D000[16] = temp[1];
 	D000[17] = temp[2];
-	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
+	temp = U1->GetTuple3(clip(nsp1 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + nxp);
 	D000[18] = temp[0];
 	D000[19] = temp[1];
 	D000[20] = temp[2];
-	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
+	temp = U1->GetTuple3(clip(nsp1 + 1, 0, nl - 1) * ny * nx + clip(nyp + 1, 0, ny - 1) * nx + clip(nxp + 1, 0, nx - 1));
 	D000[21] = temp[0];
 	D000[22] = temp[1];
 	D000[23] = temp[2];
@@ -666,9 +667,9 @@ double* VTKreader::trilinear_interpolation(double* res, double tpt, double xpt, 
 	CC0[0] = CC00[0] * (1. - yd) + CC01[0] * yd;
 	CC0[1] = CC00[1] * (1. - yd) + CC01[1] * yd;
 	CC0[2] = CC00[2] * (1. - yd) + CC01[2] * yd;
-	CC1[0] = CC11[0] * (1. - yd) + CC11[0] * yd;
-	CC1[1] = CC11[1] * (1. - yd) + CC11[1] * yd;
-	CC1[2] = CC11[2] * (1. - yd) + CC11[2] * yd;
+	CC1[0] = CC10[0] * (1. - yd) + CC11[0] * yd;
+	CC1[1] = CC10[1] * (1. - yd) + CC11[1] * yd;
+	CC1[2] = CC10[2] * (1. - yd) + CC11[2] * yd;
 
 	//cout << "ulow: " << CC0[0]  << endl;
 	//cout << "uhigh: " << CC1[0] << endl;
