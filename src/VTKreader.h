@@ -72,6 +72,7 @@ public:
 
 	int loadcount, Uindex;
 	bool cell2Pointdata = false;
+	bool recompute_betah_every_timstep = false;
 
 	int runOptionSwitch = 0;
 	vector<string>* filevec;

@@ -1108,7 +1108,26 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf >> vtkreader.t_start;
 					buf.clear();
 					std::cout << "User specified start time (t0): " << vtkreader.Uname << std::endl;
-		}
+				}
+				if (!lineA.compare(0, 37, "update_height_function_every_timestep")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> dummystr;
+
+					if (!dummystr.compare(0, 5, "false")) {
+						// Do nothing. default value is already a very high number
+						vtkreader.recompute_betah_every_timstep = false;
+					}
+					else if (!dummystr.compare(0, 4, "true")) {
+						// Compute a decent bandwidth value. todo: make a function which does this						
+						vtkreader.recompute_betah_every_timstep = true;
+					}
+					else { // assumes that a value is given
+						vtkreader.recompute_betah_every_timstep = atof(dummystr.c_str());
+					}
+					std::cout << "update_height_function_every_timestep:   " << vtkreader.recompute_betah_every_timstep << std::endl;
+					buf.clear();
+				}
 				// if new tag is reach. break while loop.
 				if (!lineA.compare(0, 1, "[")) {
 					skip_getline = true;
