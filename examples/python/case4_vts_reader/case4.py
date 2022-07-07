@@ -17,7 +17,7 @@ temp = os.path.realpath(temp)
 temp = os.path.dirname(temp)
 
 # we load the shared library 
-mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_openmp.so")     
+mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_all_openmp.so")     
 
 # and define the functions which CFDwavemaker.h tells us are in the library
 
@@ -64,10 +64,10 @@ init_dll(mydll)
 
 x = 4.8
 y = 0.23
-z = -0.05
+z = -10.0
 
 
-time = np.arange(0,10,0.01)
+time = np.arange(0,8,0.01)
 
 elev = []
 u = []
@@ -100,7 +100,19 @@ plt.legend()
 plt.grid(True)
 plt.savefig("./result_uvw.png")
 
+plt.clf()
+ug = np.gradient(u, time)
+vg = np.gradient(v, time)
+wg = np.gradient(w, time)
+plt.plot(time,ug, label='ug')
+plt.plot(time,vg, label='vg')
+plt.plot(time,wg, label='wg')
+plt.xlabel('Time [sec]')
+plt.ylabel('particle velocity gradient [m/s^2]')
+plt.legend()
+plt.grid(True)
+plt.savefig("./result_uvw_gradient.png")
+
 
 # all done. remember to clean up after us.
 clean_up(mydll)
-
