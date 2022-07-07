@@ -7,3 +7,5 @@ vtk
 storage_path ./vtkfiles/
 filename subdomain
 name_velocity_field Velocity
+update_height_function_every_timestep true
+t_start 1.1

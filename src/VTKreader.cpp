@@ -257,6 +257,7 @@ void VTKreader::loadInit(string path, const char* fname) {
 	}
 	*/
 
+	// Compute height function betah
 	if (input2d) {
 		// Calculate betah for all points i LSgrid
 		betah = new double[nx * nl];
@@ -274,7 +275,6 @@ void VTKreader::loadInit(string path, const char* fname) {
 				//cout << "seabed:" << seabed << " welev: " << welev << " betah:" << betah[k * nx  + i]<< endl;
 			}
 		}
-
 	}
 	else {
 		//cout << "nx, ny, nl: " << nx << ", " << ny << ", " << nl << endl;
@@ -404,6 +404,49 @@ void VTKreader::loadNext(string path, const char* fname) {
 		U1 = dataset1->GetCellData()->GetArray(Uindex);
 	}
 	loadcount++;
+
+
+	if (recompute_betah_every_timstep) {
+		// Compute height function betah
+		if (input2d) {
+			// Calculate betah for all points i LSgrid
+			double z, welev, seabed, pNew[3];
+			for (int k = 0; k < nl; k++) {
+				for (int i = 0; i < nx; i++) {
+					//cout << i << ", " << j << endl;
+					dataset1->GetPoint(i, k, 0, pNew);
+					z = pNew[1];
+					dataset1->GetPoint(i, 0, 0, pNew);
+					seabed = pNew[1];
+					dataset1->GetPoint(i, nl - 1, 0, pNew);
+					welev = pNew[1];
+					betah[k * nx + i] = welev == seabed ? 0. : 1 + z2s(z, welev, -seabed);
+					//cout << "seabed:" << seabed << " welev: " << welev << " betah:" << betah[k * nx  + i]<< endl;
+				}
+			}
+		}
+		else {
+			//cout << "nx, ny, nl: " << nx << ", " << ny << ", " << nl << endl;
+			// Calculate betah for all points i LSgrid
+			double z, welev, seabed, pNew[3];
+			for (int k = 0; k < nl; k++) {
+				for (int j = 0; j < ny; j++) {
+					for (int i = 0; i < nx; i++) {
+						//cout << i << ", " << j << ", " << k << endl;
+						dataset1->GetPoint(i, j, k, pNew);
+						z = pNew[2];
+						dataset1->GetPoint(i, j, 0, pNew);
+						seabed = pNew[2];
+						dataset1->GetPoint(i, j, nl - 1, pNew);
+						welev = pNew[2];
+
+						betah[k * ny * nx + j * nx + i] = welev == seabed ? 0. : 1. + z2s(z, welev, -seabed);
+						//cout << "seabed:" << seabed << " welev: " << welev << " z: " << z << " betah:" << betah[k * ny * nx + j * nx + i] << endl;
+					}
+				}
+			}
+		}
+	}
 }
 
 template<class T>T* BinarySearch(//<======FIND THE POINTER c | *c <= k < *(c+1)
