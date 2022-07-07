@@ -437,8 +437,8 @@ An example of the required input parameters which needs to be specified in *wave
 - Like irregular second order wave theory, the grid interpolation schemes presented in :numref:`inputfile_description:Grid interpolation schemes` are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.
 - The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see :numref:`inputfile_description:General input data`). To change reference position, see :numref:`inputfile_description:Wave reference point` and ``swl`` in :numref:`inputfile_description:General input data`.
 
-VTK library kinematics
-----------------------
+VTK kinematics reader
+---------------------
 
 The `VTK (Visialization Toolkit) library`_ is open-source and a widely used library in the CFD industry. It support a wide range of formats which covers pretty much all thinkable grid types used by CFD solvers. Compiling CFDwavemaker with this extension library therefore expands its usage, and enables CFDwavemaker to read kinematics from most wave models, as long as they can export their result into one of the hundres of formats that VTK supports.
 
@@ -463,6 +463,12 @@ The input format in the waveinput.dat file is fairly simple. First, **[wave type
     * - ``name_velocity_field``
       - Name of the vector field variable which contain kinematics (u,v,w). This may vary depending on what code was used to output the data. 
       - yes
+    * - ``t_start``
+      - delta time, to start reading from another time value than the default t=0. 
+      - no
+    * - ``update_height_function_every_timestep``
+      - the height function betah is by default computed only once (at t=0) when reading kinematics from the lagrangian grid. This works well, except when reading kinematics from a location which dry at t=0 (cell heights of grid = 0), but becomes wet for t>0. If this is the case, the beta function should be updated every time a new vts file is loaded. 
+      - no
 
 .. note::
 
