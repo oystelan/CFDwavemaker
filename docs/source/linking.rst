@@ -34,7 +34,7 @@ Essentially you need to do a couple of things:
 - be sure to link up either the dynamic or the static library duing linking. If the libCFDwavemaker_openmp.so file is located in the same directory as your program, then adding a "-lCFDwavemaker_openmp" in your linking statement of your make file should do the job.
 - if your compiling a native C program, then make sure to add "-lstdc++" when linking. 
 
-A simple example is shown below, where
+A simple example is shown below (basilisk example)
 
 
 Linking up with Python
@@ -219,11 +219,8 @@ This simple example makes use of the non-hydrostatic multilayer solver to propag
 	#include "layered/perfs.h"
 	#include "view.h"
 
-	// Some additional libraries needed
+
 	#include "CFDwavemaker.h"
-	//#include <sys/types.h>
-	//#include <sys/stat.h>
-	//#include "output_vts_multilayer.h"
 
 	/**
 	The initial conditions is set in the waveinput.dat file and read through
