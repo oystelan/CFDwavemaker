@@ -9,7 +9,7 @@ Linux/UNIX
 `CFDwavemaker v2.1.6`_ ( compiled using ubuntu (v2106) with openMP support)
 
 
-.. _`CFDwavemaker v2.1.6`: http://www.hydrodynamics.no/CFDwavemaker/downloads/CFDwavemaker_v2.1.6.tar.gz
+.. _`CFDwavemaker v2.1.6`: http://www.hydrodynamics.no/CFDwavemaker/downloads/cfdwavemaker_bin_v2.1.6.tar.gz
 
 
 
