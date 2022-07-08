@@ -176,13 +176,11 @@ Ramps can sometimes be useful to avoid transient behaviour for example in at sta
 Irregular wave specification
 ----------------------------
 
-Irregular waves can be specified in several ways, but to keep it simple, we destinguish between two categories of specification:
+Irregular waves are prescribed by specifying the linear frequency components, directional components, amplitudes, etc, which consititute the irregular wave field. The second order bounded components are computed by CFDwavemaker if the **[second order]** is present in the file. 
 
-1. Manual specification - frequency components, directional components, amplitudes, etc are specified manually. This is useful when you want complete control or need to run a simulation where the spectral components are have been calculated by another program.
-2. Spectral specification - CFDwavemaker does the job for you. **Note: it should be noted that spectral specification is not yet fully implemented.**
+.. note::
 
-Manual specification
-....................
+  In previous releases it was possible to specify irregular waves based on spectral data input (spectrum type, hs, tp, etc). This module was however never completely finished and was never used. I decided to discontinue this development since in pratice its much easier and practical to use other codes such as python, matlab or similar to generate the linear wave components and write the appropriate `waveinput.dat` file.
 
 The tag **[irregular wave components]** needs to present. This tag requires the following information to follow:
 
@@ -196,7 +194,7 @@ The tag **[irregular wave components]** needs to present. This tag requires the 
       - number of frequency components to read from input file. A list of frequency component data should follow, where the number of entries (lines) must correspond to the number of components specified with this parameter. For each component the following data should be given on a single line, separate by space:
         **1. frequency:** given in rad/s. 
         **2. amplitude:** given in meters. 
-        **3. wave number:** wave number assosiated with the frequency (specified in rad/m.
+        **3. wave number:** wave number assosiated with the frequency (specified in rad/m).
         **4. phase:** Random phase, value between 0 and 2*PI (specified in radians). 
         **5. theta:** (only specified if ``ndir``= 0) direction of frequency component (specified in radians). 
       - yes
@@ -251,67 +249,6 @@ Example 2:
           0.61087     0.048652
           0.69813     0.045853
            0.7854     0.042843
-
-
-Spectral specification
-......................
-
-.. note::
-
-  This module has been disabled since it is not complete and tested. Please use manual specification **[Manual specification]** for now. 
-
-The second of initializing an irregular wave field. The tag **[irregular spectral properties]** needs to be specified, followed by the following data
-
-to be updated.
-
-Example 1:
-
-.. code-block:: none
-
-    [irregular spectral properties]
-    # spectral definition
-    w0 0.05
-    dw 0.05
-    wmax 0.5
-    random_seed 123
-    spectrum jonswap3
-    hs 10.0
-    tp 15.0
-    gamma 3.0
-    #spreading definition
-    spread cosn
-    n 4
-    type random_draw
-    dir_seed 1234
-    event_select_criterion crestmax
-    event_number 3 # selecting to run the third largest event
-    event_posx 10. # m, position of where to look for maxima (x-coord)
-    event_posy 12. # m, "    (y-coord)
-
-Example 2:
-
-.. code-block:: none
-
-    [irregular spectral properties]
-    # spectral definition
-    w_min 0.05
-    w_max 0.5
-    dw 0.05
-    random_seed 9947793
-    spectrum torsethaugen2004
-    hs 5.5
-    tp 8.3
-    #spreading definition
-    spread cos2s
-    s 15
-    type integrate
-    theta_min -1.57
-    theta_max 1.57
-    dtheta 0.3491
-    event_select_criterion waveheightmax
-    eventnumber 1 # selecting to run the largest wave height
-    
-
 
 Second order wave theory
 ........................
@@ -500,8 +437,8 @@ An example of the required input parameters which needs to be specified in *wave
 - Like irregular second order wave theory, the grid interpolation schemes presented in :numref:`inputfile_description:Grid interpolation schemes` are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.
 - The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see :numref:`inputfile_description:General input data`). To change reference position, see :numref:`inputfile_description:Wave reference point` and ``swl`` in :numref:`inputfile_description:General input data`.
 
-VTK library kinematics
-----------------------
+VTK kinematics reader
+---------------------
 
 The `VTK (Visialization Toolkit) library`_ is open-source and a widely used library in the CFD industry. It support a wide range of formats which covers pretty much all thinkable grid types used by CFD solvers. Compiling CFDwavemaker with this extension library therefore expands its usage, and enables CFDwavemaker to read kinematics from most wave models, as long as they can export their result into one of the hundres of formats that VTK supports.
 
@@ -526,6 +463,12 @@ The input format in the waveinput.dat file is fairly simple. First, **[wave type
     * - ``name_velocity_field``
       - Name of the vector field variable which contain kinematics (u,v,w). This may vary depending on what code was used to output the data. 
       - yes
+    * - ``t_start``
+      - delta time, to start reading from another time value than the default t=0. 
+      - no
+    * - ``update_height_function_every_timestep``
+      - the height function betah is by default computed only once (at t=0) when reading kinematics from the lagrangian grid. This works well, except when reading kinematics from a location which dry at t=0 (cell heights of grid = 0), but becomes wet for t>0. If this is the case, the beta function should be updated every time a new vts file is loaded. 
+      - no
 
 .. note::
 
