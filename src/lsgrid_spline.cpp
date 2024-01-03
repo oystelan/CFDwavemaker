@@ -1,4 +1,4 @@
-#include "lsgrid.h"
+#include "lsgrid_spline.h"
 #include <algorithm>
 #include <iostream>
 #include <cmath>
@@ -21,13 +21,31 @@
 
 // Allocation of memory to storage matrices
 void lsGrid::allocate() {
+	// Primary fields
 	ETA = new double[4 * nx * ny];
-	IGNORE = new int[4 * nx * ny];
-
 	UX = new double[4 * nx * ny * nl];
 	UY = new double[4 * nx * ny * nl];
 	UZ = new double[4 * nx * ny * nl];
 
+	// secondary fields (derivatives)
+	etadx = new double[2 * nx * ny];
+	etady = new double[2 * nx * ny];
+	etadt = new double[4 * nx * ny];
+	udt = new double[4 * nx * ny * nl];
+	udx = new double[2 * nx * ny * nl];
+	udy = new double[2 * nx * ny * nl];
+	uds = new double[2 * nx * ny * nl];
+	vdt = new double[4 * nx * ny * nl];
+	vdx = new double[2 * nx * ny * nl];
+	vdy = new double[2 * nx * ny * nl];
+	vds = new double[2 * nx * ny * nl];
+	wdt = new double[4 * nx * ny * nl];
+	wdx = new double[2 * nx * ny * nl];
+	wdy = new double[2 * nx * ny * nl];
+	wds = new double[2 * nx * ny * nl];
+
+	// Misc fields
+	IGNORE = new int[nx * ny];
 }
 
 // A streching function for setting variable layer thickness
@@ -81,11 +99,189 @@ double lsGrid::cart2sigmaS(double zpt, double wave_elev, double depth){
     // defined now from 0 to 1 where 0 is sea bed and 1 is surface
 }
 
-double sigmaS2cart(double s, double wave_elev, double depth){
+double lsGrid::sigmaS2cart(double s, double wave_elev, double depth){
     double sigma = -std::pow(std::tan(-(s - 1) * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 	return s2z(sigma, wave_elev, depth);
 }
 
+void lsGrid::update_gradient_dt(double* data, double* graddt){
+    // function for computation of temporal gradients using central difference
+    if (update_count > 0){
+        int tid = (update_count + 2) % 4;
+        int tid1 = (update_count + 3) % 4;
+        int tid0 = (update_count + 1) % 4;
+		for (int i = 0; i < nx*ny*nz; i++) {
+            graddt[tid * nx * ny * nz + i] = (data[tid1 * nx * ny * nz + i] - data[tid0 * nx * ny * nz + i]) / (2 * dt);
+		}
+	}
+    else {
+        for (int i = 0; i < nx*ny*nz; i++) {
+            graddt[1 * nx * ny * nz + i] = (data[2 * nx * ny * nz + i] - data[1 * nx * ny * nz + i]) / dt;
+            graddt[2 * nx * ny * nz + i] = (data[3 * nx * ny * nz + i] - data[1 * nx * ny * nz + i]) / (2 * dt);
+		}
+	}
+}
+
+void lsGrid::update_gradient_eta_dt(double* data, double* graddt){
+    // function for computation of temporal gradients using central difference
+    if (update_count > 0){
+        int tid = (update_count + 2) % 4;
+        int tid1 = (update_count + 3) % 4;
+        int tid0 = (update_count + 1) % 4;
+        for (int i = 0; i < nx*ny; i++) {
+            graddt[tid * nx * ny + i] = (data[tid1 * nx * ny + i] - data[tid0 * nx * ny + i]) / (2 * dt);
+		}
+	}
+    else {
+        for (int i = 0; i < nx*ny; i++) {
+            graddt[1 * nx * ny + i] = (data[2 * nx * ny + i] - data[1 * nx * ny + i]) / dt;
+            graddt[2 * nx * ny + i] = (data[3 * nx * ny + i] - data[1 * nx * ny + i]) / (2 * dt);
+		}
+	}
+}
+
+void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
+    // tid: specifies which time step to compute gradients for (value from 0 to 1)
+    // compute spatial gradient of the sea surface using central difference
+
+    int tid0 = (update_count + 1) % 4;
+    int tid1 = (update_count + 2) % 4;
+	for (int i = 1; i < (nx-1); i++) {
+		for (int j = 0; j < ny; j++) {
+            gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
+                                                   eta[tid0 * nx * ny +(i - 1) * ny + j]) / (2 * dx);
+            gradx[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + (i + 1) * ny + j] -
+                                                 eta[tid1 * nx * ny + (i - 1) * ny + j]) / (2 * dx);
+		}
+	}
+    
+	// boundaries are special cases (x=0 and x=xn)
+    for (int j = 0; j < ny; j++) {
+        gradx[0 * nx * ny + j] = (eta[tid0 * nx * ny + ny + j] - eta[tid0 * nx * ny +j]) / dx;
+        gradx[0 * nx * ny + (nx-1) * ny + j] = (eta[tid0 * nx * ny +(nx-1) * ny + j] -
+                                                   eta[tid0 * nx * ny +(nx-2) * ny + j]) / dx;
+        gradx[1 * nx * ny + j] = (eta[tid1 * nx * ny + ny + j] - eta[tid1 * nx * ny + j]) / dx;
+        gradx[1 * nx * ny + (nx - 1) * ny + j] = (eta[tid1 * nx * ny + (nx - 1) * ny + j] -
+                                                   eta[tid1 * nx * ny + (nx - 2) * ny + j]) / dx;
+	}
+
+    // compute spatial gradient using central difference
+    for (int i = 0; i < nx; i++) {
+		for (int j = 1; j < (ny-1); j++) {
+            grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
+                                                  eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy)
+            grady[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + i * ny + (j + 1)] -
+                                                 eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy)
+		}
+	}
+    // y=0 and y=yn
+    for (int i = 0; i < nx; i++) {
+        grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy
+        grady[0 * nx * ny + i * ny + (ny - 1)] = (eta[tid0 * nx * ny + i * ny + (ny - 1)] -
+                                                     eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy
+        grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy
+        grady[1 * nx * ny + i * ny + (ny - 1)] = (eta[tid1 * nx * ny + i * ny + (ny - 1)] -
+                                                   eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy
+
+	}
+}
+
+void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz){
+    // compute spatial gradient using central difference
+
+    int tid0 = (update_count + 1) % 4;
+    int tid1 = (update_count + 2) % 4;
+    for (int i = 1; i < (nx-1); i++) {
+		for (int j = 0; j < ny; j++) {
+			for (int m = 0; m < nl; m++) {
+                gradx[0 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid0 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
+                    data[tid0 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+                gradx[1 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid1 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
+                      data[tid1 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+			}
+		}
+	}
+    // x=0 and x=xn
+    for (int j = 0; j < ny; j++) {
+		for (int m = 0; m < nl; m++) {
+            gradx[0 * nx * ny * nl + j * nl + m] = (
+                data[tid0 * nx * ny * nl + ny * nl + j * nl + m] -
+                data[tid0 * nx * ny * nl + j * nl + m]) / dx;
+            gradx[0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] = (
+                data[tid0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] -
+                data[tid0 * nx * ny * nl + (nx-2) * ny * nl + j * nl + m]) / dx;
+            gradx[1 * nx * ny * nl + j * nl + m] = (
+                 data[tid1 * nx * ny * nl + ny * nl + j * nl + m] -
+                 data[tid1 * nx * ny * nl + j * nl + m]) / dx;
+            gradx[1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] = (
+                  data[tid1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] -
+                  data[tid1 * nx * ny * nl + (nx - 2) * ny * nl + j * nl + m]) / dx;
+		}
+	}
+
+    // compute spatial gradient using central difference
+    for (int i = 0; i < nx; i++) {
+		for (int j = 1; j < (ny-1); j++) {
+			for (int m = 0; m < nl; m++) {
+                grady[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+                        (data[tid0 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
+                         data[tid0 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+                grady[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+                        (data[tid1 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
+                         data[tid1 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+			}
+		}
+	}
+
+    // y=0 and y=yn
+    for (int i = 0; i < nx; i++) {
+		for (int m = 0; m < nl; m++) {
+            grady[0 * nx * ny * nl + i * ny * nl + m] = (
+                    (data[tid0 * nx * ny * nl + i * ny * nl + nl + m] -
+                     data[tid0 * nx * ny * nl + i * ny * nl + m]) / dy);
+            grady[0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
+                    (data[tid0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
+                     data[tid0 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
+            grady[1 * nx * ny * nl + i * ny * nl + m] = (
+                    (data[tid1 * nx * ny * nl + i * ny * nl + nl + m] -
+                     data[tid1 * nx * ny * nl + i * ny * nl + m]) / dy);
+            grady[1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
+                    (data[tid1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
+                     data[tid1 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
+		}
+	}
+    
+	// compute grad z spatial gradient using central difference
+     for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+			for (int m = 1; m < (nl-1); m++) {
+                gradz[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+                        (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
+                         data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+                gradz[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+                        (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
+                         data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+			}
+		}
+	 }
+    // z=0 and z=zn
+    for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+            gradz[0 * nx * ny * nl + i * ny * nl + j * nl] = (
+                    (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + 1] -
+                     data[tid0 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
+            gradz[0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
+                    (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
+                     data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+            gradz[1 * nx * ny * nl + i * ny * nl + j * nl] = (
+                    (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + 1] -
+                     data[tid1 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
+            gradz[1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
+                    (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
+                     data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+		}
+	}
+}
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
 double lsGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
 
@@ -397,7 +593,7 @@ void lsGrid::update_bounds(double xpt, double ypt) {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void lsGrid::initialize_kinematics(Irregular& irregular) {
+void lsGrid::initialme_kinematics(Irregular& irregular) {
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));

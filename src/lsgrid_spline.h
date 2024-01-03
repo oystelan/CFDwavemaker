@@ -94,6 +94,11 @@ public:
 #endif
 
 	void set_ignore();
+	// gradient update functions
+	void update_gradient_dt(double* data, double* graddt);
+	void update_gradient_eta_dt(double* data, double* graddt);
+	void update_gradient_eta_dxdy(double* eta, double* gradx,double* grady);
+	void update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz);
 
 	// Grid interpolation functions
 	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
