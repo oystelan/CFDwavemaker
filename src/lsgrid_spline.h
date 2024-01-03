@@ -72,7 +72,9 @@ public:
 	double s2tan(double s);
 	double tan2s(double t);
 
-	
+	double clamp(double aa, double a1, double a2);
+	double* square_vals(double* C, double* data, int nxp, int nyp, int tid);
+	double* cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid);
 	
 	void write_vtk(bool endtime);
 	void allocate();

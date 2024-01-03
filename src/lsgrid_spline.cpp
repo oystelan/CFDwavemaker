@@ -282,6 +282,146 @@ void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, 
 		}
 	}
 }
+
+double lsGrid::clamp(double aa, double a1, double a2):
+    return std::min(std::max(aa, a1), a2);
+
+void lsGrid::square_vals(double* C, double* data, int nxp, int nyp, int tid){
+    C[0] = data[tid * nx * ny + nxp * ny + nyp]; // C00
+    C[1] = data[tid * nx * ny + nxp * ny + clamp(nyp + 1, 0, ny - 1)]; // C01
+    C[2] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + nyp]; // C10
+    C[3] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + clamp(nyp + 1, 0, ny - 1)];//C11
+}
+
+void lsGrid::cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid){
+    C[0] = data[tid * nx * ny * nl + nxp * ny * nl + nyp * nl + nlp]; //C000
+    C[1] = data[tid * nx * ny * nl + nxp * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + nlp]; //C010
+    C[2] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nlp]; //C100
+    C[3] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + nlp]; //C110
+    C[4] = data[tid * nx * ny * nl + nxp * ny * nl + nyp * nl + clamp(nlp + 1, 0, nl - 1)]; //C001
+    C[5] = data[tid * nx * ny * nl + nxp * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + clamp(nlp + 1, 0, nl - 1)]; //C011
+    C[6] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clamp(nlp + 1, 0, nl - 1)]; //C101
+    C[7] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + clamp(nlp + 1, 0, nl - 1)]; //C111
+}
+
+double lsGrid::spline_interp_velo(double* U, double* Udt, double* Udx, double* Udy, double* Uds, int nxp, int nyp, int nsp0, int nsp1, double xd, double yd, double sd0, double sd1, double td, int tid1, int tid2){
+    // Ux
+    // --------------------------------------------------------------------
+    // u0, u1, u0dt, u1dt, u0dx, u1dx, u0dy, u1dy, u0ds, u1ds
+	double C[8], D[8], Ct[8], Dt[8], Cx[8], Dx[8], Cy[8], Dy[8], Cs[8], Ds[8];
+    cube_vals(C, U, nxp, nyp, nsp0, tid1);
+    cube_vals(D, U, nxp, nyp, nsp1, tid2);
+    cube_vals(Ct, Udt, nxp, nyp, nsp0, tid1);
+    cube_vals(Dt, Udt, nx, ny, ns, nxp, nyp, nsp1, tid2);
+    cube_vals(Cx, Udx, nx, ny, ns, nxp, nyp, nsp0, 0);
+    cube_vals(Dx, Udx, nx, ny, ns, nxp, nyp, nsp1, 1);
+    cube_vals(Cy, Udy, nx, ny, ns, nxp, nyp, nsp0, 0);
+    cube_vals(Dy, Udy, nx, ny, ns, nxp, nyp, nsp1, 1);
+    cube_vals(Cs, Uds, nx, ny, ns, nxp, nyp, nsp0, 0);
+    cube_vals(Ds, Uds, nx, ny, ns, nxp, nyp, nsp1, 1);
+
+    // gcompute spline coefficients
+    double a00 = dx * Cx[0] - (C[2] - C[0]);
+    double b00 = -dx * Cx[2] + (C[2] - C[0]);
+    double a10 = dx * Cx[1] - (C[3] - C[1]);
+    double b10 = -dx * Cx[3] + (C[3] - C[1]);
+    double a01 = dx * Cx[4] - (C[6] - C[4]);
+    double b01 = -dx * Cx[6] + (C[6] - C[4]);
+	double a11 = dx * Cx[5] - (C[7] - C[5]);
+    double b11 = -dx * Cx[7] + (C[7] - C[5]);
+    double c00 = dx * Dx[0] - (D[2] - D[0]);
+    double d00 = -dx * Dx[2] + (D[2] - D[0]);
+    double c10 = dx * Dx[1] - (D[3] - D[1]);
+    double d10 = -dx * Dx[3] + (D[3] - D[1]);
+    double c01 = dx * Dx[4] - (D[6] - D[4]);
+    double d01 = -dx * Dx[6] + (D[6] - D[4]);
+	double c11 = dx * Dx[5] - (D[7] - D[5]);
+    double d11 = -dx * Dx[7] + (D[7] - D[5]);
+
+    // compute new values
+    double C00 = C[0] * (1. - xd) + C[2] * xd + xd * (1 - xd) * (a00 * (1 - xd) + b00 * xd);
+    double C10 = C[1] * (1. - xd) + C[3] * xd + xd * (1 - xd) * (a10 * (1 - xd) + b10 * xd);
+    double C01 = C[4] * (1. - xd) + C[6] * xd + xd * (1 - xd) * (a01 * (1 - xd) + b01 * xd);
+    double C11 = C[5] * (1. - xd) + C[7] * xd + xd * (1 - xd) * (a11 * (1 - xd) + b11 * xd);
+    double D00 = D[0] * (1. - xd) + D[2] * xd + xd * (1 - xd) * (c00 * (1 - xd) + d00 * xd);
+    double D10 = D[1] * (1. - xd) + D[3] * xd + xd * (1 - xd) * (c10 * (1 - xd) + d10 * xd);
+    double D01 = D[4] * (1. - xd) + D[6] * xd + xd * (1 - xd) * (c01 * (1 - xd) + d01 * xd);
+    double D11 = D[5] * (1. - xd) + D[7] * xd + xd * (1 - xd) * (c11 * (1 - xd) + d11 * xd);
+
+    // Reduce y, s and t
+    double C00y = Cy[0] * (1. - xd) + Cy[2] * xd;
+    double C10y = Cy[1] * (1. - xd) + Cy[3] * xd;
+    double C01y = Cy[4] * (1. - xd) + Cy[6] * xd;
+    double C11y = Cy[5] * (1. - xd) + Cy[7] * xd;
+    double D00y = Dy[0] * (1. - xd) + Dy[2] * xd;
+    double D10y = Dy[1] * (1. - xd) + Dy[3] * xd;
+    double D01y = Dy[4] * (1. - xd) + Dy[6] * xd;
+    double D11y = Dy[5] * (1. - xd) + Dy[7] * xd;
+
+    double C00t = Ct[0] * (1. - xd) + Ct[2] * xd;
+    double C10t = Ct[1] * (1. - xd) + Ct[3] * xd;
+    double C01t = Ct[4] * (1. - xd) + Ct[6] * xd;
+    double C11t = Ct[5] * (1. - xd) + Ct[7] * xd;
+    double D00t = Dt[0] * (1. - xd) + Dt[2] * xd;
+    double D10t = Dt[1] * (1. - xd) + Dt[3] * xd;
+    double D01t = Dt[4] * (1. - xd) + Dt[6] * xd;
+    double D11t = Dt[5] * (1. - xd) + Dt[7] * xd;
+
+    double C00s = Cs[0] * (1. - xd) + Cs[2] * xd;
+    double C10s = Cs[1] * (1. - xd) + Cs[3] * xd;
+    double C01s = Cs[4] * (1. - xd) + Cs[6] * xd;
+    double C11s = Cs[5] * (1. - xd) + Cs[7] * xd;
+    double D00s = Ds[0] * (1. - xd) + Ds[2] * xd;
+    double D10s = Ds[1] * (1. - xd) + Ds[3] * xd;
+    double D01s = Ds[4] * (1. - xd) + Ds[6] * xd;
+    double D11s = Ds[5] * (1. - xd) + Ds[7] * xd;
+
+    // compute spline coefficients
+    double a0 = dy * C00y - (C10 - C00);
+    double b0 = -dy * C10y + (C10 - C00);
+    double a1 = dy * C01y - (C11 - C01);
+    double b1 = -dy * C11y + (C11 - C01);
+    double c0 = dy * D00y - (D10 - D00);
+    double d0 = -dy * D10y + (D10 - D00);
+    double c1 = dy * D01y - (D11 - D01);
+    double d1 = -dy * D11y + (D11 - D01);
+
+    // compute new values
+    double C0 = C00 * (1. - yd) + C10 * yd + yd * (1 - yd) * (a0 * (1 - yd) + b0 * yd);
+    double C1 = C01 * (1. - yd) + C11 * yd + yd * (1 - yd) * (a1 * (1 - yd) + b1 * yd);
+    double D0 = D00 * (1. - yd) + D10 * yd + yd * (1 - yd) * (c0 * (1 - yd) + d0 * yd);
+    double D1 = D01 * (1. - yd) + D11 * yd + yd * (1 - yd) * (c1 * (1 - yd) + d1 * yd);
+
+    // reduce y and t direction
+    double C0s = C00s * (1. - yd) + C10s * yd;
+    double C1s = C01s * (1. - yd) + C11s * yd;
+    double D0s = D00s * (1. - yd) + D10s * yd;
+    double D1s = D01s * (1. - yd) + D11s * yd;
+    double C0t = C00t * (1. - yd) + C10t * yd;
+    double C1t = C01t * (1. - yd) + C11t * yd;
+    double D0t = D00t * (1. - yd) + D10t * yd;
+    double D1t = D01t * (1. - yd) + D11t * yd;
+
+    // compute spline coefficients
+    double a0 = ds * C0s - (C1 - C0);
+    double b0 = -ds * C1s + (C1 - C0);
+    double a1 = ds * D0s - (D1 - D0);
+    double b1 = -ds * D1s + (D1 - D0);
+
+    // compute wave elevation for two time steps
+    double C = C0 * (1. - sd0) + C1 * sd0 + sd0 * (1 - sd0) * (a0 * (1 - sd0) + b0 * sd0);
+    double D = D0 * (1. - sd1) + D1 * sd1 + sd1 * (1 - sd1) * (a1 * (1 - sd1) + b1 * sd1);
+
+    // compute spline coefficients
+    double Ct = C0t * (1. - sd0) + C1t * sd0;
+    double Dt = D0t * (1. - sd1) + D1t * sd1;
+    double a = dt * Ct - (D - C);
+    double b = -dt * Dt + (D - C);
+
+    // compute final interpolated wave elevation for single point
+    return C * (1. - td) + D * td + td * (1 - td) * (a * (1 - td) + b * td);
+}
+
 /* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
 double lsGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
 
