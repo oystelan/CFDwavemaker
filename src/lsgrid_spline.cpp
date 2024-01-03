@@ -100,16 +100,17 @@ double lsGrid::cart2sigmaS(double zpt, double wave_elev, double depth){
 }
 
 double lsGrid::sigmaS2cart(double s, double wave_elev, double depth){
+	// s defined now from 0 to 1 where 0 is sea bed and 1 is surface
     double sigma = -std::pow(std::tan(-(s - 1) * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 	return s2z(sigma, wave_elev, depth);
 }
 
 void lsGrid::update_gradient_dt(double* data, double* graddt){
     // function for computation of temporal gradients using central difference
-    if (update_count > 0){
-        int tid = (update_count + 2) % 4;
-        int tid1 = (update_count + 3) % 4;
-        int tid0 = (update_count + 1) % 4;
+    if (tstep > 0){
+        int tid = (tstep + 2) % 4;
+        int tid1 = (tstep + 3) % 4;
+        int tid0 = (tstep + 1) % 4;
 		for (int i = 0; i < nx*ny*nz; i++) {
             graddt[tid * nx * ny * nz + i] = (data[tid1 * nx * ny * nz + i] - data[tid0 * nx * ny * nz + i]) / (2 * dt);
 		}
@@ -124,10 +125,10 @@ void lsGrid::update_gradient_dt(double* data, double* graddt){
 
 void lsGrid::update_gradient_eta_dt(double* data, double* graddt){
     // function for computation of temporal gradients using central difference
-    if (update_count > 0){
-        int tid = (update_count + 2) % 4;
-        int tid1 = (update_count + 3) % 4;
-        int tid0 = (update_count + 1) % 4;
+    if (tstep > 0){
+        int tid = (tstep + 2) % 4;
+        int tid1 = (tstep + 3) % 4;
+        int tid0 = (tstep + 1) % 4;
         for (int i = 0; i < nx*ny; i++) {
             graddt[tid * nx * ny + i] = (data[tid1 * nx * ny + i] - data[tid0 * nx * ny + i]) / (2 * dt);
 		}
@@ -144,8 +145,8 @@ void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
     // tid: specifies which time step to compute gradients for (value from 0 to 1)
     // compute spatial gradient of the sea surface using central difference
 
-    int tid0 = (update_count + 1) % 4;
-    int tid1 = (update_count + 2) % 4;
+    int tid0 = (tstep + 1) % 4;
+    int tid1 = (tstep + 2) % 4;
 	for (int i = 1; i < (nx-1); i++) {
 		for (int j = 0; j < ny; j++) {
             gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
@@ -189,8 +190,8 @@ void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
 void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz){
     // compute spatial gradient using central difference
 
-    int tid0 = (update_count + 1) % 4;
-    int tid1 = (update_count + 2) % 4;
+    int tid0 = (tstep + 1) % 4;
+    int tid1 = (tstep + 2) % 4;
     for (int i = 1; i < (nx-1); i++) {
 		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
@@ -605,33 +606,7 @@ double lsGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, 
 	return (C0 * (1. - sd0) + C1 * sd0) * (1. - td) + (D0 * (1. - sd1) + D1 * sd1) * td;
 }
 
-/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double lsGrid::bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
 
-	double nxp = std::min(double(nx), std::max(0., (xpt - domain[0]) / dx));
-	double nyp = std::min(double(ny), std::max(0., (ypt - domain[2]) / dy));
-
-
-	double C00 = VAR0[int(floor(nxp) * ny + floor(nyp))];
-	double C01 = VAR0[int(floor(nxp) * ny + ceil(nyp))];
-	double C10 = VAR0[int(ceil(nxp) * ny + floor(nyp))];
-	double C11 = VAR0[int(ceil(nxp) * ny + ceil(nyp))];
-	double D00 = VAR1[int(floor(nxp) * ny + floor(nyp))];
-	double D01 = VAR1[int(floor(nxp) * ny + ceil(nyp))];
-	double D10 = VAR1[int(ceil(nxp) * ny + floor(nyp))];
-	double D11 = VAR1[int(ceil(nxp) * ny + ceil(nyp))];
-
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
-	double td = std::min(1., std::max(0., (tpt - t0) / dt));
-
-	double C0 = C00 * (1. - xd) + C10 * xd;
-	double C1 = C01 * (1. - xd) + C11 * xd;
-	double D0 = D00 * (1. - xd) + D10 * xd;
-	double D1 = D01 * (1. - xd) + D11 * xd;
-
-	return (C0 * (1. - yd) + C1 * yd) * (1. - td) + (D0 * (1. - yd) + D1 * yd) * td;
-}
 
 //#define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
 
@@ -733,12 +708,19 @@ void lsGrid::update_bounds(double xpt, double ypt) {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void lsGrid::initialme_kinematics(Irregular& irregular) {
+void lsGrid::initialize_kinematics(Irregular& irregular) {
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
+
+	double t0[4] = {t_target, t_target, t_target+dt, t_target+2*dt};
 
 	double dd = omp_get_wtime();
 
@@ -752,78 +734,43 @@ void lsGrid::initialme_kinematics(Irregular& irregular) {
 
 		// Main grid
 #pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
+		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
+			for (int i = 0; i < nx; i++) {
 
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				double eta0_temp = ETA0[i * ny + j] - swl;
-
-				double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-				double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-				double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt0 = s2z(spt, eta0_temp, water_depth);
-					double zpt0max = std::max(0., zpt0 - swl);
-					double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
+				for (int j = 0; j < ny; j++) {
+					double xpt = domain[0] + dx * i;
+					double ypt = domain[2] + dy * j;
 					
-					//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
-					//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
-					//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t0[tt], xpt, ypt) + irregular.eta2(t0[tt], xpt, ypt) + swl;
 
-					std::vector<double> U2 = irregular.uvw2(t0, xpt, ypt, zpt0min);
-					UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
-					UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
-					UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
+					double eta_temp = ETA[tt*nx*ny + i * ny + j];
+
+					double PHI0_dxdz = irregular.phi1_dxdz(t0[tt], xpt, ypt);
+					double PHI0_dydz = irregular.phi1_dydz(t0[tt], xpt, ypt);
+					double PHI0_dzdz = irregular.phi1_dzdz(t0[tt], xpt, ypt);
+
+					for (int m = 0; m < nl; m++) {
+						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+						double zpt0max = std::max(0., zpt0 - swl);
+						double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
+						
+						//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
+						//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
+						//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
+
+						std::vector<double> U2 = irregular.uvw2(t0[tt], xpt, ypt, zpt0min);
+						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
+					}
 				}
 			}
 		}
 	}
 		
-	if (init_only) {
-		UX1 = UX0;
-		UY1 = UY0;
-		UZ1 = UZ0;
-	}
-	else{
-	#pragma omp parallel // start parallel initialization
-		{
-#pragma omp for collapse(2)
-			for (int i = 0; i < nx; i++) {
-				for (int j = 0; j < ny; j++) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta1_temp = ETA1[i * ny + j] - swl;
-
-					double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-					double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-					double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt1 = s2z(spt, eta1_temp, water_depth);
-						double zpt1max = std::max(0., zpt1 - swl);
-						double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
-
-						//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-						//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-						//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
-
-						std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
-						UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
-						UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
-						UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
-					}
-				}
-			}
-		}
-	} 
 	// End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
-		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
 	dd = omp_get_wtime() - dd;
@@ -831,17 +778,23 @@ void lsGrid::initialme_kinematics(Irregular& irregular) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
 void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
+
+	bxmin = domain[0];
+	bxmax = domain[1];
+	bymin = domain[2];
+	bymax = domain[3];
 
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
+	double t0[4] = {t_target, t_target, t_target+dt, t_target+2*dt};
+
 	double dd = omp_get_wtime();
 
-	//omp_set_num_threads(1);
+	//omp_set_num_threads(1)
 	//omp_set_num_threads(omp_get_max_threads());
 
 #pragma omp parallel // start parallel initialization
@@ -851,214 +804,50 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 		// Main grid
 #pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
+		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
 			for (int i = 0; i < nx; i++) {
 				if (!IGNORE[i * ny + j]) {
-					double xpt = domain[0] + dx * i;
-					double ypt = domain[2] + dy * j;
-					double eta0_temp = ETA0[i * ny + j] - swl;
-
-					double PHI0_dxdz = irregular.phi1_dxdz(t0, xpt, ypt);
-					double PHI0_dydz = irregular.phi1_dydz(t0, xpt, ypt);
-					double PHI0_dzdz = irregular.phi1_dzdz(t0, xpt, ypt);
-
-					for (int m = 0; m < nl; m++) {
-						double spt = s2tan(-1. + ds * m);
-						double zpt0 = s2z(spt, eta0_temp, water_depth);
-						double zpt0max = std::max(0., zpt0 - swl);
-						double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
-
-						//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
-						//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
-						//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
-
-						std::vector<double> U2 = irregular.uvw2(t0, xpt, ypt, zpt0min);
-						UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
-						UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
-						UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
-					}
-				}
-			}
-		}
-	}
-
-	if (init_only) {
-		UX1 = UX0;
-		UY1 = UY0;
-		UZ1 = UZ0;
-	}
-	else {
-#pragma omp parallel // start parallel initialization
-		{
-#pragma omp for collapse(2)
-			for (int j = 0; j < ny; j++) {
-				for (int i = 0; i < nx; i++) {
-					if (!IGNORE[i * ny + j]) {
+					for (int j = 0; j < ny; j++) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
-						double eta1_temp = ETA1[i * ny + j] - swl;
+						
+						ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t0[tt], xpt, ypt) + irregular.eta2(t0[tt], xpt, ypt) + swl;
 
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+						double eta_temp = ETA[tt*nx*ny + i * ny + j];
+
+						double PHI0_dxdz = irregular.phi1_dxdz(t0[tt], xpt, ypt);
+						double PHI0_dydz = irregular.phi1_dydz(t0[tt], xpt, ypt);
+						double PHI0_dzdz = irregular.phi1_dzdz(t0[tt], xpt, ypt);
 
 						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, eta1_temp, water_depth);
-							double zpt1max = std::max(0., zpt1 - swl);
-							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
+							double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+							double zpt0max = std::max(0., zpt0 - swl);
+							double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
+							
+							//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
+							//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
+							//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
 
-							//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-							//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-							//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
-
-							std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
+							std::vector<double> U2 = irregular.uvw2(t0[tt], xpt, ypt, zpt0min);
+							UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+							UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+							UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
 						}
 					}
 				}
 			}
 		}
 	}
+		
 	// End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
-		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
 	dd = omp_get_wtime() - dd;
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 	std::cout << "Interpolation can commence..." << std::endl;
 }
-
-
-
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 4
-void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target) {
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	//omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int i = 0; i < nx; i++) {
-
-			for (int j = 0; j < ny; j++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-
-				ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-				//ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-
-			}
-		}
-		if (init_only){
-		  ETA1 = ETA0;
-		}
-		else{
-#pragma omp for collapse(2)
-                for (int i = 0; i < nx; i++) {
-
-                        for (int j = 0; j < ny; j++) {
-                                double xpt = domain[0] + dx * i;
-                                double ypt = domain[2] + dy * j;
-
-                                //ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-                                ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-
-                        }
-                }
-		}
-
-	}
-	dd = omp_get_wtime() - dd;
-
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-}
-// Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void lsGrid::initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target) {
-
-	std::cout << "time: " << t_target << std::endl;
-	t0 = t_target;
-
-	// Allocating memory for storage of surface elevation and velocities
-
-	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
-	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
-
-	bxmin = domain[0];
-	bxmax = domain[1];
-	bymin = domain[2];
-	bymax = domain[3];
-
-	double dd = omp_get_wtime();
-	//omp_set_num_threads(1);
-	//omp_set_num_threads(omp_get_max_threads());
-
-#pragma omp parallel
-	{
-		// Main grid
-#pragma omp for collapse(2)
-		for (int j = 0; j < ny; j++) {
-			for (int i = 0; i < nx; i++) {
-				double xpt = domain[0] + dx * i;
-				double ypt = domain[2] + dy * j;
-				if (!IGNORE[i * ny + j]) {
-					ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-					//ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-				}
-				else {
-					ETA0[i * ny + j] = swl;
-					//ETA1[i * ny + j] = swl;
-				}
-			}
-		}
-		if (init_only) {
-		  ETA1 = ETA0;
-		}
-		else{
-#pragma omp for collapse(2)
-                for (int j = 0; j < ny; j++) {
-                        for (int i = 0; i < nx; i++) {
-                                double xpt = domain[0] + dx * i;
-                                double ypt = domain[2] + dy * j;
-                                if (!IGNORE[i * ny + j]) {
-				  //ETA0[i * ny + j] = irregular.eta1(t0, xpt, ypt) + irregular.eta2(t0, xpt, ypt) + swl;
-                                        ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
-                                }
-                                else {
-				  //ETA0[i * ny + j] = swl;
-                                        ETA1[i * ny + j] = swl;
-                                }
-                        }
-                }
-		}
-
-	}
-	dd = omp_get_wtime() - dd;
-
-	std::cout << "Surface Elevation generated successfully. ";
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-}
-
 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void lsGrid::update(Irregular& irregular, double t_target)
@@ -1069,59 +858,44 @@ void lsGrid::update(Irregular& irregular, double t_target)
 		CheckBounds();
 	}*/
 
+	tstep++;
 	// new time step
-	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
-		double new_time = dt * std::floor(t_target / dt);
-		initialize_surface_elevation(irregular, new_time);
-		initialize_kinematics(irregular);
-	}
-	else {
-		t0 += dt;
-		// Updating surface elevations
-		double dd = omp_get_wtime();
-		//omp_set_num_threads(1);
-		//omp_set_num_threads(omp_get_max_threads());
+	
+	t0 += dt; // base step
+	double t1 = t0 + dt; 
+    double t2 = t0 + 2*dt;
+	int tt = (tstep + 3) % 4; // index to write new time step (two steps ahead of basestep)
+
+	// Updating surface elevations
+	double dd = omp_get_wtime();
+	//omp_set_num_threads(1);
+	//omp_set_num_threads(omp_get_max_threads());
 #pragma omp parallel
-		{
-			// Main grid
+	{
+		// Main grid
 #pragma omp for collapse(2)
-			for (int j = 0; j < ny; j++) {
-				for (int i = 0; i < nx; i++) {
-					double xpt = domain[0] + dx * i;
-					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
-					double ypt = domain[2] + dy * j;
-					if (!IGNORE[i * ny + j]) {
-						ETA0[i * ny + j] = ETA1[i * ny + j];
-						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+		for (int j = 0; j < ny; j++) {
+			for (int i = 0; i < nx; i++) {
+				double xpt = domain[0] + dx * i;
+				//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
+				double ypt = domain[2] + dy * j;
+				if (!IGNORE[i * ny + j]) {
+					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t2, xpt, ypt) + irregular.eta2(t2, xpt, ypt) + swl;
+					double eta_temp = ETA[tt*nx*ny + i * ny + j];
 
-						//double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
-						//double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
-						//double Uz1 = irregular.w1(t0 + dt, xpt, ypt, 0.0) + irregular.w2(t0 + dt, xpt, ypt, 0.0);
+					double PHI1_dxdz = irregular.phi1_dxdz(t2, xpt, ypt);
+					double PHI1_dydz = irregular.phi1_dydz(t2, xpt, ypt);
+					double PHI1_dzdz = irregular.phi1_dzdz(t2, xpt, ypt);
 
-						double PHI1_dxdz = irregular.phi1_dxdz(t0 + dt, xpt, ypt);
-						double PHI1_dydz = irregular.phi1_dydz(t0 + dt, xpt, ypt);
-						double PHI1_dzdz = irregular.phi1_dzdz(t0 + dt, xpt, ypt);
+					for (int m = 0; m < nl; m++) {
+						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+						double zpt1max = std::max(0., zpt1 - swl);
+						double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
 
-						for (int m = 0; m < nl; m++) {
-							double spt = s2tan(-1. + ds * m);
-							double zpt1 = s2z(spt, ETA1[i * ny + j] - swl, water_depth);
-
-							UX0[i * ny * nl + j * nl + m] = UX1[i * ny * nl + j * nl + m];
-							UY0[i * ny * nl + j * nl + m] = UY1[i * ny * nl + j * nl + m];
-							UZ0[i * ny * nl + j * nl + m] = UZ1[i * ny * nl + j * nl + m];
-
-							double zpt1max = std::max(0., zpt1 - swl);
-							double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
-
-							//UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + irregular.u2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dxdz * zpt1max;
-							//UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + irregular.v2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dydz * zpt1max;
-							//UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + irregular.w2(t0 + dt, xpt, ypt, zpt1min) + PHI1_dzdz * zpt1max;
-
-							std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
-							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
-						}
+						std::vector<double> U2 = irregular.uvw2(t2, xpt, ypt, zpt1min);
+						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t2, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
+						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t2, xpt, ypt, zpt1min) + U2[1] + PHI1_dydz * zpt1max;
+						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t2, xpt, ypt, zpt1min) + U2[2] + PHI1_dzdz * zpt1max;
 					}
 				}
 			}
@@ -1129,7 +903,6 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 		if (dump_vtk) {
 			write_vtk(false);
-			update_count++;
 		}
 
 		dd = omp_get_wtime() - dd;
@@ -1250,7 +1023,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 	}
 	if (dump_vtk) {
 		write_vtk(false);
-		update_count++;
+		tstep++;
 	}
 	std::cout << "Generation of domain kinematics using SWD completed. ";
 	dd = omp_get_wtime() - dd;
@@ -1370,7 +1143,6 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	} // End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
-		update_count++;
 	}
 	std::cout << "Generation of domain kinematics data completed. ";
 	dd = omp_get_wtime() - dd;
@@ -1617,7 +1389,6 @@ if (!disable_checkbounds){
 
 		if (dump_vtk) {
 			write_vtk(false);
-			update_count++;
 		}
 
 		dd = omp_get_wtime() - dd;
@@ -1641,7 +1412,7 @@ if (!disable_checkbounds){
 
 // when called, writes stored kinematics to file
 void lsGrid::write_vtk(bool endtime) {
-	char buffer[256]; sprintf(buffer, "%05d", update_count);
+	char buffer[256]; sprintf(buffer, "%05d", tstep);
 
 	if (dirExists(vtk_directory_path.c_str()) == 0) {
 		std::cout << "WARNING: Specified directory for storage of VTK files does not exist. Directory will be created at the following path:  " << vtk_directory_path << std::endl;

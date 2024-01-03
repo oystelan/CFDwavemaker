@@ -776,8 +776,8 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 							std::vector<double> U2 = irregular.uvw2(t0 + dt, xpt, ypt, zpt1min);
 							UX1[i * ny * nl + j * nl + m] = irregular.u1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
-							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dydz * zpt1max;
-							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[0] + PHI1_dzdz * zpt1max;
+							UY1[i * ny * nl + j * nl + m] = irregular.v1(t0 + dt, xpt, ypt, zpt1min) + U2[1] + PHI1_dydz * zpt1max;
+							UZ1[i * ny * nl + j * nl + m] = irregular.w1(t0 + dt, xpt, ypt, zpt1min) + U2[2] + PHI1_dzdz * zpt1max;
 						}
 					}
 				}
