@@ -920,6 +920,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 
+/*
 #if defined(SWD_enable)
 
 void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
@@ -1320,10 +1321,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 void lsGrid::update(SpectralWaveData* swd, double t_target)
 {
 	// Start by checking bounds
-/*
-if (!disable_checkbounds){
-	CheckBounds();
-}*/
+
 
 // new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
@@ -1399,7 +1397,7 @@ if (!disable_checkbounds){
 
 #endif
 
-
+*/
 
 //----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1458,58 +1456,41 @@ void lsGrid::export_vtu(FILE* fp, bool last)
 	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
 
 	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
+	int tt = (tstep + 1) % 4; // index for base step
 	if (last) {
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
-				for (int m = 0; m < nl; m++) {
-					fprintf(fp, "%g %g %g\n", UX1[i * ny * nl + j * nl + m], UY1[i * ny * nl + j * nl + m], UZ1[i * ny * nl + j * nl + m]);
-				}
+		tt = (tstep + 2) % 4; // index for basestep + 1
+	}
+	
+	for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+			for (int m = 0; m < nl; m++) {
+				fprintf(fp, "%g %g %g\n", UX[tt*nx*ny*nl + i * ny * nl + j * nl + m], UY[tt*nx*ny*nl +i * ny * nl + j * nl + m], UZ[tt*nx*ny*nl +i * ny * nl + j * nl + m]);
 			}
 		}
 	}
-	else {
-		for (int i = 0; i < nx; i++) {
-			for (int j = 0; j < ny; j++) {
-				for (int m = 0; m < nl; m++) {
-					fprintf(fp, "%g %g %g\n", UX0[i * ny * nl + j * nl + m], UY0[i * ny * nl + j * nl + m], UZ0[i * ny * nl + j * nl + m]);
-				}
-			}
-		}
-	}
+
+
 	fputs("\t\t\t\t </DataArray>\n", fp);
 
 	fputs("\t\t\t </PointData>\n", fp);
 
 	fputs("\t\t\t <Points>\n", fp);
 	fputs("\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n", fp);
-	if (last) {
-		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
-			for (int j = 0; j < ny; j++) {
-				double ypt = domain[2] + dy * j;
-				double eta1_temp = ETA1[i * ny + j];
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt1 = s2z(spt, eta1_temp, water_depth);
-					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt1);
-				}
+	
+	for (int i = 0; i < nx; i++) {
+		double xpt = domain[0] + dx * i;
+		for (int j = 0; j < ny; j++) {
+			double ypt = domain[2] + dy * j;
+			double eta1_temp = ETA[tt*nx*ny + i * ny + j];
+			for (int m = 0; m < nl; m++) {
+				double spt = s2tan(-1. + ds * m);
+				double zpt1 = s2z(spt, eta1_temp, water_depth);
+				fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt1);
 			}
 		}
 	}
-	else {
-		for (int i = 0; i < nx; i++) {
-			double xpt = domain[0] + dx * i;
-			for (int j = 0; j < ny; j++) {
-				double ypt = domain[2] + dy * j;
-				double eta0_temp = ETA0[i * ny + j];
-				for (int m = 0; m < nl; m++) {
-					double spt = s2tan(-1. + ds * m);
-					double zpt0 = s2z(spt, eta0_temp, water_depth);
-					fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt0);
-				}
-			}
-		}
-	}
+	
+	
 	fputs("\t\t\t\t </DataArray>\n", fp);
 	fputs("\t\t\t </Points>\n", fp);
 

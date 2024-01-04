@@ -43,7 +43,7 @@ public:
 	double domain[4] = {};
 	double domain_ignore[4] = {largeval, -largeval, largeval, -largeval};
 	bool ignore_at_init = false;
-	int update_count = 0;
+	int tstep = 0;
 
 	bool disable_checkbounds = true;
 	bool ignore_domain = false;
