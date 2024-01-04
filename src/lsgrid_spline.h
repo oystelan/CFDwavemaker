@@ -4,7 +4,7 @@
 
 #ifndef SGrid_H
 #define SGrid_H
-
+#include <vector>
 #include "Irregular.h"
 #if SWD_enable
 #include "SpectralWaveData.h"
@@ -33,10 +33,10 @@ public:
 	double* UX, * UY, * UZ; // 4D dimensions, (time, x, y, z)	
 	double* ETA;// Surface grid (3D) (time, x, y)
 	// Secondary field variables (derivatives)
-	double* etadx,* etady,* etadt;
-	double* udt, * udx,* udy,* uds;
-	double* vdt, * vdx,* vdy,* vds;
-	double* wdt, * wdx,* wdy,* wds;
+	double* ETAdx,* ETAdy,* ETAdt;
+	double* Udt, * Udx,* Udy,* Uds;
+	double* Vdt, * Vdx,* Vdy,* Vds;
+	double* Wdt, * Wdx,* Wdy,* Wds;
 
 	int* IGNORE; // matrix with cells to ignore when updating surface elevation
 	int nx, ny, nl;
@@ -72,9 +72,13 @@ public:
 	double s2tan(double s);
 	double tan2s(double t);
 
-	double clamp(double aa, double a1, double a2);
-	double* square_vals(double* C, double* data, int nxp, int nyp, int tid);
-	double* cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid);
+	double sigmaS2cart(double s, double wave_elev, double depth);
+	double cart2sigmaS(double zpt, double wave_elev, double depth);
+
+	void square_vals(double* C, double* data, int nxp, int nyp, int tid);
+	void cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid);
+	double spline_interp_velo(double* U, double* Udt, double* Udx, double* Udy, double* Uds, int nxp, int nyp, int nsp0, int nsp1, double xd, double yd, double sd0, double sd1, double td, int tid1, int tid2);
+
 	
 	void write_vtk(bool endtime);
 	void allocate();
@@ -82,10 +86,9 @@ public:
 	// Second order theory
 	void initialize_kinematics(Irregular& irregular);
 	void initialize_kinematics_with_ignore(Irregular& irregular);
-	void initialize_surface_elevation(Irregular& irregular, double t_target);
-	void initialize_surface_elevation_with_ignore(Irregular& irregular, double t_target);
 	void update(Irregular& irregular, double t_target);
 
+/*
 	// SWD
 #if defined(SWD_enable)
 	void initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target);
@@ -94,6 +97,7 @@ public:
 	void initialize_kinematics(SpectralWaveData* swd);
 	void update(SpectralWaveData* swd, double t_target);
 #endif
+*/
 
 	void set_ignore();
 	// gradient update functions
@@ -103,17 +107,8 @@ public:
 	void update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz);
 
 	// Grid interpolation functions
-	double trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
-	double trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt);
-	double bilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt);
+	std::vector<double> get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h);
 
-	double bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt);
-
-	// routines for extracting kinematics from initial grid
-	double u(double tpt, double xpt, double ypt, double zpt);
-	double v(double tpt, double xpt, double ypt, double zpt);
-	double w(double tpt, double xpt, double ypt, double zpt);
-	double eta(double tpt, double xpt, double ypt);
 
 	// routines for extracting kinematics at walls
 	bool CheckTime(double tpt);

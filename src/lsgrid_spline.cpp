@@ -28,21 +28,21 @@ void lsGrid::allocate() {
 	UZ = new double[4 * nx * ny * nl];
 
 	// secondary fields (derivatives)
-	etadx = new double[2 * nx * ny];
-	etady = new double[2 * nx * ny];
-	etadt = new double[4 * nx * ny];
-	udt = new double[4 * nx * ny * nl];
-	udx = new double[2 * nx * ny * nl];
-	udy = new double[2 * nx * ny * nl];
-	uds = new double[2 * nx * ny * nl];
-	vdt = new double[4 * nx * ny * nl];
-	vdx = new double[2 * nx * ny * nl];
-	vdy = new double[2 * nx * ny * nl];
-	vds = new double[2 * nx * ny * nl];
-	wdt = new double[4 * nx * ny * nl];
-	wdx = new double[2 * nx * ny * nl];
-	wdy = new double[2 * nx * ny * nl];
-	wds = new double[2 * nx * ny * nl];
+	ETAdx = new double[2 * nx * ny];
+	ETAdy = new double[2 * nx * ny];
+	ETAdt = new double[4 * nx * ny];
+	Udt = new double[4 * nx * ny * nl];
+	Udx = new double[2 * nx * ny * nl];
+	Udy = new double[2 * nx * ny * nl];
+	Uds = new double[2 * nx * ny * nl];
+	Vdt = new double[4 * nx * ny * nl];
+	Vdx = new double[2 * nx * ny * nl];
+	Vdy = new double[2 * nx * ny * nl];
+	Vds = new double[2 * nx * ny * nl];
+	Wdt = new double[4 * nx * ny * nl];
+	Wdx = new double[2 * nx * ny * nl];
+	Wdy = new double[2 * nx * ny * nl];
+	Wds = new double[2 * nx * ny * nl];
 
 	// Misc fields
 	IGNORE = new int[nx * ny];
@@ -62,6 +62,10 @@ double lsGrid::slayer(int layerno) {
 	double layer_percentage = dd[layerno] / ddsum;
 	delete[] dd;
 	return layer_percentage;
+}
+template <typename T>
+T clamp(const T& n, const T& lower, const T& upper) {
+	return std::max(lower, std::min(n, upper));
 }
 
 // A function for constant layer thickness (equal spacing as a function of z)
@@ -94,7 +98,7 @@ double lsGrid::tan2s(double t) {
 
 double lsGrid::cart2sigmaS(double zpt, double wave_elev, double depth){
     double z = std::min(zpt, wave_elev); // impose an upper bound
-    double sigma = std::max(z2s(z, wave_elev, depth), -1); // transform to sigma coordinates
+    double sigma = std::max(z2s(z, wave_elev, depth), -1.); // transform to sigma coordinates
     return 1 - std::atan(std::pow(-sigma * std::pow(std::tan(tan_a), tan_b), 1. / tan_b)) / tan_a;
     // defined now from 0 to 1 where 0 is sea bed and 1 is surface
 }
@@ -111,14 +115,14 @@ void lsGrid::update_gradient_dt(double* data, double* graddt){
         int tid = (tstep + 2) % 4;
         int tid1 = (tstep + 3) % 4;
         int tid0 = (tstep + 1) % 4;
-		for (int i = 0; i < nx*ny*nz; i++) {
-            graddt[tid * nx * ny * nz + i] = (data[tid1 * nx * ny * nz + i] - data[tid0 * nx * ny * nz + i]) / (2 * dt);
+		for (int i = 0; i < nx*ny*nl; i++) {
+            graddt[tid * nx * ny * nl + i] = (data[tid1 * nx * ny * nl + i] - data[tid0 * nx * ny * nl + i]) / (2 * dt);
 		}
 	}
     else {
-        for (int i = 0; i < nx*ny*nz; i++) {
-            graddt[1 * nx * ny * nz + i] = (data[2 * nx * ny * nz + i] - data[1 * nx * ny * nz + i]) / dt;
-            graddt[2 * nx * ny * nz + i] = (data[3 * nx * ny * nz + i] - data[1 * nx * ny * nz + i]) / (2 * dt);
+        for (int i = 0; i < nx*ny*nl; i++) {
+            graddt[1 * nx * ny * nl + i] = (data[2 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / dt;
+            graddt[2 * nx * ny * nl + i] = (data[3 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / (2 * dt);
 		}
 	}
 }
@@ -170,19 +174,19 @@ void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
     for (int i = 0; i < nx; i++) {
 		for (int j = 1; j < (ny-1); j++) {
             grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
-                                                  eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy)
+                                                  eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
             grady[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + i * ny + (j + 1)] -
-                                                 eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy)
+                                                 eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
 		}
 	}
     // y=0 and y=yn
     for (int i = 0; i < nx; i++) {
-        grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy
+        grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy;
         grady[0 * nx * ny + i * ny + (ny - 1)] = (eta[tid0 * nx * ny + i * ny + (ny - 1)] -
-                                                     eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy
-        grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy
+                                                     eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy;
+        grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy;
         grady[1 * nx * ny + i * ny + (ny - 1)] = (eta[tid1 * nx * ny + i * ny + (ny - 1)] -
-                                                   eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy
+                                                   eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy;
 
 	}
 }
@@ -284,9 +288,6 @@ void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, 
 	}
 }
 
-double lsGrid::clamp(double aa, double a1, double a2):
-    return std::min(std::max(aa, a1), a2);
-
 void lsGrid::square_vals(double* C, double* data, int nxp, int nyp, int tid){
     C[0] = data[tid * nx * ny + nxp * ny + nyp]; // C00
     C[1] = data[tid * nx * ny + nxp * ny + clamp(nyp + 1, 0, ny - 1)]; // C01
@@ -313,13 +314,13 @@ double lsGrid::spline_interp_velo(double* U, double* Udt, double* Udx, double* U
     cube_vals(C, U, nxp, nyp, nsp0, tid1);
     cube_vals(D, U, nxp, nyp, nsp1, tid2);
     cube_vals(Ct, Udt, nxp, nyp, nsp0, tid1);
-    cube_vals(Dt, Udt, nx, ny, ns, nxp, nyp, nsp1, tid2);
-    cube_vals(Cx, Udx, nx, ny, ns, nxp, nyp, nsp0, 0);
-    cube_vals(Dx, Udx, nx, ny, ns, nxp, nyp, nsp1, 1);
-    cube_vals(Cy, Udy, nx, ny, ns, nxp, nyp, nsp0, 0);
-    cube_vals(Dy, Udy, nx, ny, ns, nxp, nyp, nsp1, 1);
-    cube_vals(Cs, Uds, nx, ny, ns, nxp, nyp, nsp0, 0);
-    cube_vals(Ds, Uds, nx, ny, ns, nxp, nyp, nsp1, 1);
+    cube_vals(Dt, Udt, nxp, nyp, nsp1, tid2);
+    cube_vals(Cx, Udx, nxp, nyp, nsp0, 0);
+    cube_vals(Dx, Udx, nxp, nyp, nsp1, 1);
+    cube_vals(Cy, Udy, nxp, nyp, nsp0, 0);
+    cube_vals(Dy, Udy, nxp, nyp, nsp1, 1);
+    cube_vals(Cs, Uds, nxp, nyp, nsp0, 0);
+    cube_vals(Ds, Uds, nxp, nyp, nsp1, 1);
 
     // gcompute spline coefficients
     double a00 = dx * Cx[0] - (C[2] - C[0]);
@@ -404,267 +405,129 @@ double lsGrid::spline_interp_velo(double* U, double* Udt, double* Udx, double* U
     double D1t = D01t * (1. - yd) + D11t * yd;
 
     // compute spline coefficients
-    double a0 = ds * C0s - (C1 - C0);
-    double b0 = -ds * C1s + (C1 - C0);
-    double a1 = ds * D0s - (D1 - D0);
-    double b1 = -ds * D1s + (D1 - D0);
+    a0 = ds * C0s - (C1 - C0);
+    b0 = -ds * C1s + (C1 - C0);
+    a1 = ds * D0s - (D1 - D0);
+    b1 = -ds * D1s + (D1 - D0);
 
     // compute wave elevation for two time steps
-    double C = C0 * (1. - sd0) + C1 * sd0 + sd0 * (1 - sd0) * (a0 * (1 - sd0) + b0 * sd0);
-    double D = D0 * (1. - sd1) + D1 * sd1 + sd1 * (1 - sd1) * (a1 * (1 - sd1) + b1 * sd1);
+    double CC = C0 * (1. - sd0) + C1 * sd0 + sd0 * (1 - sd0) * (a0 * (1 - sd0) + b0 * sd0);
+    double DD = D0 * (1. - sd1) + D1 * sd1 + sd1 * (1 - sd1) * (a1 * (1 - sd1) + b1 * sd1);
 
     // compute spline coefficients
-    double Ct = C0t * (1. - sd0) + C1t * sd0;
-    double Dt = D0t * (1. - sd1) + D1t * sd1;
-    double a = dt * Ct - (D - C);
-    double b = -dt * Dt + (D - C);
+    double CCt = C0t * (1. - sd0) + C1t * sd0;
+    double DDt = D0t * (1. - sd1) + D1t * sd1;
+    double a = dt * CCt - (DD - CC);
+    double b = -dt * DDt + (DD - CC);
 
     // compute final interpolated wave elevation for single point
-    return C * (1. - td) + D * td + td * (1 - td) * (a * (1 - td) + b * td);
+    return CC * (1. - td) + DD * td + td * (1 - td) * (a * (1 - td) + b * td);
 }
 
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double lsGrid::trilinear_interpolation(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
 
-	double nxp = std::min(double(nx), std::max(0., (xpt - domain[0]) / dx));
-	double nyp = std::min(double(ny), std::max(0., (ypt - domain[2]) / dy));
+std::vector<double> lsGrid::get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h){
+    // for t, for x, for y, for z stacking
 
-	// Find surface elevation (required for stretching)
-	double C00 = ETA0[int(floor(nxp) * ny + floor(nyp))];
-	double C01 = ETA0[int(floor(nxp) * ny + ceil(nyp))];
-	double C10 = ETA0[int(ceil(nxp) * ny + floor(nyp))];
-	double C11 = ETA0[int(ceil(nxp) * ny + ceil(nyp))];
-	double D00 = ETA1[int(floor(nxp) * ny + floor(nyp))];
-	double D01 = ETA1[int(floor(nxp) * ny + ceil(nyp))];
-	double D10 = ETA1[int(ceil(nxp) * ny + floor(nyp))];
-	double D11 = ETA1[int(ceil(nxp) * ny + ceil(nyp))];
+    // list of required data
+    // eta0, eta1, eta1dt, eta2dt, eta1dx, eta2dx, eta1dy, eta2dy
+    // u0, u1, u0dt, u1dt, u0dx, u1dx, u0dy, u1dy, u0ds, u1ds
+    // v0, v1, v0dt, v1dt, v0dx, v1dx, v0dy, v1dy, v0ds, v1ds
+    // w0, w1, w0dt, w1dt, w0dx, w1dx, w0dy, w1dy, w0ds, w1ds
 
-	double xd = nxp - floor(nxp);
-	double yd = nyp - floor(nyp);
+    double tid1 = (tstep + 1) % 4;
+    double tid2 = (tstep + 2) % 4;
 
-	double td = std::min(1., std::max(0., (tpt - t0) / dt));
-
-	double C0 = C00 * (1. - xd) + C10 * xd;
-	double C1 = C01 * (1. - xd) + C11 * xd;
-	double D0 = D00 * (1. - xd) + D10 * xd;
-	double D1 = D01 * (1. - xd) + D11 * xd;
-
-	double wave_elev0 = C0 * (1. - yd) + C1 * yd;
-	double wave_elev1 = D0 * (1. - yd) + D1 * yd;
-
-	/* Todo: fix this check at some point
-	if (zpt > wave_elev) {
-		return 0.;
-	}*/
-
-	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
-
-	double spt0 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev0 - swl), wave_elev0 - swl, water_depth), -1.));
-	double nsp0 = (spt0 + 1.) / ds;
-	double spt1 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev1 - swl), wave_elev1 - swl, water_depth), -1.));
-	double nsp1 = (spt1 + 1.) / ds;
-
-	//std::cout << "orig: nsp0:" << nsp0 << ", nsp1: " << nsp1 << "spt0: " << spt0 << ", wavelev0: " << wave_elev0 << std::endl;
-	//exit(0);
-	// Trilinear interpolation.
-	double C000 = VAR0[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
-	double C001 = VAR0[int(floor(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp0))];
-	double C010 = VAR0[int(floor(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];
-	double C011 = VAR0[int(floor(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
-	double C100 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + floor(nsp0))];
-	double C101 = VAR0[int(ceil(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp0))];
-	double C110 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp0))];
-	double C111 = VAR0[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0))];
-	double D000 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + floor(nsp1))];
-	double D001 = VAR1[int(floor(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp1))];
-	double D010 = VAR1[int(floor(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp1))];
-	double D011 = VAR1[int(floor(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp1))];
-	double D100 = VAR1[int(ceil(nxp) * ny * nl + floor(nyp) * nl + floor(nsp1))];
-	double D101 = VAR1[int(ceil(nxp) * ny * nl + floor(nyp) * nl + ceil(nsp1))];
-	double D110 = VAR1[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + floor(nsp1))];
-	double D111 = VAR1[int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp1))];
-
-	double sd0 = nsp0 - floor(nsp0);
-	double sd1 = nsp1 - floor(nsp1);
-
-	C00 = C000 * (1. - xd) + C100 * xd;
-	C01 = C001 * (1. - xd) + C101 * xd;
-	C10 = C010 * (1. - xd) + C110 * xd;
-	C11 = C011 * (1. - xd) + C111 * xd;
-	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
-
-	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
-
-	D00 = D000 * (1. - xd) + D100 * xd;
-	D01 = D001 * (1. - xd) + D101 * xd;
-	D10 = D010 * (1. - xd) + D110 * xd;
-	D11 = D011 * (1. - xd) + D111 * xd;
-
-	C0 = C00 * (1. - yd) + C10 * yd;
-	C1 = C01 * (1. - yd) + C11 * yd;
-	D0 = D00 * (1. - yd) + D10 * yd;
-	D1 = D01 * (1. - yd) + D11 * yd;
-
-	return (C0 * (1. - sd0) + C1 * sd0) * (1. - td) + (D0 * (1. - sd1) + D1 * sd1) * td;
-}
-template <typename T>
-T clip(const T& n, const T& lower, const T& upper) {
-	return std::max(lower, std::min(n, upper));
-}
-
-/* Function for trilinear interpolation on a cartesian evenly spaced mesh*/
-double lsGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt, double zpt) {
-
+    // Step 1 - Interpolate to find wave elevation at point (xpt,ypt)
 	float nxp_temp, nyp_temp;
-	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
-	double yd = std::modf(clip((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
-
+	double xd = std::modf(clamp((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
+	double yd = std::modf(clamp((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
+	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+	
 	int nxp = int(nxp_temp);
 	int nyp = int(nyp_temp);
 
-	double C00 = ETA0[nxp * ny + nyp];
-	double C01 = ETA0[nxp * ny + clip(nyp + 1, 0, ny - 1)];
-	double C10 = ETA0[clip(nxp + 1, 0, nx - 1) * ny + nyp];
-	double C11 = ETA0[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
-	double D00 = ETA1[nxp * ny + nyp];
-	double D01 = ETA1[nxp * ny + clip(nyp + 1, 0, ny - 1)];
-	double D10 = ETA1[clip(nxp + 1, 0, nx - 1) * ny + nyp];
-	double D11 = ETA1[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+	double C[4], D[4], Ct[4], Dt[4], Cx[4], Dx[4], Cy[4], Dy[4], Cs[4], Ds[4];
+    square_vals(C, ETA, nxp, nyp, tid1);
+    square_vals(D, ETA, nxp, nyp, tid2);
+    square_vals(Ct, ETAdt, nxp, nyp, tid1);
+    square_vals(Dt, ETAdt, nxp, nyp, tid2);
+    square_vals(Cx, ETAdx, nxp, nyp, 0);
+    square_vals(Dx, ETAdx, nxp, nyp, 1);
+    square_vals(Cy, ETAdy, nxp, nyp, 0);
+    square_vals(Dy, ETAdy, nxp, nyp, 1);
 
-	double td = std::min(1., std::max(0., (tpt - t0) / dt));
+    // compute spline coefficients
+    double a00 = dx * Cx[0] - (C[2] - C[0]);
+    double a01 = dx * Cx[1] - (C[2] - C[1]);
+    double b00 = -dx * Cx[2] + (C[2] - C[0]);
+    double b01 = -dx * Cx[3] + (C[2] - C[1]);
+    double a10 = dx * Dx[0] - (D[2] - D[0]);
+    double a11 = dx * Dx[1] - (D[3] - D[1]);
+    double b10 = -dx * Dx[2] + (D[2] - D[0]);
+    double b11 = -dx * Dx[3] + (D[3] - D[1]);
 
-	double C0 = C00 * (1. - xd) + C10 * xd;
-	double C1 = C01 * (1. - xd) + C11 * xd;
-	double D0 = D00 * (1. - xd) + D10 * xd;
-	double D1 = D01 * (1. - xd) + D11 * xd;
+    // compute new values
+    double C0 = C[0] * (1. - xd) + C[2] * xd + xd * (1 - xd) * (a00 * (1 - xd) + b00 * xd);
+    double C1 = C[1] * (1. - xd) + C[2] * xd + xd * (1 - xd) * (a01 * (1 - xd) + b01 * xd);
+    double D0 = D[0] * (1. - xd) + D[2] * xd + xd * (1 - xd) * (a10 * (1 - xd) + b10 * xd);
+    double D1 = D[1] * (1. - xd) + D[3] * xd + xd * (1 - xd) * (a11 * (1 - xd) + b11 * xd);
 
-	double wave_elev0 = C0 * (1. - yd) + C1 * yd;
-	double wave_elev1 = D0 * (1. - yd) + D1 * yd;
+    // reduce y and t direction
+    double C0y = Cy[0] * (1. - xd) + Cy[2] * xd;
+    double C1y = Cy[1] * (1. - xd) + Cy[3] * xd;
+    double D0y = Dy[0] * (1. - xd) + Dy[2] * xd;
+    double D1y = Dy[1] * (1. - xd) + Dy[3] * xd;
+    double C0t = Ct[0] * (1. - xd) + Ct[2] * xd;
+    double C1t = Ct[1] * (1. - xd) + Ct[3] * xd;
+    double D0t = Dt[0] * (1. - xd) + Dt[2] * xd;
+    double D1t = Dt[1] * (1. - xd) + Dt[3] * xd;
 
-	/* Todo: fix this check at some point
-	if (zpt > wave_elev) {
-		return 0.;
-	}*/
+    // compute spline coefficients
+    double a0 = dy * C0y - (C1 - C0);
+    double b0 = -dy * C1y + (C1 - C0);
+    double a1 = dy * D0y - (D1 - D0);
+    double b1 = -dy * D1y + (D1 - D0);
 
-	//std::cout << "dy: " << dy << ", nyp: " << nyp << ", ypt: " << ypt << std::endl;
+    // compute wave elevation for two time steps
+    double wave_elev0 = C0 * (1. - yd) + C1 * yd + yd * (1 - yd) * (a0 * (1 - yd) + b0 * yd);
+    double wave_elev1 = D0 * (1. - yd) + D1 * yd + yd * (1 - yd) * (a1 * (1 - yd) + b1 * yd);
 
-	double spt0 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev0 - swl), wave_elev0 - swl, water_depth), -1.));
-	double nsp0a = (spt0 + 1.) / ds;
-	double spt1 = tan2s(std::max(z2s(std::min(zpt - swl, wave_elev1 - swl), wave_elev1 - swl, water_depth), -1.));
-	double nsp1a = (spt1 + 1.) / ds;
+    // compute spline coefficients
+    double CCt = C0t * (1. - yd) + C1t * yd;
+    double DDt = D0t * (1. - yd) + D1t * yd;
+    double a = dt * CCt - (wave_elev1 - wave_elev0);
+    double b = -dt * DDt + (wave_elev1 - wave_elev0);
 
-	float nsp0_temp, nsp1_temp;
-	double sd0 = std::modf((spt0 + 1.) / ds, &nsp0_temp);
-	double sd1 = std::modf((spt1 + 1.) / ds, &nsp1_temp);
-	int nsp0 = int(nsp0_temp);
-	int nsp1 = int(nsp1_temp);
+    // compute final interpolated wave elevation for single point
+    double wave_elev = wave_elev0 * (1. - td) + wave_elev1 * td + td * (1 - td) * (a * (1 - td) + b * td);
 
-	//std::cout << floor(nsp0a) << " " << nsp0 << "spt0: " << spt0 << ", wavelev0: " << wave_elev0 << std::endl;
+    // Step 2 - Now compute vertical sigma coords and find kinematics from SigmaStreched grid.
 
-	//std::cout << "nsp0:" << nsp0 << ", nsp1: " << nsp1 << std::endl;
+    double spt0 = cart2sigmaS(zpt, wave_elev0, water_depth);
+    double nsp0a = spt0 / ds;
+    double spt1 = cart2sigmaS(zpt, wave_elev1, water_depth);
+    double nsp1a = spt1 / ds;
 
-	//exit(0);
-	// Trilinear interpolation.
-	double C000 = VAR0[nxp * ny * nl + nyp * nl + nsp0];
-	double C001 = VAR0[nxp * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1)];
-	double C010 = VAR0[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0];
-	double C011 = VAR0[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1)];
-	double C100 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp0];
-	double C101 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp0 + 1, 0, nl - 1)];
-	double C110 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp0];//
-	double C111 = VAR0[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp0 + 1, 0, nl - 1)];//
-	double D000 = VAR1[nxp * ny * nl + nyp * nl + nsp1];
-	double D001 = VAR1[nxp * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1)];
-	double D010 = VAR1[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1];
-	double D011 = VAR1[nxp * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1)];
-	double D100 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nsp1];
-	double D101 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clip(nsp1 + 1, 0, nl - 1)];
-	double D110 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + nsp1];
-	double D111 = VAR1[clip(nxp + 1, 0, nx - 1) * ny * nl + clip(nyp + 1, 0, ny - 1) * nl + clip(nsp1 + 1, 0, nl - 1)];
+	float sd0_temp, sd1_temp;
+    double sd0 = std::modf(nsp0a, &sd0_temp);
+    double sd1 = std::modf(nsp1a, &sd1_temp);
+    int nsp0 = int(sd0_temp);
+    int nsp1 = int(sd1_temp);
 
-	//double sd0 = nsp0 - floor(nsp0);
-	//double sd1 = nsp1 - floor(nsp1);
+    double ux = spline_interp_velo(UX, Udt, Udx, Udy, Uds, nxp, nyp, nsp0, nsp1, xd, yd, sd0, sd1, td, tid1, tid2);
+    double vy = spline_interp_velo(UY, Vdt, Vdx, Vdy, Vds, nxp, nyp, nsp0, nsp1, xd, yd, sd0, sd1, td, tid1, tid2);
+    double wz = spline_interp_velo(UZ, Wdt, Wdx, Wdy, Wds, nxp, nyp, nsp0, nsp1, xd, yd, sd0, sd1, td, tid1, tid2);
 
-	C00 = C000 * (1. - xd) + C100 * xd;
-	C01 = C001 * (1. - xd) + C101 * xd;
-	C10 = C010 * (1. - xd) + C110 * xd;
-	C11 = C011 * (1. - xd) + C111 * xd;
-	//std::cout << int(ceil(nxp) * ny * nl + ceil(nyp) * nl + ceil(nsp0)) << ", " << ceil(nxp) << ", " << ceil(nyp) << ", " << ceil(nsp0) << std::endl;
+	std::vector<double> res;
+	res.push_back(wave_elev);
+	res.push_back(ux);
+	res.push_back(vy);
+	res.push_back(wz);
 
-	//std::cout << C010 << ", " << C110 << ", " << C011 << ", " << C111 << std::endl;
-
-	D00 = D000 * (1. - xd) + D100 * xd;
-	D01 = D001 * (1. - xd) + D101 * xd;
-	D10 = D010 * (1. - xd) + D110 * xd;
-	D11 = D011 * (1. - xd) + D111 * xd;
-
-	C0 = C00 * (1. - yd) + C10 * yd;
-	C1 = C01 * (1. - yd) + C11 * yd;
-	D0 = D00 * (1. - yd) + D10 * yd;
-	D1 = D01 * (1. - yd) + D11 * yd;
-
-	return (C0 * (1. - sd0) + C1 * sd0) * (1. - td) + (D0 * (1. - sd1) + D1 * sd1) * td;
+	return res;
 }
-
-
 
 //#define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
-
-
-
-/* bilinear interpolation function used to interpolate surface values on a regular evenly spaced grid*/
-double lsGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, double xpt, double ypt) {
-
-
-
-	float nxp_temp, nyp_temp;
-	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
-	double yd = std::modf(clip((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
-
-	int nxp = int(nxp_temp);
-	int nyp = int(nyp_temp);
-
-	//std::cout << nxp << " " << nyp << "VAR0: " << VAR0[0] << std::endl;
-
-	double C00 = VAR0[nxp * ny + nyp];
-	double C01 = VAR0[nxp * ny + clip(nyp + 1, 0, ny - 1)];
-	double C10 = VAR0[clip(nxp + 1, 0, nx - 1) * ny + nyp];
-	double C11 = VAR0[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
-	double D00 = VAR1[nxp * ny + nyp];
-	double D01 = VAR1[nxp * ny + clip(nyp + 1, 0, ny - 1)];
-	double D10 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + nyp];
-	double D11 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
-
-	//std::cout << C00 << " " << C01 << " " << C10 << " " << C11 << " " << D00 << " " << D01 << " " << D10 << " " << D11 << std::endl;
-	//double xd = nxp - floor(nxp);
-	//double yd = nyp - floor(nyp);
-	double td = std::min(1., std::max(0., (tpt - t0) / dt));
-
-	double C0 = C00 * (1. - xd) + C10 * xd;
-	double C1 = C01 * (1. - xd) + C11 * xd;
-	double D0 = D00 * (1. - xd) + D10 * xd;
-	double D1 = D01 * (1. - xd) + D11 * xd;
-
-	return (C0 * (1. - yd) + C1 * yd) * (1. - td) + (D0 * (1. - yd) + D1 * yd) * td;
-}
-
-
-double lsGrid::u(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation2(UX0, UX1, tpt, xpt, ypt, zpt);
-}
-
-double lsGrid::v(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation2(UY0, UY1, tpt, xpt, ypt, zpt);
-}
-
-double lsGrid::w(double tpt, double xpt, double ypt, double zpt) {
-	return trilinear_interpolation2(UZ0, UZ1, tpt, xpt, ypt, zpt);
-}
-
-double lsGrid::eta(double tpt, double xpt, double ypt) {
-	//update_bounds(xpt, ypt);
-	return bilinear_interpolation2(ETA0, ETA1, tpt, xpt, ypt);
-}
 
 
 bool lsGrid::CheckTime(double tpt) {
@@ -720,7 +583,7 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double t0[4] = {t_target, t_target, t_target+dt, t_target+2*dt};
+	double tt0[4] = {t0, t0, t0+dt, t0+2*dt};
 
 	double dd = omp_get_wtime();
 
@@ -736,18 +599,17 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 #pragma omp for collapse(2)
 		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
 			for (int i = 0; i < nx; i++) {
-
 				for (int j = 0; j < ny; j++) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
 					
-					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t0[tt], xpt, ypt) + irregular.eta2(t0[tt], xpt, ypt) + swl;
+					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
 
 					double eta_temp = ETA[tt*nx*ny + i * ny + j];
 
-					double PHI0_dxdz = irregular.phi1_dxdz(t0[tt], xpt, ypt);
-					double PHI0_dydz = irregular.phi1_dydz(t0[tt], xpt, ypt);
-					double PHI0_dzdz = irregular.phi1_dzdz(t0[tt], xpt, ypt);
+					double PHI0_dxdz = irregular.phi1_dxdz(tt0[tt], xpt, ypt);
+					double PHI0_dydz = irregular.phi1_dydz(tt0[tt], xpt, ypt);
+					double PHI0_dzdz = irregular.phi1_dzdz(tt0[tt], xpt, ypt);
 
 					for (int m = 0; m < nl; m++) {
 						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
@@ -758,15 +620,25 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 						//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
 						//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
 
-						std::vector<double> U2 = irregular.uvw2(t0[tt], xpt, ypt, zpt0min);
-						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
-						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
-						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
+						std::vector<double> U2 = irregular.uvw2(tt0[tt], xpt, ypt, zpt0min);
+						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
 					}
 				}
 			}
 		}
 	}
+
+	// Update derivatives
+	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+	update_gradient_eta_dt(ETA, ETAdt);
+	update_gradient_dxdydz(UX, Udx, Udy, Uds);
+	update_gradient_dt(UX, Udt);
+	update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+	update_gradient_dt(UY, Vdt);
+	update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+	update_gradient_dt(UZ, Wdt);
 		
 	// End parallel initialization
 	if (dump_vtk) {
@@ -790,7 +662,7 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
-	double t0[4] = {t_target, t_target, t_target+dt, t_target+2*dt};
+	double tt0[4] = {t0, t0, t0+dt, t0+2*dt};
 
 	double dd = omp_get_wtime();
 
@@ -806,18 +678,18 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 #pragma omp for collapse(2)
 		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
 			for (int i = 0; i < nx; i++) {
-				if (!IGNORE[i * ny + j]) {
-					for (int j = 0; j < ny; j++) {
+				for (int j = 0; j < ny; j++) {
+					if (!IGNORE[i * ny + j]) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
 						
-						ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t0[tt], xpt, ypt) + irregular.eta2(t0[tt], xpt, ypt) + swl;
+						ETA[tt*nx*ny + i * ny + j] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
 
 						double eta_temp = ETA[tt*nx*ny + i * ny + j];
 
-						double PHI0_dxdz = irregular.phi1_dxdz(t0[tt], xpt, ypt);
-						double PHI0_dydz = irregular.phi1_dydz(t0[tt], xpt, ypt);
-						double PHI0_dzdz = irregular.phi1_dzdz(t0[tt], xpt, ypt);
+						double PHI0_dxdz = irregular.phi1_dxdz(tt0[tt], xpt, ypt);
+						double PHI0_dydz = irregular.phi1_dydz(tt0[tt], xpt, ypt);
+						double PHI0_dzdz = irregular.phi1_dzdz(tt0[tt], xpt, ypt);
 
 						for (int m = 0; m < nl; m++) {
 							double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
@@ -828,16 +700,26 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 							//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
 							//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
 
-							std::vector<double> U2 = irregular.uvw2(t0[tt], xpt, ypt, zpt0min);
-							UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
-							UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
-							UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
+							std::vector<double> U2 = irregular.uvw2(tt0[tt], xpt, ypt, zpt0min);
+							UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2[0] + PHI0_dxdz * zpt0max;
+							UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2[1] + PHI0_dydz * zpt0max;
+							UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2[2] + PHI0_dzdz * zpt0max;
 						}
 					}
 				}
 			}
 		}
 	}
+
+	// Update derivatives
+	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+	update_gradient_eta_dt(ETA, ETAdt);
+	update_gradient_dxdydz(UX, Udx, Udy, Uds);
+	update_gradient_dt(UX, Udt);
+	update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+	update_gradient_dt(UY, Vdt);
+	update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+	update_gradient_dt(UZ, Wdt);
 		
 	// End parallel initialization
 	if (dump_vtk) {
@@ -889,8 +771,8 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 					for (int m = 0; m < nl; m++) {
 						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
-						double zpt1max = std::max(0., zpt1 - swl);
-						double zpt1min = std::min(0., zpt1); // swl already included in irregular class functions
+						double zpt1max = std::max(0., zpt0 - swl);
+						double zpt1min = std::min(0., zpt0); // swl already included in irregular class functions
 
 						std::vector<double> U2 = irregular.uvw2(t2, xpt, ypt, zpt1min);
 						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t2, xpt, ypt, zpt1min) + U2[0] + PHI1_dxdz * zpt1max;
@@ -900,6 +782,16 @@ void lsGrid::update(Irregular& irregular, double t_target)
 				}
 			}
 		}
+
+		// Update derivatives
+		update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+		update_gradient_eta_dt(ETA, ETAdt);
+		update_gradient_dxdydz(UX, Udx, Udy, Uds);
+		update_gradient_dt(UX, Udt);
+		update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+		update_gradient_dt(UY, Vdt);
+		update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+		update_gradient_dt(UZ, Wdt);
 
 		if (dump_vtk) {
 			write_vtk(false);
