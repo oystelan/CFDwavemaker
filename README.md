@@ -31,6 +31,9 @@ Special:
 
 ## Version log (highlights only)
 
+Version 3.0.1 release:
+- (major update): added spline interpolation in 4 dimensions to LSgrid. This improves accuracy, smoothness of the resulting timeseries and improves calculation time, since a lot less second order kinematics is needed to create an accurate description of the field 
+
 Version 2.1.6 release:
 - VTK extension.
 - Some minor bugfixes in second order theory related to intermediate water depth usage.

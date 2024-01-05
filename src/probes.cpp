@@ -86,6 +86,40 @@ void Probes::write(double tpt, lsGrid& sgrid, Irregular& irregular, Ramp& ramp) 
 	}
 }
 
+void Probes::write(double tpt, lsGridSpline& sgrids, Irregular& irregular, Ramp& ramp) {
+	if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+		sgrids.update(irregular, tpt);
+	}
+
+	// loop over probes and write
+	for (int i = 0; i < ts_nprobes; i++) {
+		std::vector<double> v;
+		double xpt = coords[i].x;
+		double ypt = coords[i].y;
+		double zpt = coords[i].z;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, irregular.depth);
+	
+		
+		double welev, ux, uy, uz;
+		welev = ramp.ramp(tpt, xpt, ypt) * v[0];
+		ux = ramp.ramp(tpt, xpt, ypt) * v[1];
+		uy = ramp.ramp(tpt, xpt, ypt) * v[2];
+		uz = ramp.ramp(tpt, xpt, ypt) * v[3];
+		//std::cout << welev << std::endl;
+
+		// open file and write line
+		char buffer[256]; sprintf(buffer, "%05d", i);
+		std::string str(buffer);
+		std::string fpath = (ts_path + ts_filename + buffer + ".dat");
+		//std::cout << fpath << std::endl;
+		FILE* fp = fopen(fpath.c_str(), "a");
+		fprintf(fp, "%14.4f  %14.4f  %14.4f  %14.4f  %14.4f\n", tpt, welev, ux, uy, uz);
+		// create file, do nothing.
+		fclose(fp);
+	}
+}
+
 void Probes::write(double tpt, Wavemaker& wavemaker, Ramp& ramp){
 	// loop over probes and write
 	for (int i = 0; i < ts_nprobes; i++) {

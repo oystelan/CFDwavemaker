@@ -84,22 +84,22 @@ x = 0.0
 y = 0.0
 z = -7
 
-# # Step 1 - Lest compute the exact second order solution
-# shutil.copyfile("waveinput_exact.dat", 'waveinput.dat')
-# init_dll(mydll1)
+# Step 1 - Lest compute the exact second order solution
+shutil.copyfile("waveinput_exact.dat", 'waveinput.dat')
+init_dll(mydll1)
 
-# wave_elev1 = []
-# u1 = []
-# v1 = []
-# w1 = []
+wave_elev1 = []
+u1 = []
+v1 = []
+w1 = []
 
-# for t in time:
-#     #print(wave_SurfElev(mydll,t,-200,0))
-#     wave_elev1.append(wave_SurfElev(mydll1,t,x,y))
-#     u1.append(wave_VeloX(mydll1,t,x,y,z))
-#     v1.append(wave_VeloY(mydll1,t,x,y,z))
-#     w1.append(wave_VeloZ(mydll1,t,x,y,z))
-# clean_up(mydll1)
+for t in time:
+    #print(wave_SurfElev(mydll,t,-200,0))
+    wave_elev1.append(wave_SurfElev(mydll1,t,x,y))
+    u1.append(wave_VeloX(mydll1,t,x,y,z))
+    v1.append(wave_VeloY(mydll1,t,x,y,z))
+    w1.append(wave_VeloZ(mydll1,t,x,y,z))
+clean_up(mydll1)
 
 # Step 2 - now lest do the LSgrid with linear interpolation
 shutil.copyfile("waveinput_linear.dat", 'waveinput.dat')
@@ -118,41 +118,40 @@ for t in time:
     w2.append(wave_VeloZ(mydll2,t,x,y,z))
 clean_up(mydll2)
 
-# # Step 3 - finally lets do the LSgrid with spline interpolation
-# shutil.copyfile("waveinput_spline.dat", 'waveinput.dat')
-# init_dll(mydll3)
+# Step 3 - finally lets do the LSgrid with spline interpolation
+shutil.copyfile("waveinput_spline.dat", 'waveinput.dat')
+init_dll(mydll3)
 
-# wave_elev3 = []
-# u3 = []
-# v3 = []
-# w3 = []
+wave_elev3 = []
+u3 = []
+v3 = []
+w3 = []
 
-# for t in time:
-#     wave_update(mydll3, t)
-#     data = wave_Kinematics(mydll3,t,x,y,z)
-#     #print(wave_SurfElev(mydll,t,-200,0))
-#     # wave_elev3.append(wave_SurfElev(mydll3,t,x,y))
-#     # u3.append(wave_VeloX(mydll3,t,x,y,z))
-#     # v3.append(wave_VeloY(mydll3,t,x,y,z))
-#     # w3.append(wave_VeloZ(mydll3,t,x,y,z))
-#     wave_elev3.append(data[0])
-#     u3.append(data[1])
-#     v3.append(data[2])
-#     w3.append(data[3])
-# clean_up(mydll3)
+for t in time:
+    wave_update(mydll3, t)
+    data = wave_Kinematics(mydll3,t,x,y,z)
+    #print(wave_SurfElev(mydll,t,-200,0))
+    # wave_elev3.append(wave_SurfElev(mydll3,t,x,y))
+    # u3.append(wave_VeloX(mydll3,t,x,y,z))
+    # v3.append(wave_VeloY(mydll3,t,x,y,z))
+    # w3.append(wave_VeloZ(mydll3,t,x,y,z))
+    wave_elev3.append(data[0])
+    u3.append(data[1])
+    v3.append(data[2])
+    w3.append(data[3])
+clean_up(mydll3)
     
 
 
 
 
-#plt.plot(time, wave_elev1, label="exact")
+plt.plot(time, wave_elev1, label="exact")
 plt.plot(time, wave_elev2,"--", label="linear")
-#plt.plot(time, wave_elev3,"--", label="spline")
+plt.plot(time, wave_elev3,"--", label="spline")
 plt.legend()
 plt.grid(True)
 plt.savefig("./result_eta.png")
 plt.show()
-exit()
 plt.clf()
 plt.plot(time,u1, label='u exact')
 plt.plot(time,v1, label='v exact')

@@ -1762,6 +1762,7 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);}
 	case 5:
 	{
+		update_probes(tpt);
 		if (!sgrids.CheckTime(tpt)) {
 #pragma omp single nowait
 			sgrids.update(irregular, tpt);
@@ -1889,6 +1890,13 @@ void update_probes(double tpt) {
 #pragma omp single nowait
 		if (probes.checkTime(tpt)) {
 			probes.write(tpt, sgrid, irregular, ramp);
+		}
+		break;
+	}
+	case 5: {
+#pragma omp single nowait
+		if (probes.checkTime(tpt)) {
+			probes.write(tpt, sgrids, irregular, ramp);
 		}
 		break;
 	}

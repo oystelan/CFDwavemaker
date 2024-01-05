@@ -5,6 +5,7 @@
 #include "Irregular.h"
 #include "Utils.h"
 #include "lsgrid.h"
+#include "lsgrid_spline.h"
 #include "Wavemaker.h"
 #include "Stokes5.h"
 
@@ -41,6 +42,7 @@ public:
 	bool checkTime(double tpt);
 	void write(double tpt, Irregular& irregular, Ramp& ramp);
 	void write(double tpt, lsGrid& sgrid, Irregular& irregular, Ramp& ramp);
+	void write(double tpt, lsGridSpline& sgrids, Irregular& irregular, Ramp& ramp);
 	void write(double tpt, Wavemaker& wavemaker, Ramp& ramp);
 	void write(double tpt, Stokes5& stokes5, Ramp& ramp);
 #if defined(SWD_enable)

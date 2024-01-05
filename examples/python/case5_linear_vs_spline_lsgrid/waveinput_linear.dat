@@ -231,8 +231,8 @@ ndir 0
 scheme linear
 #         XMIN   XMAX   YMIN   YMAX
 bounds -5. 5. -5. 5.
-nx  3
-ny  3
+nx  4
+ny  4
 nl  8
 t0  0.0
 dt  1.0

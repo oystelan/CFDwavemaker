@@ -235,7 +235,7 @@ nx  4
 ny  4
 nl  4
 t0  0.0
-dt  2.0
+dt  1.0
 stretch_params 0.7   1.5
 
 #[vtk output]

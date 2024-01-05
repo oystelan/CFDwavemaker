@@ -228,12 +228,12 @@ ndir 0
         0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
 [lsgrid]
-scheme linear
+scheme spline
 #         XMIN   XMAX   YMIN   YMAX
 bounds -5. 5. -5. 5.
-nx  3
-ny  3
-nl  8
+nx  4
+ny  4
+nl  4
 t0  0.0
 dt  1.0
 stretch_params 0.7   1.5

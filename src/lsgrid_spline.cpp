@@ -115,11 +115,13 @@ void lsGridSpline::update_gradient_dt(double* data, double* graddt){
         int tid = (tstep + 2) % 4;
         int tid1 = (tstep + 3) % 4;
         int tid0 = (tstep + 1) % 4;
+		#pragma omp for
 		for (int i = 0; i < nx*ny*nl; i++) {
             graddt[tid * nx * ny * nl + i] = (data[tid1 * nx * ny * nl + i] - data[tid0 * nx * ny * nl + i]) / (2 * dt);
 		}
 	}
     else {
+		#pragma omp for
         for (int i = 0; i < nx*ny*nl; i++) {
             graddt[1 * nx * ny * nl + i] = (data[2 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / dt;
             graddt[2 * nx * ny * nl + i] = (data[3 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / (2 * dt);
@@ -133,11 +135,13 @@ void lsGridSpline::update_gradient_eta_dt(double* data, double* graddt){
         int tid = (tstep + 2) % 4;
         int tid1 = (tstep + 3) % 4;
         int tid0 = (tstep + 1) % 4;
+		#pragma omp for
         for (int i = 0; i < nx*ny; i++) {
             graddt[tid * nx * ny + i] = (data[tid1 * nx * ny + i] - data[tid0 * nx * ny + i]) / (2 * dt);
 		}
 	}
     else {
+		#pragma omp for
         for (int i = 0; i < nx*ny; i++) {
             graddt[1 * nx * ny + i] = (data[2 * nx * ny + i] - data[1 * nx * ny + i]) / dt;
             graddt[2 * nx * ny + i] = (data[3 * nx * ny + i] - data[1 * nx * ny + i]) / (2 * dt);
@@ -151,6 +155,7 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 
     int tid0 = (tstep + 1) % 4;
     int tid1 = (tstep + 2) % 4;
+	#pragma omp for collapse(1)
 	for (int i = 1; i < (nx-1); i++) {
 		for (int j = 0; j < ny; j++) {
             gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
@@ -161,6 +166,7 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 	}
     
 	// boundaries are special cases (x=0 and x=xn)
+	#pragma omp for
     for (int j = 0; j < ny; j++) {
         gradx[0 * nx * ny + j] = (eta[tid0 * nx * ny + ny + j] - eta[tid0 * nx * ny +j]) / dx;
         gradx[0 * nx * ny + (nx-1) * ny + j] = (eta[tid0 * nx * ny +(nx-1) * ny + j] -
@@ -171,6 +177,7 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 	}
 
     // compute spatial gradient using central difference
+	#pragma omp for collapse(1)
     for (int i = 0; i < nx; i++) {
 		for (int j = 1; j < (ny-1); j++) {
             grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
@@ -179,6 +186,7 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
                                                  eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
 		}
 	}
+	#pragma omp for
     // y=0 and y=yn
     for (int i = 0; i < nx; i++) {
         grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy;
@@ -196,6 +204,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 
     int tid0 = (tstep + 1) % 4;
     int tid1 = (tstep + 2) % 4;
+	#pragma omp for collapse(2)
     for (int i = 1; i < (nx-1); i++) {
 		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
@@ -207,6 +216,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		}
 	}
     // x=0 and x=xn
+	#pragma omp for collapse(2)
     for (int j = 0; j < ny; j++) {
 		for (int m = 0; m < nl; m++) {
             gradx[0 * nx * ny * nl + j * nl + m] = (
@@ -225,6 +235,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 	}
 
     // compute spatial gradient using central difference
+	#pragma omp for collapse(2)
     for (int i = 0; i < nx; i++) {
 		for (int j = 1; j < (ny-1); j++) {
 			for (int m = 0; m < nl; m++) {
@@ -239,6 +250,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 	}
 
     // y=0 and y=yn
+	#pragma omp for collapse(2)
     for (int i = 0; i < nx; i++) {
 		for (int m = 0; m < nl; m++) {
             grady[0 * nx * ny * nl + i * ny * nl + m] = (
@@ -257,6 +269,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 	}
     
 	// compute grad z spatial gradient using central difference
+	#pragma omp for collapse(2)
      for (int i = 0; i < nx; i++) {
 		for (int j = 0; j < ny; j++) {
 			for (int m = 1; m < (nl-1); m++) {
@@ -270,6 +283,7 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		}
 	 }
     // z=0 and z=zn
+	#pragma omp for collapse(2)
     for (int i = 0; i < nx; i++) {
 		for (int j = 0; j < ny; j++) {
             gradz[0 * nx * ny * nl + i * ny * nl + j * nl] = (
