@@ -2,8 +2,8 @@
 #define PI 3.1415926535897
 #endif
 
-#ifndef SGrid_H
-#define SGrid_H
+#ifndef SGridSpline_H
+#define SGridSpline_H
 #include <vector>
 #include "Irregular.h"
 #if SWD_enable
@@ -12,9 +12,9 @@
 
 #define largeval 1.E12
 
-class lsGrid {
+class lsGridSpline {
 public:
-	lsGrid() {
+	lsGridSpline() {
 		// Set default values
 		tan_a = 7. * PI / 18.;
 		tan_b = 1.5;
@@ -22,7 +22,7 @@ public:
 		dt = 0.5;
 		swl = 0.;
 	};
-	~lsGrid() {
+	~lsGridSpline() {
 		if (dump_vtk) {
 			write_vtk(true);
 		}

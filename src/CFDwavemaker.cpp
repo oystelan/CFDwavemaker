@@ -38,6 +38,7 @@
 #include "Utils.h"
 #include "Wavemaker.h"
 #include "lsgrid.h"
+#include "lsgrid_spline.h"
 #include "probes.h"
 
 // for now, spectralwavedata is only supported in linux build
@@ -77,6 +78,22 @@ public:
 	bool dc_bias = false;
 	std::string swdFileName;
 
+	// lsgrid related data
+	int lsgrid_interp_scheme = 0; // 0=linear, 1=spline
+	double lsgrid_domain[4] = {};
+	int lsgrid_nx = 5;
+	int lsgrid_ny = 0;
+	int lsgrid_nl = 4;
+	double lsgrid_t0 = 0.;
+	double lsgrid_dt = 0.1;
+	double lsgrid_tan_a;
+	double lsgrid_tan_b;
+	double lsgrid_domain_ignore[4] = {};
+	bool lsgrid_ignore_domain = false;
+	bool lsgrid_ignore_at_init = 0;
+	bool lsgrid_init_only = 0;
+	std::string lsgrid_scheme_str;
+
 	CFDwavemakerInputdata() {
 	}
 
@@ -101,6 +118,7 @@ Wavemaker wavemaker;
 
 // Grid class
 lsGrid sgrid;
+lsGridSpline sgrids;
 
 // Ramp class
 Ramp ramp;
@@ -184,7 +202,7 @@ int numparams(std::string str)
 }
 
 /* main input file reader function*/
-int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, Ramp& rramp) {
+int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavemaker& wmaker, lsGrid& lsgrid, lsGridSpline& lsgrids, Ramp& rramp) {
 	std::string lineA, dummystr, lineP;
 	std::ifstream fid;
 	std::istringstream buf;
@@ -834,72 +852,94 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 				getline(f, lineA);
 				std::cout << lineA << std::endl;
 				trim(lineA);
+				if (!lineA.compare(0, 6, "scheme")) {
+					buf.str(lineA);
+					buf >> dummystr;
+					buf >> dummystr;
+					inputdata.lsgrid_scheme_str = dummystr;
+					if (!dummystr.compare(0, 6, "linear")) {
+						inputdata.lsgrid_interp_scheme = 0;
+						// Do nothing. default value is already a very high number
+						std::cout << "Linear interpolation scheme (default) chosen." << std::endl;
+					}
+					else if (!dummystr.compare(0, 6, "spline")) {
+						inputdata.lsgrid_interp_scheme = 1;
+						// Compute a decent bandwidth value. todo: make a function which does this
+						std::cout << "Spline interpolation scheme chosen." << std::endl;
+					}
+					else { // assumes that a value is given
+						std::cout << "Unknown interpolation scheme specified (use either linear or spline)." << std::endl;
+						exit(-1);
+					}
+
+					buf.clear();
+				}		
 				if (!lineA.compare(0, 6, "bounds")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.domain[0];
-					buf >> lsgrid.domain[1];
-					buf >> lsgrid.domain[2];
-					buf >> lsgrid.domain[3];
+					buf >> inputdata.lsgrid_domain[0];
+					buf >> inputdata.lsgrid_domain[1];
+					buf >> inputdata.lsgrid_domain[2];
+					buf >> inputdata.lsgrid_domain[3];
 					buf.clear();
 				}
 				if (!lineA.compare(0, 2, "nx")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.nx;
+					buf >> inputdata.lsgrid_nx;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 2, "ny")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.ny;
+					buf >> inputdata.lsgrid_ny;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 2, "nl")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.nl;
+					buf >> inputdata.lsgrid_nl;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 2, "t0")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.t0;
+					buf >> inputdata.lsgrid_t0;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 2, "dt")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.dt;
+					buf >> inputdata.lsgrid_dt;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 14, "stretch_params")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.tan_a;
-					buf >> lsgrid.tan_b;
+					buf >> inputdata.lsgrid_tan_a;
+					buf >> inputdata.lsgrid_tan_b;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 16, "ignore_subdomain")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.domain_ignore[0];
-					buf >> lsgrid.domain_ignore[1];
-					buf >> lsgrid.domain_ignore[2];
-					buf >> lsgrid.domain_ignore[3];
+					buf >> inputdata.lsgrid_domain_ignore[0];
+					buf >> inputdata.lsgrid_domain_ignore[1];
+					buf >> inputdata.lsgrid_domain_ignore[2];
+					buf >> inputdata.lsgrid_domain_ignore[3];
 					buf.clear();
-					lsgrid.ignore_domain = true;
+					inputdata.lsgrid_ignore_domain = true;
 				}
 				if (!lineA.compare(0, 14, "ignore_at_init")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.ignore_at_init;
+					buf >> inputdata.lsgrid_ignore_at_init;
 					buf.clear();
 				}
 				if (!lineA.compare(0, 9, "init_only")) {
 					buf.str(lineA);
 					buf >> dummystr;
-					buf >> lsgrid.init_only;
+					buf >> inputdata.lsgrid_init_only;
 					buf.clear();
 				}
 				// if new tag is reach. break while loop.
@@ -913,52 +953,99 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 			// allocate memory
 			
 
+			std::cout << "Interpolation Scheme: " << inputdata.lsgrid_scheme_str << std::endl;
 			std::cout << "LS grid domain bounds: " << std::endl;
-			std::cout << "\tXMIN: " << lsgrid.domain[0] << std::endl;
-			std::cout << "\tXMAX: " << lsgrid.domain[1] << std::endl;
-			std::cout << "\tYMIN: " << lsgrid.domain[2] << std::endl;
-			std::cout << "\tYMAX: " << lsgrid.domain[3] << std::endl;
+			std::cout << "\tXMIN: " << inputdata.lsgrid_domain[0] << std::endl;
+			std::cout << "\tXMAX: " << inputdata.lsgrid_domain[1] << std::endl;
+			std::cout << "\tYMIN: " << inputdata.lsgrid_domain[2] << std::endl;
+			std::cout << "\tYMAX: " << inputdata.lsgrid_domain[3] << std::endl;
 			std::cout << "Grid resolution: " << std::endl;
-			std::cout << "nx: " << lsgrid.nx << std::endl;
-			std::cout << "ny: " << lsgrid.ny << std::endl;
-			std::cout << "nl: " << lsgrid.nl << std::endl;
-			std::cout << "time init: " << lsgrid.t0 << std::endl;
-			std::cout << "dt: " << lsgrid.dt << std::endl;
-			std::cout << "Stretching parameters set to a=" << lsgrid.tan_a << ", b=" << lsgrid.tan_b << std::endl;
-			if (lsgrid.ignore_domain) {
+			std::cout << "nx: " << inputdata.lsgrid_nx << std::endl;
+			std::cout << "ny: " << inputdata.lsgrid_ny << std::endl;
+			std::cout << "nl: " << inputdata.lsgrid_nl << std::endl;
+			std::cout << "time init: " << inputdata.lsgrid_t0 << std::endl;
+			std::cout << "dt: " << inputdata.lsgrid_dt << std::endl;
+			std::cout << "Stretching parameters set to a=" << inputdata.lsgrid_tan_a << ", b=" << inputdata.lsgrid_tan_b << std::endl;
+			if (inputdata.lsgrid_ignore_domain) {
 				std::cout << "The following subdomain will be ignored after intialization: " << std::endl;
-				std::cout << "\tXMIN: " << lsgrid.domain_ignore[0] << std::endl;
-				std::cout << "\tXMAX: " << lsgrid.domain_ignore[1] << std::endl;
-				std::cout << "\tYMIN: " << lsgrid.domain_ignore[2] << std::endl;
-				std::cout << "\tYMAX: " << lsgrid.domain_ignore[3] << std::endl;
+				std::cout << "\tXMIN: " << inputdata.lsgrid_domain_ignore[0] << std::endl;
+				std::cout << "\tXMAX: " << inputdata.lsgrid_domain_ignore[1] << std::endl;
+				std::cout << "\tYMIN: " << inputdata.lsgrid_domain_ignore[2] << std::endl;
+				std::cout << "\tYMAX: " << inputdata.lsgrid_domain_ignore[3] << std::endl;
 			}
-			std::cout << "Ignore subdomain at t_init: " << lsgrid.ignore_at_init << std::endl;
+			std::cout << "Ignore subdomain at t_init: " << inputdata.lsgrid_ignore_at_init << std::endl;
 
-			if (inputdata.wavetype == 1) {
-				inputdata.wavetype = 4;
-				std::cout << "LS grid + irregular = True." << std::endl;
-			}
-			else if (inputdata.wavetype == 31){
-				inputdata.wavetype = 34;
+			if (inputdata.lsgrid_interp_scheme == 0) {
+				if (inputdata.wavetype == 1){
+					inputdata.wavetype = 4;
+					std::cout << "LS grid + linera interpolation + irregular" << std::endl;
+				}
+				else if (inputdata.wavetype == 31){
+					inputdata.wavetype = 34;
 				std::cout << "LS grid + swd = True." << std::endl;
+				}
+				std::cout << "LS grid + irregular = True." << std::endl;
+				// copy necessary parameters to lsgrid class
+				lsgrid.domain[0] = inputdata.lsgrid_domain[0];
+				lsgrid.domain[1] = inputdata.lsgrid_domain[1];
+				lsgrid.domain[2] = inputdata.lsgrid_domain[2];
+				lsgrid.domain[3] = inputdata.lsgrid_domain[3];
+				lsgrid.nx = inputdata.lsgrid_nx;
+				lsgrid.ny = inputdata.lsgrid_ny;
+				lsgrid.nl = inputdata.lsgrid_nl;
+				lsgrid.t0 = inputdata.lsgrid_t0;
+				lsgrid.dt = inputdata.lsgrid_dt;
+				lsgrid.tan_a = inputdata.lsgrid_tan_a;
+				lsgrid.tan_b = inputdata.lsgrid_tan_b;
+				lsgrid.domain_ignore[0] = inputdata.lsgrid_domain_ignore[0];
+				lsgrid.domain_ignore[1] = inputdata.lsgrid_domain_ignore[1];
+				lsgrid.domain_ignore[2] = inputdata.lsgrid_domain_ignore[2];
+				lsgrid.domain_ignore[3] = inputdata.lsgrid_domain_ignore[3];
+				lsgrid.ignore_domain = inputdata.lsgrid_ignore_domain;
+				lsgrid.init_only = inputdata.lsgrid_init_only;
+				lsgrid.ignore_at_init = inputdata.lsgrid_ignore_at_init;
+				lsgrid.allocate();
+			}
+			else if (inputdata.lsgrid_interp_scheme == 1){
+				inputdata.wavetype = 5;
+				std::cout << "LS grid + Spline + irregular" << std::endl;
+				// copy necessary parameters to lsgrid class
+				lsgrids.domain[0] = inputdata.lsgrid_domain[0];
+				lsgrids.domain[1] = inputdata.lsgrid_domain[1];
+				lsgrids.domain[2] = inputdata.lsgrid_domain[2];
+				lsgrids.domain[3] = inputdata.lsgrid_domain[3];
+				lsgrids.nx = inputdata.lsgrid_nx;
+				lsgrids.ny = inputdata.lsgrid_ny;
+				lsgrids.nl = inputdata.lsgrid_nl;
+				lsgrids.t0 = inputdata.lsgrid_t0;
+				lsgrids.dt = inputdata.lsgrid_dt;
+				lsgrids.tan_a = inputdata.lsgrid_tan_a;
+				lsgrids.tan_b = inputdata.lsgrid_tan_b;
+				lsgrids.domain_ignore[0] = inputdata.lsgrid_domain_ignore[0];
+				lsgrids.domain_ignore[1] = inputdata.lsgrid_domain_ignore[1];
+				lsgrids.domain_ignore[2] = inputdata.lsgrid_domain_ignore[2];
+				lsgrids.domain_ignore[3] = inputdata.lsgrid_domain_ignore[3];
+				lsgrids.ignore_domain = inputdata.lsgrid_ignore_domain;
+				lsgrids.init_only = inputdata.lsgrid_init_only;
+				lsgrids.ignore_at_init = inputdata.lsgrid_ignore_at_init;
+				lsgrids.allocate();
 			}
 			else {
 				std::cerr << "INPUTFILE ERROR: LS grid may currently only be used with irregular second order wave theory and spectral wave method" << std::endl;
 				exit(-1);
 			}
-			lsgrid.allocate();
-
 		}
 		
 		if (!lineA.compare("[vtk output]")) { //optional
 			std::cout << "--------------------" << std::endl;
 			std::cout << "VTK output settings:" << std::endl;
 			std::cout << "--------------------" << std::endl;
-			if (inputdata.wavetype != 4 && inputdata.wavetype != 34)  {
+			if (inputdata.wavetype != 4 && inputdata.wavetype != 34 && inputdata.wavetype != 5)  {
 				std::cout << "InputError: VTK output only works in combination with LSgrid at the moment." << std::endl;
 				exit(-1);
 			}
 			sgrid.dump_vtk = true;
+			sgrids.dump_vtk = true;
 
 			while (!f.eof()) {
 				lineP = lineA;
@@ -968,6 +1055,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> lsgrid.vtk_directory_path;
+					lsgrids.vtk_directory_path = lsgrid.vtk_directory_path;
 					buf.clear();
 					std::cout << "Directory for storage of vtk files: " << lsgrid.vtk_directory_path << std::endl;
 				}
@@ -975,6 +1063,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> lsgrid.vtk_prefix;
+					lsgrids.vtk_prefix = lsgrid.vtk_prefix;
 					buf.clear();
 					std::cout << "filename prefix: " << lsgrid.vtk_prefix << std::endl;
 				}
@@ -982,6 +1071,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 					buf.str(lineA);
 					buf >> dummystr;
 					buf >> lsgrid.vtk_timelabel;
+					lsgrids.vtk_timelabel = lsgrid.vtk_timelabel;
 					buf.clear();
 					std::cout << "time label to use in vtk specified as: " << lsgrid.vtk_timelabel << std::endl;
 				}
@@ -1223,6 +1313,18 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 			lsgrid.initialize_kinematics(irreg);
 		}
 	}
+	if (inputdata.wavetype == 5) {
+		lsgrids.water_depth = inputdata.depth;
+		lsgrids.swl = inputdata.swl;
+		lsgrids.set_ignore();
+
+		if (lsgrids.ignore_at_init) {
+			lsgrids.initialize_kinematics_with_ignore(irreg);
+		}
+		else {
+			lsgrids.initialize_kinematics(irreg);
+		}
+	}
 
 	
 	// swd
@@ -1326,7 +1428,18 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 		}
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.u(tpt, xpt, ypt, zpt);
-
+	case 5:
+	{
+		if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
+		}
+		std::vector<double> v;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, inputdata.depth);
+		//std::for_each(v.begin(), v.end(), [](double &el){el *= ramp.ramp(tpt, xpt, ypt); });
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return v[1]*ramp.ramp(tpt, xpt, ypt);
+	}
 
 		// stokes 5th
 	case 21:
@@ -1401,6 +1514,22 @@ double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
 
 	switch (inputdata.wavetype) {
 	// VTKinput
+	case 5:
+	{
+		if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
+		}
+		std::vector<double> v;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, inputdata.depth);
+		double rr = ramp.ramp(tpt, xpt, ypt);
+		//std::for_each(v.begin(), v.end(), [](double &el){el *= rr; });
+		std::transform(v.begin(), v.end(), v.begin(),[&rr](double element) { return element *= rr; });
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		double* a = &v[0];
+		
+		return a;
+	}
 	case 41:
 	{
 #if defined(VTK_enable)
@@ -1440,6 +1569,17 @@ double wave_VeloY(double xpt, double ypt, double zpt, double tpt)
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.v(tpt, xpt, ypt, zpt);
+	case 5:
+	{
+		if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
+		}
+		std::vector<double> v;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, inputdata.depth);
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return v[2]*ramp.ramp(tpt, xpt, ypt);
+	}
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.v(tpt, xpt, ypt, zpt);
 		// swd
@@ -1512,6 +1652,17 @@ double wave_VeloZ(double xpt, double ypt, double zpt, double tpt)
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.w(tpt, xpt, ypt, zpt);
+	case 5:
+	{
+		if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
+		}
+		std::vector<double> v;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, inputdata.depth);
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return v[3]*ramp.ramp(tpt, xpt, ypt);
+	}
 	case 21:
 		return ramp.ramp(tpt, xpt, ypt) * stokes5.w(tpt, xpt, ypt, zpt);
 		// swd
@@ -1604,6 +1755,17 @@ double wave_SurfElev(double xpt, double ypt, double tpt)
 			sgrid.update(irregular, tpt);
 		}
 		return ramp.ramp(tpt, xpt, ypt) * sgrid.eta(tpt, xpt, ypt);}
+	case 5:
+	{
+		if (!sgrids.CheckTime(tpt)) {
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
+		}
+		std::vector<double> v;
+		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, 0., inputdata.depth);
+		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
+		return v[0]*ramp.ramp(tpt, xpt, ypt);
+	}
 	case 11:
 	{
 		update_probes(tpt);
@@ -1770,7 +1932,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v2.1.6" << std::endl;
+	std::cout << "CFD WAVEMAKER v3.0.1" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	
@@ -1846,7 +2008,7 @@ int wave_Initialize()
 
 	
 
-	int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, ramp);
+	int i = process_inputdata(res, irregular, stokes5, wavemaker, sgrid, sgrids, ramp);
 	CFDwmInit = true;
 	return 0;
 }

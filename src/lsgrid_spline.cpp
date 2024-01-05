@@ -12,7 +12,7 @@
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 
-// LSgrid functions
+// LSgridSpline functions
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@
 
 
 // Allocation of memory to storage matrices
-void lsGrid::allocate() {
+void lsGridSpline::allocate() {
 	// Primary fields
 	ETA = new double[4 * nx * ny];
 	UX = new double[4 * nx * ny * nl];
@@ -49,7 +49,7 @@ void lsGrid::allocate() {
 }
 
 // A streching function for setting variable layer thickness
-double lsGrid::slayer(int layerno) {
+double lsGridSpline::slayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
 	double sfac = 3.0; // fixme: this should be made dimensionless and a function of specified wave
 	double* dd = new double[nl];
@@ -69,47 +69,47 @@ T clamp(const T& n, const T& lower, const T& upper) {
 }
 
 // A function for constant layer thickness (equal spacing as a function of z)
-double lsGrid::clayer(int layerno) {
+double lsGridSpline::clayer(int layerno) {
 	//fprintf(stdout,"numlayers: %d",nl);
 	return 1./double(nl);
 }
 
 // Transforms normal z axis to streched sigma coordinates 
 // s defined between -1 (seabed) and 0 (free surface)
-double lsGrid::z2s(double z, double wave_elev, double depth) {
+double lsGridSpline::z2s(double z, double wave_elev, double depth) {
 	return (z - (wave_elev - swl)) / (depth + (wave_elev - swl));
 }
 
 // Transforms stretched sigma coordinate to normal z
-double lsGrid::s2z(double s, double wave_elev, double depth) {
+double lsGridSpline::s2z(double s, double wave_elev, double depth) {
 	return (wave_elev - swl) + s * (depth + (wave_elev - swl));
 }
 
-double lsGrid::s2tan(double s) {
+double lsGridSpline::s2tan(double s) {
 	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
 	// returns tangens strethced coordintates tan, which is also defined between -1 and 0	
 	return -std::pow(std::tan(-s * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 }
 
-double lsGrid::tan2s(double t) {
+double lsGridSpline::tan2s(double t) {
 	// The inverse of the above function s2tan. from tan stretched to normal constant spacing	
 	return -std::atan(std::pow(-t * std::pow(std::tan(tan_a) , tan_b) , 1. / tan_b)) / tan_a;
 }
 
-double lsGrid::cart2sigmaS(double zpt, double wave_elev, double depth){
+double lsGridSpline::cart2sigmaS(double zpt, double wave_elev, double depth){
     double z = std::min(zpt, wave_elev); // impose an upper bound
     double sigma = std::max(z2s(z, wave_elev, depth), -1.); // transform to sigma coordinates
     return 1 - std::atan(std::pow(-sigma * std::pow(std::tan(tan_a), tan_b), 1. / tan_b)) / tan_a;
     // defined now from 0 to 1 where 0 is sea bed and 1 is surface
 }
 
-double lsGrid::sigmaS2cart(double s, double wave_elev, double depth){
+double lsGridSpline::sigmaS2cart(double s, double wave_elev, double depth){
 	// s defined now from 0 to 1 where 0 is sea bed and 1 is surface
     double sigma = -std::pow(std::tan(-(s - 1) * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
 	return s2z(sigma, wave_elev, depth);
 }
 
-void lsGrid::update_gradient_dt(double* data, double* graddt){
+void lsGridSpline::update_gradient_dt(double* data, double* graddt){
     // function for computation of temporal gradients using central difference
     if (tstep > 0){
         int tid = (tstep + 2) % 4;
@@ -127,7 +127,7 @@ void lsGrid::update_gradient_dt(double* data, double* graddt){
 	}
 }
 
-void lsGrid::update_gradient_eta_dt(double* data, double* graddt){
+void lsGridSpline::update_gradient_eta_dt(double* data, double* graddt){
     // function for computation of temporal gradients using central difference
     if (tstep > 0){
         int tid = (tstep + 2) % 4;
@@ -145,7 +145,7 @@ void lsGrid::update_gradient_eta_dt(double* data, double* graddt){
 	}
 }
 
-void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
+void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
     // tid: specifies which time step to compute gradients for (value from 0 to 1)
     // compute spatial gradient of the sea surface using central difference
 
@@ -191,7 +191,7 @@ void lsGrid::update_gradient_eta_dxdy(double* eta, double* gradx,double* grady){
 	}
 }
 
-void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz){
+void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* grady, double* gradz){
     // compute spatial gradient using central difference
 
     int tid0 = (tstep + 1) % 4;
@@ -288,14 +288,14 @@ void lsGrid::update_gradient_dxdydz(double* data, double* gradx, double* grady, 
 	}
 }
 
-void lsGrid::square_vals(double* C, double* data, int nxp, int nyp, int tid){
+void lsGridSpline::square_vals(double* C, double* data, int nxp, int nyp, int tid){
     C[0] = data[tid * nx * ny + nxp * ny + nyp]; // C00
     C[1] = data[tid * nx * ny + nxp * ny + clamp(nyp + 1, 0, ny - 1)]; // C01
     C[2] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + nyp]; // C10
     C[3] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + clamp(nyp + 1, 0, ny - 1)];//C11
 }
 
-void lsGrid::cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid){
+void lsGridSpline::cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid){
     C[0] = data[tid * nx * ny * nl + nxp * ny * nl + nyp * nl + nlp]; //C000
     C[1] = data[tid * nx * ny * nl + nxp * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + nlp]; //C010
     C[2] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nlp]; //C100
@@ -306,7 +306,7 @@ void lsGrid::cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int t
     C[7] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + clamp(nlp + 1, 0, nl - 1)]; //C111
 }
 
-double lsGrid::spline_interp_velo(double* U, double* Udt, double* Udx, double* Udy, double* Uds, int nxp, int nyp, int nsp0, int nsp1, double xd, double yd, double sd0, double sd1, double td, int tid1, int tid2){
+double lsGridSpline::spline_interp_velo(double* U, double* Udt, double* Udx, double* Udy, double* Uds, int nxp, int nyp, int nsp0, int nsp1, double xd, double yd, double sd0, double sd1, double td, int tid1, int tid2){
     // Ux
     // --------------------------------------------------------------------
     // u0, u1, u0dt, u1dt, u0dx, u1dx, u0dy, u1dy, u0ds, u1ds
@@ -425,7 +425,7 @@ double lsGrid::spline_interp_velo(double* U, double* Udt, double* Udx, double* U
 }
 
 
-std::vector<double> lsGrid::get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h){
+std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h){
     // for t, for x, for y, for z stacking
 
     // list of required data
@@ -530,7 +530,7 @@ std::vector<double> lsGrid::get_kinematics_at_point(double tpt, double xpt, doub
 //#define clamp(x,a,b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
 
 
-bool lsGrid::CheckTime(double tpt) {
+bool lsGridSpline::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t0 + dt) {
 		std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
@@ -542,7 +542,7 @@ bool lsGrid::CheckTime(double tpt) {
 
 // function to find if given point 
 // lies inside a given rectangle or not. 
-bool lsGrid::CheckBounds()
+bool lsGridSpline::CheckBounds()
 {
 	if (bxmin >= domain[0] && bxmax <= domain[1] && bymin >= domain[2] && bymax <= domain[3])
 		return true;
@@ -553,7 +553,7 @@ bool lsGrid::CheckBounds()
 	}
 }
 
-void lsGrid::update_bounds(double xpt, double ypt) {
+void lsGridSpline::update_bounds(double xpt, double ypt) {
 	bxmin = std::min(xpt, bxmin);
 	bxmax = std::min(xpt, bxmax);
 	bymin = std::min(ypt, bymin);
@@ -571,7 +571,7 @@ void lsGrid::update_bounds(double xpt, double ypt) {
 //----------------------------------------------------------------------------------------------------------------------------------------
 
 // Precalculate velocityfield and surface elevation on coarse grid in case of WAVE TYPE 3
-void lsGrid::initialize_kinematics(Irregular& irregular) {
+void lsGridSpline::initialize_kinematics(Irregular& irregular) {
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -650,7 +650,7 @@ void lsGrid::initialize_kinematics(Irregular& irregular) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
+void lsGridSpline::initialize_kinematics_with_ignore(Irregular& irregular) {
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -732,7 +732,7 @@ void lsGrid::initialize_kinematics_with_ignore(Irregular& irregular) {
 }
 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
-void lsGrid::update(Irregular& irregular, double t_target)
+void lsGridSpline::update(Irregular& irregular, double t_target)
 {
 	// Start by checking bounds
 	/*
@@ -799,7 +799,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 
 		dd = omp_get_wtime() - dd;
 		std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+		std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 	}
 }
 
@@ -815,7 +815,7 @@ void lsGrid::update(Irregular& irregular, double t_target)
 /*
 #if defined(SWD_enable)
 
-void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
+void lsGridSpline::initialize_kinematics(SpectralWaveData *swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -925,7 +925,7 @@ void lsGrid::initialize_kinematics(SpectralWaveData *swd) {
 }
 
 
-void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
+void lsGridSpline::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// Tell the swd object current application time...
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
@@ -1043,7 +1043,7 @@ void lsGrid::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	std::cout << "Interpolation can commence..." << std::endl;
 }
 
-void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
+void lsGridSpline::initialize_surface_elevation(SpectralWaveData* swd, double t_target) {
 
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
@@ -1129,7 +1129,7 @@ void lsGrid::initialize_surface_elevation(SpectralWaveData* swd, double t_target
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
-void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
+void lsGridSpline::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, double t_target) {
 	std::cout << "time: " << t_target << std::endl;
 	t0 = t_target;
 
@@ -1210,7 +1210,7 @@ void lsGrid::initialize_surface_elevation_with_ignore(SpectralWaveData* swd, dou
 	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
 }
 
-void lsGrid::update(SpectralWaveData* swd, double t_target)
+void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 {
 	// Start by checking bounds
 
@@ -1218,7 +1218,7 @@ void lsGrid::update(SpectralWaveData* swd, double t_target)
 // new time step
 	if ((t_target / dt - (t0 + 2 * dt) / dt) > 0.) {
 		double new_time = dt * std::floor(t_target / dt);
-		std::cout << "Time step to large. reinitializing LSgrid." << std::endl;
+		std::cout << "Time step to large. reinitializing lsGridSpline." << std::endl;
 		if (ignore_domain){
 			initialize_surface_elevation_with_ignore(swd, new_time);
 			initialize_kinematics_with_ignore(swd);
@@ -1283,7 +1283,7 @@ void lsGrid::update(SpectralWaveData* swd, double t_target)
 
 		dd = omp_get_wtime() - dd;
 		std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "LSgrid matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+		std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 	}
 }
 
@@ -1301,7 +1301,7 @@ void lsGrid::update(SpectralWaveData* swd, double t_target)
 
 
 // when called, writes stored kinematics to file
-void lsGrid::write_vtk(bool endtime) {
+void lsGridSpline::write_vtk(bool endtime) {
 	char buffer[256]; sprintf(buffer, "%05d", tstep);
 
 	if (dirExists(vtk_directory_path.c_str()) == 0) {
@@ -1324,7 +1324,7 @@ void lsGrid::write_vtk(bool endtime) {
 }
 
 /* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
-void lsGrid::export_vtu(FILE* fp, bool last)
+void lsGridSpline::export_vtu(FILE* fp, bool last)
 {
 	// write header
 	fputs("<?xml version=\"1.0\"?>\n"
@@ -1507,7 +1507,7 @@ void lsGrid::export_vtu(FILE* fp, bool last)
 }
 
 /* Set area of domain to ignore when update kinematics data. this is useful when prescribing kinematics at the boundaries*/
-void lsGrid::set_ignore()
+void lsGridSpline::set_ignore()
 {
 	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));

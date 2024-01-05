@@ -14,7 +14,7 @@ TARGETS_SHARED_OMP_SWD:= $(addsuffix _swd_openmp.so, $(TARGETS))
 TARGETS_STATIC_OMP_SWD:= $(addsuffix _swd_openmp.a, $(TARGETS))
 
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ	   := $(MAINS) Stokes5.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o probes.o lsgrid_spline.o  
+OBJ	   := $(MAINS) Stokes5.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o probes.o lsgrid.o lsgrid_spline.o  
 
 
 .PHONY: clean all
