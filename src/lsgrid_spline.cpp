@@ -155,47 +155,66 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 
     int tid0 = (tstep + 1) % 4;
     int tid1 = (tstep + 2) % 4;
-	#pragma omp for collapse(1)
-	for (int i = 1; i < (nx-1); i++) {
+
+	if (nx == 1){
+		#pragma omp for
 		for (int j = 0; j < ny; j++) {
-            gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
-                                                   eta[tid0 * nx * ny +(i - 1) * ny + j]) / (2 * dx);
-            gradx[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + (i + 1) * ny + j] -
-                                                 eta[tid1 * nx * ny + (i - 1) * ny + j]) / (2 * dx);
+            gradx[0 * ny + j] = 0.;
+            gradx[1 * ny + j] = 0.;
 		}
 	}
-    
-	// boundaries are special cases (x=0 and x=xn)
-	#pragma omp for
-    for (int j = 0; j < ny; j++) {
-        gradx[0 * nx * ny + j] = (eta[tid0 * nx * ny + ny + j] - eta[tid0 * nx * ny +j]) / dx;
-        gradx[0 * nx * ny + (nx-1) * ny + j] = (eta[tid0 * nx * ny +(nx-1) * ny + j] -
-                                                   eta[tid0 * nx * ny +(nx-2) * ny + j]) / dx;
-        gradx[1 * nx * ny + j] = (eta[tid1 * nx * ny + ny + j] - eta[tid1 * nx * ny + j]) / dx;
-        gradx[1 * nx * ny + (nx - 1) * ny + j] = (eta[tid1 * nx * ny + (nx - 1) * ny + j] -
-                                                   eta[tid1 * nx * ny + (nx - 2) * ny + j]) / dx;
-	}
-
-    // compute spatial gradient using central difference
-	#pragma omp for collapse(1)
-    for (int i = 0; i < nx; i++) {
-		for (int j = 1; j < (ny-1); j++) {
-            grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
-                                                  eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
-            grady[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + i * ny + (j + 1)] -
-                                                 eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
+	else{
+		#pragma omp for collapse(1)
+		for (int i = 1; i < (nx-1); i++) {
+			for (int j = 0; j < ny; j++) {
+				gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
+													eta[tid0 * nx * ny +(i - 1) * ny + j]) / (2 * dx);
+				gradx[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + (i + 1) * ny + j] -
+													eta[tid1 * nx * ny + (i - 1) * ny + j]) / (2 * dx);
+			}
+		}
+		
+		// boundaries are special cases (x=0 and x=xn)
+		#pragma omp for
+		for (int j = 0; j < ny; j++) {
+			gradx[0 * nx * ny + j] = (eta[tid0 * nx * ny + ny + j] - eta[tid0 * nx * ny +j]) / dx;
+			gradx[0 * nx * ny + (nx-1) * ny + j] = (eta[tid0 * nx * ny +(nx-1) * ny + j] -
+													eta[tid0 * nx * ny +(nx-2) * ny + j]) / dx;
+			gradx[1 * nx * ny + j] = (eta[tid1 * nx * ny + ny + j] - eta[tid1 * nx * ny + j]) / dx;
+			gradx[1 * nx * ny + (nx - 1) * ny + j] = (eta[tid1 * nx * ny + (nx - 1) * ny + j] -
+													eta[tid1 * nx * ny + (nx - 2) * ny + j]) / dx;
 		}
 	}
-	#pragma omp for
-    // y=0 and y=yn
-    for (int i = 0; i < nx; i++) {
-        grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy;
-        grady[0 * nx * ny + i * ny + (ny - 1)] = (eta[tid0 * nx * ny + i * ny + (ny - 1)] -
-                                                     eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy;
-        grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy;
-        grady[1 * nx * ny + i * ny + (ny - 1)] = (eta[tid1 * nx * ny + i * ny + (ny - 1)] -
-                                                   eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy;
 
+	if (ny == 1){
+		#pragma omp for
+		for (int i = 0; i < nx; i++) {
+            grady[0 * nx + i] = 0.;
+            grady[1 * nx + i] = 0.;
+		}
+	}
+	else{
+		// compute spatial gradient using central difference
+		#pragma omp for collapse(1)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 1; j < (ny-1); j++) {
+				grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
+													eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
+				grady[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + i * ny + (j + 1)] -
+													eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
+			}
+		}
+		#pragma omp for
+		// y=0 and y=yn
+		for (int i = 0; i < nx; i++) {
+			grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy;
+			grady[0 * nx * ny + i * ny + (ny - 1)] = (eta[tid0 * nx * ny + i * ny + (ny - 1)] -
+														eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy;
+			grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy;
+			grady[1 * nx * ny + i * ny + (ny - 1)] = (eta[tid1 * nx * ny + i * ny + (ny - 1)] -
+													eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy;
+
+		}
 	}
 }
 
@@ -204,100 +223,131 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 
     int tid0 = (tstep + 1) % 4;
     int tid1 = (tstep + 2) % 4;
-	#pragma omp for collapse(2)
-    for (int i = 1; i < (nx-1); i++) {
+	if (nx == 1){
+		#pragma omp for
 		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
-                gradx[0 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid0 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
-                    data[tid0 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
-                gradx[1 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid1 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
-                      data[tid1 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+				gradx[0 * ny * nl + j * nl + m] = 0.;
+				gradx[1 * ny * nl + j * nl + m] = 0.;
 			}
 		}
 	}
-    // x=0 and x=xn
-	#pragma omp for collapse(2)
-    for (int j = 0; j < ny; j++) {
-		for (int m = 0; m < nl; m++) {
-            gradx[0 * nx * ny * nl + j * nl + m] = (
-                data[tid0 * nx * ny * nl + ny * nl + j * nl + m] -
-                data[tid0 * nx * ny * nl + j * nl + m]) / dx;
-            gradx[0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] = (
-                data[tid0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] -
-                data[tid0 * nx * ny * nl + (nx-2) * ny * nl + j * nl + m]) / dx;
-            gradx[1 * nx * ny * nl + j * nl + m] = (
-                 data[tid1 * nx * ny * nl + ny * nl + j * nl + m] -
-                 data[tid1 * nx * ny * nl + j * nl + m]) / dx;
-            gradx[1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] = (
-                  data[tid1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] -
-                  data[tid1 * nx * ny * nl + (nx - 2) * ny * nl + j * nl + m]) / dx;
+	else{
+		#pragma omp for collapse(2)
+		for (int i = 1; i < (nx-1); i++) {
+			for (int j = 0; j < ny; j++) {
+				for (int m = 0; m < nl; m++) {
+					gradx[0 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid0 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
+						data[tid0 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+					gradx[1 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid1 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
+						data[tid1 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+				}
+			}
 		}
-	}
-
-    // compute spatial gradient using central difference
-	#pragma omp for collapse(2)
-    for (int i = 0; i < nx; i++) {
-		for (int j = 1; j < (ny-1); j++) {
+		// x=0 and x=xn
+		#pragma omp for collapse(2)
+		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
-                grady[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-                        (data[tid0 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
-                         data[tid0 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
-                grady[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-                        (data[tid1 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
-                         data[tid1 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+				gradx[0 * nx * ny * nl + j * nl + m] = (
+					data[tid0 * nx * ny * nl + ny * nl + j * nl + m] -
+					data[tid0 * nx * ny * nl + j * nl + m]) / dx;
+				gradx[0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] = (
+					data[tid0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] -
+					data[tid0 * nx * ny * nl + (nx-2) * ny * nl + j * nl + m]) / dx;
+				gradx[1 * nx * ny * nl + j * nl + m] = (
+					data[tid1 * nx * ny * nl + ny * nl + j * nl + m] -
+					data[tid1 * nx * ny * nl + j * nl + m]) / dx;
+				gradx[1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] = (
+					data[tid1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] -
+					data[tid1 * nx * ny * nl + (nx - 2) * ny * nl + j * nl + m]) / dx;
 			}
 		}
 	}
+	if (ny == 1){
+		#pragma omp for
+		for (int i = 0; i < nx; i++) {
+			for (int m = 0; m < nl; m++) {
+				grady[0 * nx * nl + i * nl + m] = 0.;
+				grady[1 * nx * nl + i * nl + m] = 0.;
+			}
+		}
+	}
+	else{
+		// compute spatial gradient using central difference
+		#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 1; j < (ny-1); j++) {
+				for (int m = 0; m < nl; m++) {
+					grady[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+							(data[tid0 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
+							data[tid0 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+					grady[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+							(data[tid1 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
+							data[tid1 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+				}
+			}
+		}
 
-    // y=0 and y=yn
-	#pragma omp for collapse(2)
-    for (int i = 0; i < nx; i++) {
-		for (int m = 0; m < nl; m++) {
-            grady[0 * nx * ny * nl + i * ny * nl + m] = (
-                    (data[tid0 * nx * ny * nl + i * ny * nl + nl + m] -
-                     data[tid0 * nx * ny * nl + i * ny * nl + m]) / dy);
-            grady[0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
-                    (data[tid0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
-                     data[tid0 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
-            grady[1 * nx * ny * nl + i * ny * nl + m] = (
-                    (data[tid1 * nx * ny * nl + i * ny * nl + nl + m] -
-                     data[tid1 * nx * ny * nl + i * ny * nl + m]) / dy);
-            grady[1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
-                    (data[tid1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
-                     data[tid1 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
-		}
-	}
-    
-	// compute grad z spatial gradient using central difference
-	#pragma omp for collapse(2)
-     for (int i = 0; i < nx; i++) {
-		for (int j = 0; j < ny; j++) {
-			for (int m = 1; m < (nl-1); m++) {
-                gradz[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-                        (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
-                         data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
-                gradz[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-                        (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
-                         data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+		// y=0 and y=yn
+		#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int m = 0; m < nl; m++) {
+				grady[0 * nx * ny * nl + i * ny * nl + m] = (
+						(data[tid0 * nx * ny * nl + i * ny * nl + nl + m] -
+						data[tid0 * nx * ny * nl + i * ny * nl + m]) / dy);
+				grady[0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
+						(data[tid0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
+						data[tid0 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
+				grady[1 * nx * ny * nl + i * ny * nl + m] = (
+						(data[tid1 * nx * ny * nl + i * ny * nl + nl + m] -
+						data[tid1 * nx * ny * nl + i * ny * nl + m]) / dy);
+				grady[1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
+						(data[tid1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
+						data[tid1 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
 			}
 		}
-	 }
-    // z=0 and z=zn
-	#pragma omp for collapse(2)
-    for (int i = 0; i < nx; i++) {
-		for (int j = 0; j < ny; j++) {
-            gradz[0 * nx * ny * nl + i * ny * nl + j * nl] = (
-                    (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + 1] -
-                     data[tid0 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
-            gradz[0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
-                    (data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
-                     data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
-            gradz[1 * nx * ny * nl + i * ny * nl + j * nl] = (
-                    (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + 1] -
-                     data[tid1 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
-            gradz[1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
-                    (data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
-                     data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+	}
+    if (nl == 1){
+		#pragma omp for
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				gradz[0 * nx * ny + i * ny + j] = 0.;
+				gradz[1 * nx * ny + i * ny + j] = 0.;
+			}
+		}
+	}
+	else{
+		// compute grad z spatial gradient using central difference
+		#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				for (int m = 1; m < (nl-1); m++) {
+					gradz[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+							(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
+							data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+					gradz[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
+							(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
+							data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+				}
+			}
+		}
+		// z=0 and z=zn
+		#pragma omp for collapse(2)
+		for (int i = 0; i < nx; i++) {
+			for (int j = 0; j < ny; j++) {
+				gradz[0 * nx * ny * nl + i * ny * nl + j * nl] = (
+						(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + 1] -
+						data[tid0 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
+				gradz[0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
+						(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
+						data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+				gradz[1 * nx * ny * nl + i * ny * nl + j * nl] = (
+						(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + 1] -
+						data[tid1 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
+				gradz[1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
+						(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
+						data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+			}
 		}
 	}
 }

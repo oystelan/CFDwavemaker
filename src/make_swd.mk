@@ -1,7 +1,7 @@
 BUILD_DIR += ../builds/linux64/
 SWD_INCL = ../swd/inc
 CC      := c++
-CCFLAGS := -g3 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
+CCFLAGS := -O3 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL)
 LDFLAGS := -L./ -L../swd/lib
 LIBS += -lm -lgfortran -lfftw3
 
