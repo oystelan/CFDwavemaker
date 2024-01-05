@@ -792,15 +792,14 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 		update_gradient_dt(UY, Vdt);
 		update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
 		update_gradient_dt(UZ, Wdt);
-
-		if (dump_vtk) {
-			write_vtk(false);
-		}
-
-		dd = omp_get_wtime() - dd;
-		std::cout << "update time: " << dd << " sec" << std::endl;
-		std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 	}
+	if (dump_vtk) {
+		write_vtk(false);
+	}
+
+	dd = omp_get_wtime() - dd;
+	std::cout << "update time: " << dd << " sec" << std::endl;
+	std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------------

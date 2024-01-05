@@ -509,10 +509,10 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 				std::cerr << "INPUTFILE ERROR: irregular wave components does not match the specified wave type. Check inputfile" << std::endl;
 				exit(-1);
 			}
-			if (irreg.initialized) {
-				std::cerr << "INPUTFILE ERROR: Irregular wave already initialized. please check input file" << std::endl;
-				exit(-1);
-			}
+			// if (irreg.initialized) {
+			// 	std::cerr << "INPUTFILE ERROR: Irregular wave already initialized. please check input file" << std::endl;
+			// 	exit(-1);
+			// }
 			getline(f, lineA);
 			trim(lineA);
 			if (!lineA.compare(0, 5, "nfreq")) {
@@ -978,7 +978,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 			if (inputdata.lsgrid_interp_scheme == 0) {
 				if (inputdata.wavetype == 1){
 					inputdata.wavetype = 4;
-					std::cout << "LS grid + linera interpolation + irregular" << std::endl;
+					std::cout << "LS grid + linear interpolation + irregular" << std::endl;
 				}
 				else if (inputdata.wavetype == 31){
 					inputdata.wavetype = 34;
@@ -1511,7 +1511,7 @@ double wave_VeloX(double xpt, double ypt, double zpt, double tpt)
 double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
 	
 	double* temp;
-
+	
 	switch (inputdata.wavetype) {
 	// VTKinput
 	case 5:
@@ -1521,14 +1521,19 @@ double* wave_Kinematics(double xpt, double ypt, double zpt, double tpt) {
 			sgrids.update(irregular, tpt);
 		}
 		std::vector<double> v;
+		double* res = new double[4];
 		v = sgrids.get_kinematics_at_point(tpt, xpt, ypt, zpt, inputdata.depth);
-		double rr = ramp.ramp(tpt, xpt, ypt);
+		res[0] = v[0]*ramp.ramp(tpt, xpt, ypt);
+		res[1] = v[1]*ramp.ramp(tpt, xpt, ypt);
+		res[2] = v[2]*ramp.ramp(tpt, xpt, ypt);
+		res[3] = v[3]*ramp.ramp(tpt, xpt, ypt);
+		//double rr = ramp.ramp(tpt, xpt, ypt);
 		//std::for_each(v.begin(), v.end(), [](double &el){el *= rr; });
-		std::transform(v.begin(), v.end(), v.begin(),[&rr](double element) { return element *= rr; });
+		//std::transform(v.begin(), v.end(), v.begin(),[&rr](double element) { return element *= rr; });
 		//std::cout << zpt << " u: " << sgrid.u(tpt, xpt, ypt, zpt) << std::endl;
-		double* a = &v[0];
+		//double* a = &v[0];
 		
-		return a;
+		return res;
 	}
 	case 41:
 	{
@@ -2105,10 +2110,17 @@ void wave_force_update(double tpt) {
 			//#pragma omp single
 #pragma omp single nowait
 			sgrid.update(irregular, tpt);
+			}
+			break;
+		}
+	case 5: {
+		if (!sgrids.CheckTime(tpt)) {
+			//#pragma omp single
+#pragma omp single nowait
+			sgrids.update(irregular, tpt);
 		}
 		break;
 	}
-
 #if defined(SWD_enable)
 	case 34: {
 		

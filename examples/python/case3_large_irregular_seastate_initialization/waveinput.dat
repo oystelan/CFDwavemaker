@@ -1,4 +1,4 @@
-@v2009
+@v300
 # Short-crested irregular wave, example
 
 [wave type]
@@ -228,6 +228,7 @@ ndir 0
         0.81799214     0.09781100     0.06821111    84.09139466     0.55859932
 
 [lsgrid]
+scheme spline
 #         XMIN   XMAX   YMIN   YMAX
 bounds -200.00 200.00 -200.0 200.0
 nx  50

@@ -17,7 +17,7 @@ temp = os.path.realpath(temp)
 temp = os.path.dirname(temp)
 
 # we load the shared library 
-mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_openmp.so")     
+mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_swd_openmp.so")     
 
 # and define the functions which CFDwavemaker.h tells us are in the library
 
@@ -64,8 +64,8 @@ init_dll(mydll)
 
 
 # Now that the initialization is done, we could extract interpolated results at any position within the bounds of the lsgrid. Linear interpolation by default.
-print('such as wave elevation: ' + wave_SurfElev(mydll,0,1.12,3.223))
-print('or kinematics: ' + wave_VeloX(mydll,0,1.1345,1.234,-0.45))
+print("such as wave elevation: %.5f" % wave_SurfElev(mydll,0,1.12,3.223))
+print('or kinematics: %.5f' % wave_VeloX(mydll,0,1.1345,1.234,-0.45))
 # you see what i mean...., but more importantly the [vtk output] is used in the waveinput.dat file, which means that kinematics for the entire lsgrid is dumped into a vts file every time the timestep of the lsgrid is updated. (hint: look in the ./vtk folder after running python3 case3.py)
 
 
