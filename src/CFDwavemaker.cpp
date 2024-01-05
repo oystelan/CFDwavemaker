@@ -51,7 +51,7 @@
 #include "VTKreader.h"
 #endif
 
-
+#define largeval 1.E12
 //#include <fftw3.h>
 
 
@@ -88,7 +88,7 @@ public:
 	double lsgrid_dt = 0.1;
 	double lsgrid_tan_a;
 	double lsgrid_tan_b;
-	double lsgrid_domain_ignore[4] = {};
+	double lsgrid_domain_ignore[4] = {largeval, -largeval, largeval, -largeval};
 	bool lsgrid_ignore_domain = false;
 	bool lsgrid_ignore_at_init = 0;
 	bool lsgrid_init_only = 0;
@@ -1302,7 +1302,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 	if (inputdata.wavetype == 4) {
 		lsgrid.water_depth = inputdata.depth;
 		lsgrid.swl = inputdata.swl;
-		lsgrid.set_ignore();
+		//lsgrid.set_ignore();
 
 		if (lsgrid.ignore_at_init) {
 			lsgrid.initialize_surface_elevation_with_ignore(irreg, lsgrid.t0);

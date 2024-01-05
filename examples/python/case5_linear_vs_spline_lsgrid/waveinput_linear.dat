@@ -231,9 +231,9 @@ ndir 0
 scheme linear
 #         XMIN   XMAX   YMIN   YMAX
 bounds -5. 5. -5. 5.
-nx  9
-ny  5
-nl  4
+nx  3
+ny  3
+nl  8
 t0  0.0
 dt  1.0
 stretch_params 0.7   1.5

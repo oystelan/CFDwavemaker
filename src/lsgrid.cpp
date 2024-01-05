@@ -21,6 +21,7 @@
 
 // Allocation of memory to storage matrices
 void lsGrid::allocate() {
+	std::cout << "allocating, nx: " << nx << " ny: " << ny << " nl: " << nl << std::endl;
 	ETA0 = new double[nx * ny];
 	ETA1 = new double[nx * ny];
 
@@ -33,6 +34,25 @@ void lsGrid::allocate() {
 	UX1 = new double[nx * ny * nl];
 	UY1 = new double[nx * ny * nl];
 	UZ1 = new double[nx * ny * nl];
+
+	// set default values zero.
+	for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+				IGNORE[i * ny + j] = 0;
+				ETA0[i * ny + j] = 0;
+				ETA1[i * ny + j] = 0;
+				for (int m = 0; m < nl; m++){
+					UX0[i*ny*nl + nl*j + m] = 0.;
+					UY0[i*ny*nl + nl*j + m] = 0.;
+					UZ0[i*ny*nl + nl*j + m] = 0.;
+					UX1[i*ny*nl + nl*j + m] = 0.;
+					UY1[i*ny*nl + nl*j + m] = 0.;
+					UZ1[i*ny*nl + nl*j + m] = 0.;
+				}
+		}
+	}		
+
+	//omp_set_num_threads(1);
 }
 
 // A streching function for setting variable layer thickness
@@ -175,6 +195,9 @@ double lsGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, 
 	double xd = std::modf(clip((xpt - domain[0]) / dx, 0., nx - 1.), &nxp_temp);
 	double yd = std::modf(clip((ypt - domain[2]) / dy, 0., ny - 1.), &nyp_temp);
 
+	//std::cout << "xmin:" << domain[0] << " ymin: " << domain[2] << " dx:" << dx << " dy:" << dy << std::endl;
+	//std::cout << "nx: " << nxp_temp << ", ny: " << nyp_temp << " xd: " << xd << " yd: " << yd << std::endl;
+
 	int nxp = int(nxp_temp);
 	int nyp = int(nyp_temp);
 
@@ -189,6 +212,7 @@ double lsGrid::trilinear_interpolation2(double* VAR0, double* VAR1, double tpt, 
 
 	double td = std::min(1., std::max(0., (tpt - t0) / dt));
 
+	//std::cout << "td:" << td << " C00:" << C00 << " C11:" << C11 << std::endl;
 	double C0 = C00 * (1. - xd) + C10 * xd;
 	double C1 = C01 * (1. - xd) + C11 * xd;
 	double D0 = D00 * (1. - xd) + D10 * xd;
@@ -306,7 +330,8 @@ double lsGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, d
 	int nxp = int(nxp_temp);
 	int nyp = int(nyp_temp);
 
-	//std::cout << nxp << " " << nyp << "VAR0: " << VAR0[0] << std::endl;
+	//std::cout << nxp_temp << " " << nyp_temp << " " << ny <<" VAR0: " << std::endl;
+	//std::cout << "xd: " << xd << "  yd: " << yd << std::endl;
 
 	double C00 = VAR0[nxp * ny + nyp];
 	double C01 = VAR0[nxp * ny + clip(nyp + 1, 0, ny - 1)];
@@ -316,6 +341,7 @@ double lsGrid::bilinear_interpolation2(double* VAR0, double* VAR1, double tpt, d
 	double D01 = VAR1[nxp * ny + clip(nyp + 1, 0, ny - 1)];
 	double D10 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + nyp];
 	double D11 = VAR1[clip(nxp + 1, 0, nx - 1) * ny + clip(nyp + 1, 0, ny - 1)];
+
 
 	//std::cout << C00 << " " << C01 << " " << C10 << " " << C11 << " " << D00 << " " << D01 << " " << D10 << " " << D11 << std::endl;
 	//double xd = nxp - floor(nxp);
@@ -602,6 +628,8 @@ void lsGrid::initialize_surface_elevation(Irregular& irregular, double t_target)
 	dx = (domain[1] - domain[0]) / std::max(1., double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
+	std::cout << "initdata: " << nx << " " << ny << " " << dx << " " << dy << std::endl; 
+
 	bxmin = domain[0];
 	bxmax = domain[1];
 	bymin = domain[2];
@@ -747,9 +775,12 @@ void lsGrid::update(Irregular& irregular, double t_target)
 					double xpt = domain[0] + dx * i;
 					//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
 					double ypt = domain[2] + dy * j;
+					
 					if (!IGNORE[i * ny + j]) {
 						ETA0[i * ny + j] = ETA1[i * ny + j];
 						ETA1[i * ny + j] = irregular.eta1(t0 + dt, xpt, ypt) + irregular.eta2(t0 + dt, xpt, ypt) + swl;
+
+						//std::cout << "i: " << i << " j: " << j << " eta: " << temp << std::endl;
 
 						//double Ux1 = irregular.u1(t0 + dt, xpt, ypt, 0.0) + irregular.u2(t0 + dt, xpt, ypt, 0.0);
 						//double Uy1 = irregular.v1(t0 + dt, xpt, ypt, 0.0) + irregular.v2(t0 + dt, xpt, ypt, 0.0);
