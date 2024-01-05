@@ -2075,13 +2075,13 @@ int Cleanup() {
 	return wave_Cleanup();
 }
 
-double wave_phase_velocity(int opt) {
+double wave_phase_speed(int opt) {
 	switch (inputdata.wavetype) {
 		// Linear wave theory, expenential profile used above free surface
 	case 1:
-		return irregular.phase_velocity(opt);
+		return irregular.phase_speed(opt);
 	case 4:
-		return irregular.phase_velocity(opt);
+		return irregular.phase_speed(opt);
 	default:
 		return 0.;
 	}

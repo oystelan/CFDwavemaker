@@ -94,7 +94,7 @@ public:
 	double interpolate(std::vector<double>& xData, std::vector<double>& yData, double x, bool extrapolate);
 	
 	// Calculation of various spectral properties
-	double phase_velocity(int opt);
+	double phase_speed(int opt);
 	double mean_wave_length(int opt);
 	double mean_wave_period(int opt);
 	double bandwidth_estimator();

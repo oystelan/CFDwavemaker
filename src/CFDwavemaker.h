@@ -42,7 +42,7 @@ extern "C" {
 	EXPORT void update_probes(double); // writes wave kinematics data to probe files for a given time step as argument.
 
 	// some helpful function in case of irregular waves
-	double wave_phase_velocity(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
+	double wave_phase_speed(int); // returns the phase velocity based on spectral mean wave period t1 for opt=1, and spectral zero crossing period t2 for opt=2
 	double wave_mean_period(int); // calculate mean wave period
 	double wave_mean_length(int); // calculate mean wave length
 

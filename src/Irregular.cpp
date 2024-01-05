@@ -729,8 +729,8 @@ double Irregular::interpolate(std::vector<double>& xData, std::vector<double>& y
 	return yL + dydx * (x - xL);                                              // linear interpolation
 }
 
-/* Function for calculating phase velocity based integration of the wave spectrum*/
-double Irregular::phase_velocity(int opt)
+/* Function for calculating phase speed based integration of the wave spectrum*/
+double Irregular::phase_speed(int opt)
 {
 	// check 
 	if (ndir > 1) {
