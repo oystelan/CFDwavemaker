@@ -682,6 +682,7 @@ void Irregular::normalize_data() {
 	if (normalize) {
 		for (int i = 0; i < nfreq*ndir; i++) {
 			A[i] = ampl * A[i] / sumA;
+			phase[i] = 0.;
 		}
 	}
 	else {
