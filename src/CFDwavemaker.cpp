@@ -1248,7 +1248,7 @@ int process_inputdata(std::string res, Irregular& irreg, Stokes5& stokes, Wavema
 	std::cout << "Wavetype: " << inputdata.wavetype << std::endl;
 
 
-	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4) {
+	if (inputdata.wavetype == 1 || inputdata.wavetype == 2 || inputdata.wavetype == 3 || inputdata.wavetype == 4 || inputdata.wavetype == 5) {
 		irregular.depth = inputdata.depth;
 		irregular.mtheta = inputdata.mtheta;
 		irregular.tofmax = inputdata.tofmax;

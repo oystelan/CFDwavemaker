@@ -135,6 +135,7 @@ void lsGridSpline::update_gradient_eta_dt(double* data, double* graddt){
         int tid = (tstep + 2) % 4;
         int tid1 = (tstep + 3) % 4;
         int tid0 = (tstep + 1) % 4;
+
 		#pragma omp for
         for (int i = 0; i < nx*ny; i++) {
             graddt[tid * nx * ny + i] = (data[tid1 * nx * ny + i] - data[tid0 * nx * ny + i]) / (2 * dt);
@@ -458,7 +459,7 @@ double lsGridSpline::spline_interp_velo(double* U, double* Udt, double* Udx, dou
     double D0 = D00 * (1. - yd) + D10 * yd + yd * (1 - yd) * (c0 * (1 - yd) + d0 * yd);
     double D1 = D01 * (1. - yd) + D11 * yd + yd * (1 - yd) * (c1 * (1 - yd) + d1 * yd);
 
-    // reduce y and t direction
+    // reduce s and t direction
     double C0s = C00s * (1. - yd) + C10s * yd;
     double C1s = C01s * (1. - yd) + C11s * yd;
     double D0s = D00s * (1. - yd) + D10s * yd;
