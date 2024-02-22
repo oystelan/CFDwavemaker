@@ -1,9 +1,9 @@
 # Compiler
 CC      := c++
 # VTK input
-VTK_VERSION=9.2
-VTK_VERSION_LONG=9.2.0
-VTK_DIR= /home/oystein/programs/vtk-${VTK_VERSION_LONG}_build
+VTK_VERSION=9.3
+VTK_VERSION_LONG=9.3.0
+VTK_DIR= /home/oystein/progs/VTK-${VTK_VERSION_LONG}/install
 VTK_INCL = $(VTK_DIR)/include/vtk-${VTK_VERSION}
 VTK_LIBS = $(VTK_DIR)/lib
 
@@ -25,7 +25,7 @@ TARGETS_STATIC_OMP_ALL:= $(addsuffix _all_openmp.a, $(TARGETS))
 
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o Irregular.o Utils.o Wavemaker.o lsgrid.o SpectralWaveData.o probes.o VTKreader.o $(MAINS)
+OBJ    := Stokes5.o Irregular.o Utils.o Wavemaker.o lsgrid.o lsgrid_spline.o SpectralWaveData.o probes.o VTKreader.o $(MAINS)
 
 
 .PHONY: all clean 
@@ -76,7 +76,8 @@ $(TARGETS_STATIC_OMP_ALL): $(OBJ)
 	echo "addlib ${VTK_LIBS}/libvtkFiltersGeneric-${VTK_VERSION}.a" >> temp.mri 
 	echo "addlib ${VTK_LIBS}/libvtkFiltersParallel-${VTK_VERSION}.a" >> temp.mri  
 	echo "addlib ${VTK_LIBS}/libvtkexpat-${VTK_VERSION}.a" >> temp.mri
-	echo "addlib ${VTK_LIBS}/libvtkpugixml-${VTK_VERSION}.a" >> temp.mri   
+	echo "addlib ${VTK_LIBS}/libvtkpugixml-${VTK_VERSION}.a" >> temp.mri
+	echo "addlib ${VTK_LIBS}/libvtklibharu-${VTK_VERSION}.a" >> temp.mri    
 	echo "save" >> temp.mri
 	echo "end" >> temp.mri
 	ar -M <temp.mri
