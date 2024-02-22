@@ -62,23 +62,23 @@ def clean_up(mydll):
 # we start by initializing (reads data from waveinput.dat) 
 init_dll(mydll)
 
-x = 4.8
-y = 0.23
-z = -10.0
+x = 1
+y = 0
+z = 0.0
 
 
 time = np.arange(0,8,0.01)
 
 elev = []
-u = []
-v = []
-w = []
+#u = []
+#v = []
+#w = []
 
 for t in time:
     elev.append(wave_SurfElev(mydll,t,x,y))
-    u.append(wave_VeloX(mydll,t,x,y,z))
-    v.append(wave_VeloY(mydll,t,x,y,z))
-    w.append(wave_VeloZ(mydll,t,x,y,z))
+    #u.append(wave_VeloX(mydll,t,x,y,z))
+    #v.append(wave_VeloY(mydll,t,x,y,z))
+    #w.append(wave_VeloZ(mydll,t,x,y,z))
     
 
 # now, lets view the resulting surface elevation
@@ -88,7 +88,8 @@ plt.xlabel('Time [sec]')
 plt.ylabel('Surface elevation [m]')
 plt.grid(True)
 plt.savefig("./result_eta.png")
-
+plt.show()
+exit()
 # and also the wave kinematics
 plt.clf()
 plt.plot(time,u, label='u')

@@ -4,8 +4,8 @@
 vtk
 
 [vtk input]
-storage_path /home/oystein/progs/multiLayerOcean2/tests/test001_2D_regwave_periodic/vtk_domain/
+storage_path ./error_vtk/
 filename domain_
 name_velocity_field Velocity
 update_height_function_every_timestep true
-t_start 0.
+t_start 1045.976

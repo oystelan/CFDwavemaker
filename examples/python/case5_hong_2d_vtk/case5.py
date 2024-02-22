@@ -62,33 +62,40 @@ def clean_up(mydll):
 # we start by initializing (reads data from waveinput.dat) 
 init_dll(mydll)
 
-x = 4.8
-y = 0.23
-z = -0.05
+x = np.arange(9.02,24.7,0.5)
+y = np.arange(-0.6, 0.2, 0.05)
 
+XI,YI = np.meshgrid(x,y)
 
-time = np.arange(0,10,0.01)
+XI_flat = XI.ravel()
+YI_flat = YI.ravel()
 
-elev = []
+time = 0
+
+#elev = []
 u = []
-v = []
-w = []
+#v = []
+#w = []
 
-for t in time:
-    elev.append(wave_SurfElev(mydll,t,x,y))
-    u.append(wave_VeloX(mydll,t,x,y,z))
-    v.append(wave_VeloY(mydll,t,x,y,z))
-    w.append(wave_VeloZ(mydll,t,x,y,z))
+for x,y in zip(XI_flat, YI_flat):
+    #elev.append(wave_SurfElev(mydll,t,x,y))
+    u.append(wave_VeloX(mydll,time,x,0,y))
+    #v.append(wave_VeloY(mydll,t,x,y,z))
+    #w.append(wave_VeloZ(mydll,t,x,y,z))
     
 
-# now, lets view the resulting surface elevation
-plt.plot(time, elev, label="surface elevation")
-plt.legend()
-plt.xlabel('Time [sec]')
-plt.ylabel('Surface elevation [m]')
-plt.grid(True)
-plt.savefig("./result_eta.png")
 
+UI = np.array(u).reshape(np.shape(XI))
+# now, lets view the resulting surface elevation
+
+plt.contourf(XI,YI, UI,50)
+#plt.legend()
+#plt.xlabel('Time [sec]')
+#plt.ylabel('Surface elevation [m]')
+#plt.grid(True)
+#plt.savefig("./result_eta.png")
+plt.show()
+exit()
 # and also the wave kinematics
 plt.clf()
 plt.plot(time,u, label='u')
@@ -100,7 +107,19 @@ plt.legend()
 plt.grid(True)
 plt.savefig("./result_uvw.png")
 
+plt.clf()
+ug = np.gradient(u, time)
+vg = np.gradient(v, time)
+wg = np.gradient(w, time)
+plt.plot(time,ug, label='ug')
+plt.plot(time,vg, label='vg')
+plt.plot(time,wg, label='wg')
+plt.xlabel('Time [sec]')
+plt.ylabel('particle velocity gradient [m/s^2]')
+plt.legend()
+plt.grid(True)
+plt.savefig("./result_uvw_gradient.png")
+
 
 # all done. remember to clean up after us.
 clean_up(mydll)
-
