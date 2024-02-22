@@ -808,31 +808,39 @@ double* VTKreader::bilinear_interpolation_xy(double* res, double tpt, double xpt
 	double* temp;
 	double CC00[8];
 	temp = U0->GetTuple3(nsp0 * nx + nxp);
+	//cout << "0u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
 	CC00[0] = temp[0];
-	CC00[1] = temp[1];
+	CC00[4] = temp[1];
 	temp = U0->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));
-	CC00[2] = temp[0];
-	CC00[3] = temp[1];
-	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
-	CC00[4] = temp[0];
+	//cout << "1u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	CC00[1] = temp[0];
 	CC00[5] = temp[1];
+	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	//cout << "2u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	CC00[2] = temp[0];
+	CC00[6] = temp[1];
 	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
-	CC00[6] = temp[0];
+	//cout << "3u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	CC00[3] = temp[0];
 	CC00[7] = temp[1];
 
+	//cout << "CC00:" << CC00[0] << " CC01:" << CC00[1] << " CC02:" << CC00[2] << " CC03:" << CC00[3] <<endl;
+	//cout << "CC04:" << CC00[4] << " CC05:" << CC00[5] << " CC06:" << CC00[6] << " CC07:" << CC00[7] <<endl;
+
 	
+
 	double DD00[8];
 	temp = U1->GetTuple3(nsp0 * nx + nxp);
 	DD00[0] = temp[0];
-	DD00[1] = temp[1];
+	DD00[4] = temp[1];
 	temp = U1->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));
-	DD00[2] = temp[0];
-	DD00[3] = temp[1];
-	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
-	DD00[4] = temp[0];
+	DD00[1] = temp[0];
 	DD00[5] = temp[1];
+	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
+	DD00[2] = temp[0];
+	DD00[6] = temp[1];
 	temp = U1->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
-	DD00[6] = temp[0];
+	DD00[3] = temp[0];
 	DD00[7] = temp[1];
 
 	//double sd0 = nsp0 - floor(nsp0);
@@ -844,12 +852,12 @@ double* VTKreader::bilinear_interpolation_xy(double* res, double tpt, double xpt
 
 	double CC0[2], CC1[2], DD0[2], DD1[2];
 	CC0[0] = CC00[0] * (1. - xd) + CC00[1] * xd;
-	CC0[1] = CC00[2] * (1. - xd) + CC00[3] * xd;
-	CC1[0] = CC00[4] * (1. - xd) + CC00[5] * xd;
+	CC1[0] = CC00[2] * (1. - xd) + CC00[3] * xd;
+	CC0[1] = CC00[4] * (1. - xd) + CC00[5] * xd;
 	CC1[1] = CC00[6] * (1. - xd) + CC00[7] * xd;
 	DD0[0] = DD00[0] * (1. - xd) + DD00[1] * xd;
-	DD0[1] = DD00[2] * (1. - xd) + DD00[3] * xd;
-	DD1[0] = DD00[4] * (1. - xd) + DD00[5] * xd;
+	DD1[0] = DD00[2] * (1. - xd) + DD00[3] * xd;
+	DD0[1] = DD00[4] * (1. - xd) + DD00[5] * xd;
 	DD1[1] = DD00[6] * (1. - xd) + DD00[7] * xd;
 
 	
