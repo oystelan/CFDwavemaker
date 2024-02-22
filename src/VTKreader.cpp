@@ -808,24 +808,24 @@ double* VTKreader::bilinear_interpolation_xy(double* res, double tpt, double xpt
 	double* temp;
 	double CC00[8];
 	temp = U0->GetTuple3(nsp0 * nx + nxp);
-	cout << "0u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	//cout << "0u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
 	CC00[0] = temp[0];
 	CC00[4] = temp[1];
 	temp = U0->GetTuple3(nsp0 * nx + clip(nxp + 1, 0, nx - 1));
-	cout << "1u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	//cout << "1u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
 	CC00[1] = temp[0];
 	CC00[5] = temp[1];
 	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + nxp);
-	cout << "2u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	//cout << "2u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
 	CC00[2] = temp[0];
 	CC00[6] = temp[1];
 	temp = U0->GetTuple3(clip(nsp0 + 1, 0, nl - 1) * nx + clip(nxp + 1, 0, nx - 1));
-	cout << "3u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
+	//cout << "3u0:" << temp[0] << " u1:" << temp[1] << " u2:" << temp[2] << endl;
 	CC00[3] = temp[0];
 	CC00[7] = temp[1];
 
-	cout << "CC00:" << CC00[0] << " CC01:" << CC00[1] << " CC02:" << CC00[2] << " CC03:" << CC00[3] <<endl;
-	cout << "CC04:" << CC00[4] << " CC05:" << CC00[5] << " CC06:" << CC00[6] << " CC07:" << CC00[7] <<endl;
+	//cout << "CC00:" << CC00[0] << " CC01:" << CC00[1] << " CC02:" << CC00[2] << " CC03:" << CC00[3] <<endl;
+	//cout << "CC04:" << CC00[4] << " CC05:" << CC00[5] << " CC06:" << CC00[6] << " CC07:" << CC00[7] <<endl;
 
 	
 
