@@ -1,0 +1,12 @@
+@v213
+# CFDwavemaker SWD example 1: irregular 5th order long crested wave
+
+[wave type]
+swd
+
+[general input data]
+depth 1.20
+mtheta 0.0000
+
+[swd wave properties]
+swdfile  raschii_test.swd

@@ -1,0 +1,20 @@
+@v213
+# Wavedata CFDwavemaker2
+
+[wave type]
+regular
+
+[general input data]
+depth 1.2
+mtheta 0.0000
+swl 0.
+
+[stokes wave properties]
+#mandatory properties for stokes wave
+wave_length 1.5668
+wave_height 0.03
+
+#[ramps]
+# ramp_type    enable       rampup_start rampup_end
+#time_rampup    1            0.0000       0.25
+# you do not need to specify all ramps, only the once you need.
