@@ -10,14 +10,15 @@
 # 34) fills its column block per rank and assembles with MPI_Allgatherv.
 BUILD_DIR += ../builds/linux64/
 SWD_INCL = ../swd/inc
+VERSION := $(strip $(shell cat VERSION))
 CC      := mpicxx
-CCFLAGS := -O2 -fPIC -pthread -std=c++11 -DMPI_enable=1 -DOMPI_SKIP_MPICXX -DSWD_enable=1 -I$(SWD_INCL)
+CCFLAGS := -O2 -fPIC -pthread -std=c++11 -DMPI_enable=1 -DOMPI_SKIP_MPICXX -DSWD_enable=1 -I$(SWD_INCL) -DCFDWM_VERSION=\"v$(VERSION)\"
 LDFLAGS := -L./ -L../swd/lib
 LIBS += -lm -lgfortran -lfftw3
 
 TARGETS:= CFDwavemaker
-TARGETS_SHARED_MPI:= $(addsuffix _mpi.so, $(TARGETS))
-TARGETS_STATIC_MPI:= $(addsuffix _mpi.a, $(TARGETS))
+TARGETS_SHARED_MPI:= $(addsuffix _v$(VERSION)_mpi.so, $(TARGETS))
+TARGETS_STATIC_MPI:= $(addsuffix _v$(VERSION)_mpi.a, $(TARGETS))
 
 MAINS  := $(addsuffix .o, $(TARGETS) )
 OBJ    := Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o lsgrid_spline.o probes.o $(MAINS)
@@ -43,8 +44,10 @@ $(TARGETS_SHARED_MPI): $(OBJ)
 	ar x libSpectralWaveData.a
 	$(CC) $(CCFLAGS) -shared -fPIC -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
+	ln -sf lib$@ $(BUILD_DIR)libCFDwavemaker_mpi.so
 
 $(TARGETS_STATIC_MPI): $(OBJ)
 	rm -f $(BUILD_DIR)lib$@
 	ar rvs -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o
 	chmod 775 $(BUILD_DIR)lib$@
+	ln -sf lib$@ $(BUILD_DIR)libCFDwavemaker_mpi.a

@@ -17,7 +17,7 @@ temp = os.path.realpath(temp)
 temp = os.path.dirname(temp)
 
 # we load the shared library 
-mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_swd.so")     
+mydll = cdll.LoadLibrary("../../../builds/linux64/libCFDwavemaker_openmp.so")     
 
 # and define the functions which CFDwavemaker.h tells us are in the library
 

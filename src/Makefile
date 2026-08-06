@@ -5,12 +5,8 @@ MAKE_DIR = $(PWD)
 
 clean:
 	@$(MAKE) -f make_openmp.mk clean
-	@$(MAKE) -f make_swd.mk clean
-	@$(MAKE) -f make_all.mk clean
+	@$(MAKE) -f make_openmp_vtk.mk clean
 
-# build CFDwavemaker_openmp (base, no swd)
-basic:
-	@$(MAKE) -f make_openmp.mk
 
 # build CFDwavemaker_mpi (base + MPI, distributes lsgrid kinematics across ranks)
 mpi:
@@ -19,8 +15,10 @@ mpi:
 
 # build CFDwavemaker_swd (base + swd, openmp) -- the default
 default:
-	@$(MAKE) -f make_swd.mk
+	@$(MAKE) -f make_openmp.mk clean
+	@$(MAKE) -f make_openmp.mk
 
-# build entire CFDwavemaker_all (base + swd + vtk)
-all:
-	@$(MAKE) -f make_all.mk
+# build entire CFDwavemaker + vtk (base + swd + vtk)
+vtk:
+	@$(MAKE) -f make_openmp_vtk.mk clean
+	@$(MAKE) -f make_openmp_vtk.mk

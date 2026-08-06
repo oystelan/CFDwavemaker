@@ -10,7 +10,10 @@
 // dean), wave paddle theory (2D only at the moment)
 //
 //
-// Current version: v3.1.0
+// Version: set in src/VERSION (passed in by the makefiles as CFDWM_VERSION)
+#ifndef CFDWM_VERSION
+#define CFDWM_VERSION "(unversioned build)"
+#endif
 // Date: 2020-12-05
 // (c) Oystein Lande
 // --------------------------------------------------------------------------------
@@ -2066,7 +2069,7 @@ int wave_Initialize()
 	std::string res;
 	std::cout << "\n\n***********************************************\n\n" << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
-	std::cout << "CFD WAVEMAKER v3.1.0" << std::endl;
+	std::cout << "CFD WAVEMAKER " << CFDWM_VERSION << std::endl;
 	std::cout << "---------------------------------------" << std::endl;
 	
 	
@@ -2130,7 +2133,7 @@ int wave_Initialize()
 		exit(0);
 	}
 	if (stoi(lineA.substr(2,3)) < 300 ) {
-		std::cout << "your waveinput.dat file is outdated and does not match the current version of CFDwavemaker. See manual v3.1.0 or newer for the updated format" << std::endl;
+		std::cout << "your waveinput.dat file is outdated and does not match the current version of CFDwavemaker. See manual " << CFDWM_VERSION << " or newer for the updated format" << std::endl;
 		exit(0);
 	}
 

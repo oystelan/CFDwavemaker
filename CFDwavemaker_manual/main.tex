@@ -246,7 +246,7 @@ Using it from a script is then a matter of loading the library, initialising, an
 \begin{lstlisting}[language=Python, caption={Loading and calling the library.}, label={lst:pyuse}]
 from cfdwavemaker import CFDwavemaker
 
-wm = CFDwavemaker("builds/linux64/libCFDwavemaker_swd.so",
+wm = CFDwavemaker("builds/linux64/libCFDwavemaker_openmp.so",
                   workdir="examples/python/case1_focused_unidirectional_wave")
 assert wm.initialize() == 0, "wave_Initialize failed -- is waveinput.dat present?"
 

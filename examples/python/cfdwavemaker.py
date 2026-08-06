@@ -14,7 +14,7 @@ Usage
 
     # 'waveinput.dat' is read from the current working directory, so point the
     # wrapper at the folder that contains it (it chdirs for you).
-    wm = CFDwavemaker("../../builds/linux64/libCFDwavemaker_swd.so",
+    wm = CFDwavemaker("../../builds/linux64/libCFDwavemaker_openmp.so",
                       workdir="my_case_folder")
     wm.initialize()
 
@@ -44,7 +44,7 @@ class CFDwavemaker:
     Parameters
     ----------
     libpath : str
-        Path to the shared library (e.g. ``libCFDwavemaker_swd.so`` on
+        Path to the shared library (e.g. ``libCFDwavemaker_openmp.so`` on
         Linux, ``CFDwavemaker.dll`` on Windows).
     workdir : str, optional
         If given, the process changes into this directory before use so that
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     # Minimal smoke test: load, initialize, query one point, clean up.
     import sys
     lib = sys.argv[1] if len(sys.argv) > 1 else \
-        "../../builds/linux64/libCFDwavemaker_swd.so"
+        "../../builds/linux64/libCFDwavemaker_openmp.so"
     workdir = sys.argv[2] if len(sys.argv) > 2 else None
 
     wm = CFDwavemaker(lib, workdir=workdir)

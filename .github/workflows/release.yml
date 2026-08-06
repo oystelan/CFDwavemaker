@@ -20,12 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check tag matches src/VERSION
+        if: github.ref_type == 'tag'
+        run: |
+          V="v$(cat src/VERSION | tr -d '[:space:]')"
+          if [ "$V" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match src/VERSION ($V). Update src/VERSION before tagging."
+            exit 1
+          fi
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y g++ gfortran libfftw3-dev libopenmpi-dev openmpi-bin
 
-      - name: Build libCFDwavemaker_swd (OpenMP + SWD)
+      - name: Build libCFDwavemaker_openmp (OpenMP + SWD)
         working-directory: ./src
         run: make default
 
@@ -38,7 +47,7 @@ jobs:
         run: |
           python3 - <<'EOF'
           from ctypes import CDLL, c_double
-          lib = CDLL("../../../builds/linux64/libCFDwavemaker_swd.so")
+          lib = CDLL("../../../builds/linux64/libCFDwavemaker_openmp.so")
           lib.wave_SurfElev.restype = c_double
           lib.wave_SurfElev.argtypes = [c_double]*3
           assert lib.wave_Initialize() == 0, "wave_Initialize failed"
@@ -54,11 +63,12 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           gh release create "$TAG" --title "CFDwavemaker ${TAG#v}" --notes "Automated release build." || true
+          V="$(cat src/VERSION | tr -d '[:space:]')"
           gh release upload "$TAG" --clobber \
-            builds/linux64/libCFDwavemaker_swd.a \
-            builds/linux64/libCFDwavemaker_swd.so \
-            builds/linux64/libCFDwavemaker_mpi.a \
-            builds/linux64/libCFDwavemaker_mpi.so \
+            "builds/linux64/libCFDwavemaker_v${V}_openmp.a" \
+            "builds/linux64/libCFDwavemaker_v${V}_openmp.so" \
+            "builds/linux64/libCFDwavemaker_v${V}_mpi.a" \
+            "builds/linux64/libCFDwavemaker_v${V}_mpi.so" \
             src/CFDwavemaker.h
 
   manual:

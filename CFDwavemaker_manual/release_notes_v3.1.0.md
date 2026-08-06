@@ -17,8 +17,8 @@ New in this release:
 
 | File | Description |
 |---|---|
-| `libCFDwavemaker_swd.a` / `.so` | Default build: OpenMP + SWD bundled. Link with `-lgfortran -lfftw3 -lm -fopenmp`. |
-| `libCFDwavemaker_mpi.a` / `.so` | MPI build (no OpenMP): distributes lsgrid kinematics across ranks; SWD bundled. Link with `mpicxx` and `-lgfortran -lfftw3 -lm`. |
+| `libCFDwavemaker_v3.1.0_openmp.a` / `.so` | Default build: OpenMP + SWD bundled. Link with `-lgfortran -lfftw3 -lm -fopenmp`. |
+| `libCFDwavemaker_v3.1.0_mpi.a` / `.so` | MPI build (no OpenMP): distributes lsgrid kinematics across ranks; SWD bundled. Link with `mpicxx` and `-lgfortran -lfftw3 -lm`. |
 | `CFDwavemaker.h` | The C header declaring the extern "C" API. |
 
 The static `.a` archives bundle the Spectral-Wave-Data objects, so they can be copied into your project and linked directly. Requires `libgfortran` and `libfftw3` on the system.

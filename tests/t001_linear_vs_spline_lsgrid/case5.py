@@ -120,7 +120,7 @@ z = -10
 
 # Step 1 - Lest compute the exact second order solution
 shutil.copyfile("waveinput_exact.dat", 'waveinput.dat')
-mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
+mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
 init_dll(mydll1)
 
 wave_elev1 = []
@@ -139,7 +139,7 @@ dlclose(mydll1)
 print("done step 1")
 
 # Step 2 - now lest do the LSgrid with linear interpolation
-mydll2 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
+mydll2 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
 shutil.copyfile("waveinput_linear.dat", 'waveinput.dat')
 init_dll(mydll2)
 
@@ -158,7 +158,7 @@ clean_up(mydll2)
 dlclose(mydll2)
 
 # Step 3 - finally lets do the LSgrid with spline interpolation
-mydll3 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
+mydll3 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
 shutil.copyfile("waveinput_spline.dat", 'waveinput.dat')
 init_dll(mydll3)
 

@@ -143,7 +143,7 @@ z = -10
 
 # Step 1 - Lest compute the exact second order solution
 shutil.copyfile("waveinput_orig.dat", 'waveinput.dat')
-mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
+mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
 init_dll(mydll1)
 
 wave_elev1 = []
@@ -163,7 +163,7 @@ print("done step 1")
 toc()
 tic()
 # Step 2 - now use boost version of irreg
-mydll2 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
+mydll2 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
 shutil.copyfile("waveinput_boost.dat", 'waveinput.dat')
 init_dll(mydll2)
 
