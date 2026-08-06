@@ -15,11 +15,11 @@ import os
 temp = os.path.abspath(__file__)
 temp = os.path.realpath(temp)
 temp = os.path.dirname(temp)
-#path = os.path.join(temp, "libCFDwavemaker_openmp.so")
+#path = os.path.join(temp, "libCFDwavemaker_swd.so")
 print(temp)
 #lib = CDLL("./comflow_wavemaker.so")
 
-mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_openmp.so")     
+mydll = cdll.LoadLibrary("../../builds/linux64/libCFDwavemaker_swd.so")     
 
 #exit()
 

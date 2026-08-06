@@ -114,7 +114,7 @@ time = np.arange(0,10.,0.001)
 
 # Step 1 - Lest compute the exact second order solution
 #shutil.copyfile("waveinput_stokes.dat", 'waveinput.dat')
-mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_swd_openmp.so")  
+mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_swd.so")  
 init_dll(mydll1)
 
 u1 = []

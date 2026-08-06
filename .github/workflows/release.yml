@@ -1,0 +1,95 @@
+name: Release build
+
+# On every pushed version tag (v3.1.0, v3.2.0, ...): build the two Linux
+# libraries (swd + mpi, both with SWD bundled) and the user manual PDF, and
+# attach them to the GitHub release for that tag. The release is created if
+# it does not already exist.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  binaries:
+    name: Build Linux libraries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ gfortran libfftw3-dev libopenmpi-dev openmpi-bin
+
+      - name: Build libCFDwavemaker_swd (OpenMP + SWD)
+        working-directory: ./src
+        run: make default
+
+      - name: Build libCFDwavemaker_mpi (MPI + SWD)
+        working-directory: ./src
+        run: make mpi
+
+      - name: Smoke test (load .so, initialize, query)
+        working-directory: ./examples/python/case1_focused_unidirectional_wave
+        run: |
+          python3 - <<'EOF'
+          from ctypes import CDLL, c_double
+          lib = CDLL("../../../builds/linux64/libCFDwavemaker_swd.so")
+          lib.wave_SurfElev.restype = c_double
+          lib.wave_SurfElev.argtypes = [c_double]*3
+          assert lib.wave_Initialize() == 0, "wave_Initialize failed"
+          eta = lib.wave_SurfElev(0.0, 0.0, 15.0)
+          print("eta(0,0,15) =", eta)
+          assert abs(eta) < 10.0, "implausible eta"
+          lib.wave_Cleanup()
+          EOF
+
+      - name: Upload libraries to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release create "$TAG" --title "CFDwavemaker ${TAG#v}" --notes "Automated release build." || true
+          gh release upload "$TAG" --clobber \
+            builds/linux64/libCFDwavemaker_swd.a \
+            builds/linux64/libCFDwavemaker_swd.so \
+            builds/linux64/libCFDwavemaker_mpi.a \
+            builds/linux64/libCFDwavemaker_mpi.so \
+            src/CFDwavemaker.h
+
+  manual:
+    name: Build user manual PDF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra texlive-science \
+            texlive-bibtex-extra texlive-publishers biber python3-pygments \
+            latexmk
+
+      - name: Compile manual
+        working-directory: ./CFDwavemaker_manual
+        run: |
+          pdflatex -shell-escape -interaction=nonstopmode main.tex
+          biber main || true
+          pdflatex -shell-escape -interaction=nonstopmode main.tex
+          pdflatex -shell-escape -interaction=nonstopmode main.tex
+          cp main.pdf "CFDwavemaker_manual_${GITHUB_REF_NAME}.pdf"
+
+      - name: Upload manual to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release create "$TAG" --title "CFDwavemaker ${TAG#v}" --notes "Automated release build." || true
+          gh release upload "$TAG" --clobber \
+            "CFDwavemaker_manual/CFDwavemaker_manual_${TAG}.pdf"

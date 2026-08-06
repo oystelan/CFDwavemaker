@@ -10,8 +10,8 @@ LIBS += -lm -lgfortran -lfftw3
 
 TARGETS:= CFDwavemaker
 
-TARGETS_SHARED_OMP_SWD:= $(addsuffix _swd_openmp.so, $(TARGETS))
-TARGETS_STATIC_OMP_SWD:= $(addsuffix _swd_openmp.a, $(TARGETS))
+TARGETS_SHARED_SWD:= $(addsuffix _swd.so, $(TARGETS))
+TARGETS_STATIC_SWD:= $(addsuffix _swd.a, $(TARGETS))
 
 MAINS  := $(addsuffix .o, $(TARGETS) )
 OBJ	   := $(MAINS) Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o probes.o lsgrid_spline.o
@@ -19,7 +19,7 @@ OBJ	   := $(MAINS) Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o Spec
 
 .PHONY: clean all
 
-all: $(TARGETS_SHARED_OMP_SWD) $(TARGETS_STATIC_OMP_SWD)
+all: $(TARGETS_SHARED_SWD) $(TARGETS_STATIC_SWD)
 
 clean:
 	rm -f $(OBJ) *f90.o *F90.o
@@ -28,7 +28,7 @@ $(OBJ):: %.o : %.cpp
 	@mkdir -p $(BUILD_DIR)
 	$(CC) -c -o $@ $< $(CCFLAGS) $(EXTRA_FLAGS) 
 
-$(TARGETS_SHARED_OMP_SWD): $(OBJ)
+$(TARGETS_SHARED_SWD): $(OBJ)
 	cp ../swd/cpp/SpectralWaveData.cpp .
 	cp ../swd/inc/SpectralWaveData.h .
 	cp ../swd/inc/spectral_wave_data.h .
@@ -37,7 +37,7 @@ $(TARGETS_SHARED_OMP_SWD): $(OBJ)
 	$(CC) $(CCFLAGS) -shared -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o $(LIBS) $(LDFLAGS)
 	chmod 775 $(BUILD_DIR)lib$@
 
-$(TARGETS_STATIC_OMP_SWD): $(OBJ)
+$(TARGETS_STATIC_SWD): $(OBJ)
 	rm -f $(BUILD_DIR)lib$@ 
 	ar rvs -o $(BUILD_DIR)lib$@ $^ *f90.o *F90.o
 	chmod 775 $(BUILD_DIR)lib$@
