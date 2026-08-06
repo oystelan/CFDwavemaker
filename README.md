@@ -21,6 +21,26 @@ A full user manual is available as a compiled PDF, attached to the latest
 ([direct download](https://github.com/oystelan/CFDwavemaker/releases/latest/download/CFDwavemaker_manual_v3.1.0.pdf)).
 The LaTeX source lives in [`CFDwavemaker_manual/`](CFDwavemaker_manual/).
 
+## Input file
+
+The library is configured through a single ASCII input file, always named
+`waveinput.dat`, read from the working directory at `wave_Initialize()`. All
+keywords and their definitions are documented in the user manual (see above).
+
+For irregular waves, the companion tool
+[**WaveForge**](https://github.com/oystelan/waveforge) provides a graphical
+interface for setting up the wave spectrum and generating the `waveinput.dat`
+file, with live 3-D preview of the resulting sea state:
+
+<p align="center">
+  <a href="https://github.com/oystelan/waveforge">
+    <img src="https://raw.githubusercontent.com/oystelan/waveforge/main/docs/screenshot_spectrum.png"
+         alt="WaveForge spectrum setup tab" width="49%">
+    <img src="https://raw.githubusercontent.com/oystelan/waveforge/main/docs/screenshot_3d.png"
+         alt="WaveForge 3-D sea surface preview" width="49%">
+  </a>
+</p>
+
 ## Citing
 
 If you use CFDwavemaker in your work, please cite the
