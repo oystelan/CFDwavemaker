@@ -1,0 +1,11 @@
+@v300
+# wave kinematics read from vtk files
+[wave type]
+vtk
+
+[wave input vtk]
+storage_path ./error_vtk/
+filename subdomain_
+name_velocity_field Velocity
+update_height_function_every_timestep true
+t_start 1045.976

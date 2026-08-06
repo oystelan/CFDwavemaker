@@ -1,0 +1,448 @@
+%% Overleaf			
+%% Software Manual and Technical Document Template	
+%% 									
+%% This provides an example of a software manual created in Overleaf.
+
+\documentclass{ol-softwaremanual}
+
+% Packages used in this example
+\usepackage{graphicx}  % for including images
+\usepackage{microtype} % for typographical enhancements
+\usepackage{minted}    % for code listings
+\usepackage{amsmath}   % for equations and mathematics
+\usepackage{mathrsfs}  % for \mathscr (script H interaction coefficient)
+\setminted{style=friendly,fontsize=\small}
+\renewcommand{\listoflistingscaption}{List of Code Listings}
+\usepackage{hyperref}  % for hyperlinks
+\usepackage[a4paper,top=4.2cm,bottom=4.2cm,left=2.0cm,right=2.0cm]{geometry} % for setting page size and margins
+\usepackage{booktabs,tabularx}
+\usepackage{xltabular}
+\usepackage[input-decimal-markers=.]{siunitx}
+\usepackage{lipsum}
+\usepackage{lscape}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[backend=biber,style=ieee,sorting=ynt]{biblatex}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\addbibresource{CFDwavemaker.bib}
+\lstset{style=mystyle}
+
+% Custom macros used in this example document
+\newcommand{\doclink}[2]{\href{#1}{#2}\footnote{\url{#1}}}
+\newcommand{\cs}[1]{\texttt{\textbackslash #1}}
+
+% Frontmatter data; appears on title page
+\title{CFDwavemaker \\User Manual (DRAFT)}
+\version{3.0.1}
+\author{Øystein Lande}
+%\softwarelogo{\includegraphics[width=8cm]{logo.png}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+%\listoflistings
+\newpage
+
+\section{Introduction}
+\subsection{Purpose}
+CFDwavemaker is a C++ library developed with the purpose of providing wave kinematics input to CFD codes. Kinematics may either be generated at the boundary (similar to a traditional wave maker) or used to initialize the entire domain before startup of the simulation (or both), as illustrated in the figure below. What distinguishes CFDwavemaker from other similar codes is its capability of generating irregular short crested waves with several hundreds of frequency components using second order potential wave theory in a numerically efficient way.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=16cm]{cfdwavemaker_purpose.png}
+    \caption{Kinematics examples needed for initialization of CFDdomain (left) or during runtime at the boundaries (right)}
+    \label{fig:lsgrid}
+\end{figure}
+
+The library have been successfully linked to a number of CFD solver, such as the Basilisk Library, OpenFOAM, ComFLOW, StarCCM+. It can be accessed and linked to any programming language which support C binding (Python, C/C++, Fortran, and more.)
+\subsection{Reference}
+The code is open source and free to use by anyone. If you find the code useful and decide to used it in projects or publications, make sure spread the word by referencing to this paper
+\begin{lstlisting}[numbers=none]
+@inproceedings{landeCFDwavemaker,
+   title={CFDWAVEMAKER: An open-source library for efficient generation of higher order wave kinematics},
+   author={Lande, Oystein and Helmers, Jens Bloch},
+   booktitle={International Conference on Offshore Mechanics and Arctic Engineering},
+   volume={57656},
+   pages={V03AT02A029},
+   year={2022},
+   organization={American Society of Mechanical Engineers}
+}
+\end{lstlisting}
+
+\section{Installation}
+\subsection{Operative system and requirements}
+CFDwavemaker
+\subsection{Compile from Source}
+Start by cloning the \doclink{https://github.com/oystelan/CFDwavemaker}{git repository} into a suitable location on you computer.
+\begin{lstlisting}[numbers=none]
+git clone git@github.com:oystelan/CFDwavemaker.git
+\end{lstlisting}
+open a terminal and navigate to the location of the CFDwavemaker folder. a Makefile is provided for quick building. CFDwavemaker can be built in three different versions:
+\begin{itemize}
+    \item \textbf{default}: contains core kinematics library + the SWD library extension.
+    \item \textbf{basic}:The core kinematics library, excluding SWD. SWD requires a fairly new version of gcc or intel compiler on windows. Therefore it can sometimes be useful to exclude SWD from the build if you dont plan on using it.
+    \item \textbf{all}: Complete build, linking core library, swd and the vtk library into one dynamic library. This does however require a bit of preparation, like builting the vtk library upfront, and modifying the make script accordingly to be in line with the version of vtk you have built. Dont attempt this if your not experienced with compiling.
+    \item \textbf{mpi}: The core kinematics library built with MPI support. This is intended for large domains where the LSgrid second-order kinematics are expensive to compute: when built with MPI the grid update is distributed across ranks (each rank computes a block of the domain, and the result is shared with an \texttt{MPI\_Allgatherv}), rather than every rank redundantly computing the whole domain. See Section~\ref{sec:mpi} for details.
+\end{itemize}
+So, to build the basic version, you execute the following two commands:
+\begin{lstlisting}[numbers=none]
+make clean
+make basic
+\end{lstlisting}
+or to build the complete library (including swd and vtk support), you do:
+\begin{lstlisting}[numbers=none]
+make clean
+make all
+\end{lstlisting}
+and to build the MPI-enabled library:
+\begin{lstlisting}[numbers=none]
+make mpi
+\end{lstlisting}
+(the \texttt{mpi} target cleans and rebuilds automatically, since it uses different compiler flags than the other targets).
+
+If the target is omitted, the default version is built. If everything went according to plan, the resulting static and dynamic link library should now have turned up in the folder ../build/linux64/* Thats it, in terms of building the library. Now its time to link the library to your software of choice.
+
+\subsection{Dependencies}
+So why did i choose to build the basic version? The answer is, for the default version (containing the =swd extension) and for the all package which links to vtk, there are some dependencies you need which does not by default ship with the compiler.
+
+For the default version of CFDwavemaker, the only additional dependency is fftw3. This is easily installed on a debian based system with the following command:
+
+\subsection{From binary}
+The latest build for Linux (normally latest release of Ubuntu) is possible to download from \doclink{https://github.com/oystelan/CFDwavemaker}{the CFDwavemaker repository}.
+
+
+\section{Interpolation Schemes}
+Grid interpolation schemes are essential in order to speed up initialization of CFD domains when using computationally expensive wave theories such as second order irregular wave theory and HOSM. The cell resolution in a CFD simulation where the kinematics components are required may be fare greater than what is needed to define the kinematics of the wave field with adequate accuracy. Using interpolation in time and space will thus save lots of computation (and time). In addition, defining kinematics on a grid rather than doing point by point randomly, simplifies parallelization.
+
+\textbf{Note:}Grid interpolation is currently only supported for use with SWD and second order irregular wave theory. For linear irregular waves or regular wave theories the use of grid interpolation will not result in a significant gain in performance.
+\subsection{Lagrangian Stretch grid (LSgrid)}
+The following statements can be said to be true for the kinematics vector field underneath an irregular sea surface:
+\begin{itemize}
+    \item The velocity profiles are exponential
+    \item The largest velocities occurring at the surface
+    \item The largest spatial velocity gradients occur near the free surface
+    \item Wave kinematics above the free surface is irrelevant.
+\end{itemize}
+The last statement might be obvious, but is what you will end up storing if your interpolation mesh is static. At the same time you will need to extrapolate the kinematics above the free surface to avoid loosing energy when the mesh is used for interpolation by the CFD solver. The best alternative is thus to have a mesh that moves with the free surface and that has a high density of cells close to the surface, an coarser for increasing water depths. The Lagrangian-Stretched grid (in short LSgrid) is just that! A mesh structure optimized for storage of wave kinematics data and that allows for the use of simple interpolation techniques.
+LSgrid uses sigma transforms in combination with a stretching factor, giving high resolution in z direction at the surface, and lower at depth. The upper layer of the LSgrid will always be at the free surface, and the bottom layer will always be at the sea bed, such that all points of the mesh covers the fluid only. An example snapshot of such a grid is shown in the figure below. This provides a very efficient way of describing the velocity profile underneath the sea surface accurately with a minimum number of points. The time interpolation is linear. To specify the use of a Lagrangian stretched grid interpolation scheme, the keyword \textbf{[lsgrid]} is used.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=16cm]{lsgrid2.png}
+    \caption{Lagrangian stretch grid using $\sigma$-coordinates}
+    \label{fig:lsgrid}
+\end{figure}
+
+
+\subsection{Cubic Spline 4D interpolation}
+
+
+\subsection{Distributed grid computation with MPI}\label{sec:mpi}
+Generating the second-order kinematics on the LSgrid is the most expensive part of a large simulation: every grid point requires a sum over all (possibly several hundred) frequency-pair interactions. With shared-memory parallelism (OpenMP) this is already spread over the cores of a single node. For very large domains run on an MPI-parallel CFD solver, however, \emph{every} MPI rank would by default recompute the \emph{entire} grid, which is wasteful. The MPI build removes this redundancy.
+
+When CFDwavemaker is compiled with the \textbf{mpi} target (see the build instructions in the Installation section), the LSgrid computation is \emph{distributed}: on each grid update every rank computes only a block of the domain (a contiguous range of grid columns), and the blocks are then shared among all ranks with a single collective \texttt{MPI\_Allgatherv}. Afterwards every rank holds the complete, identical grid, so the interpolation (and everything downstream) is unchanged --- only the cost of \emph{building} the grid is divided among the ranks. The column partition is \emph{work-balanced} by the number of active cells per column, so an \texttt{ignore\_subdomain} mask (which makes some columns cheap) does not leave ranks idle.
+
+A few things are required of the host CFD solver when using the MPI build:
+\begin{itemize}
+    \item \textbf{The host owns MPI.} CFDwavemaker never calls \texttt{MPI\_Init} or \texttt{MPI\_Finalize}; it only uses the MPI context that the CFD solver has already set up.
+    \item \textbf{Collective update.} The grid update is a collective operation, so \emph{all} ranks in the communicator must reach it together. In practice this means every rank must call \texttt{wave\_force\_update(t)} once per time step, with the same \texttt{t}. This function is the designated synchronisation point; the ordinary velocity/elevation queries never trigger a grid update on their own.
+    \item \textbf{Communicator.} By default the world communicator (\texttt{MPI\_COMM\_WORLD}) is used. If your solver runs CFDwavemaker on a sub-communicator, pass it with \texttt{wave\_set\_mpi\_comm(fortran\_comm)} (a Fortran integer communicator handle; use \texttt{MPI\_Comm\_c2f} in C) \emph{before} calling \texttt{wave\_Initialize()}.
+    \item \textbf{No OpenMP.} The MPI build does not use OpenMP (it is one or the other); parallelism comes entirely from the MPI ranks.
+\end{itemize}
+Note that this distributes \emph{computation}, not memory: every rank still stores the full grid, exactly as in the shared-memory build. The MPI build is therefore aimed at cases where the second-order grid generation dominates the run time, not at reducing per-rank memory.
+
+\input{input_file_ref}
+
+\section{Linking Tutorials}
+\subsection{Link to Basilisk C (C/C++)}
+\subsection{Link to Python}
+The shared library (\texttt{libCFDwavemaker\_openmp.so} on Linux, or the corresponding \texttt{.dll} on Windows) can be loaded directly from Python with the standard-library \texttt{ctypes} module. No compilation or wrapping on the C side is required --- the \texttt{extern "C"} interface declared in \texttt{CFDwavemaker.h} is called straight from Python.
+
+The only thing to keep in mind is that \texttt{ctypes} does not know the argument or return types of a C function on its own: every function must have its \texttt{restype} and \texttt{argtypes} set explicitly, otherwise the doubles are marshalled incorrectly. The wrapper class below (also shipped as \texttt{examples/python/cfdwavemaker.py}) sets these for the full API and exposes a small Pythonic interface on top.
+
+\begin{lstlisting}[language=Python, caption={A complete \texttt{ctypes} binding for CFDwavemaker (\texttt{cfdwavemaker.py}).}, label={lst:pywrap}]
+import os
+from ctypes import CDLL, POINTER, c_double, c_int
+
+_XYZT = [c_double, c_double, c_double, c_double]   # (x, y, z, t)
+_XYT  = [c_double, c_double, c_double]             # (x, y, t)
+
+class CFDwavemaker:
+    def __init__(self, libpath, workdir=None):
+        # wave_Initialize reads 'waveinput.dat' from the current directory,
+        # so chdir into the case folder that contains it. Resolve the library
+        # path first, so a relative libpath is taken from the caller's cwd.
+        libpath = os.path.abspath(libpath)
+        if workdir is not None:
+            os.chdir(workdir)
+        self.lib = CDLL(libpath)
+        self._bind()
+
+    def _bind(self):
+        lib = self.lib
+        # lifecycle
+        lib.wave_Initialize.restype = c_int;  lib.wave_Initialize.argtypes = []
+        lib.wave_Cleanup.restype    = c_int;  lib.wave_Cleanup.argtypes    = []
+        # point queries (x, y, z, t)
+        for name in ("wave_VeloX", "wave_VeloY", "wave_VeloZ",
+                     "wave_DynPres", "wave_nhPres"):
+            fn = getattr(lib, name); fn.restype = c_double; fn.argtypes = _XYZT
+        # surface elevation (x, y, t)
+        lib.wave_SurfElev.restype = c_double; lib.wave_SurfElev.argtypes = _XYT
+        # volume fraction (x, y, z, t, delta_cellsize) and seabed (x, y)
+        lib.wave_VFrac.restype  = c_double; lib.wave_VFrac.argtypes  = [c_double]*5
+        lib.wave_Seabed.restype = c_double; lib.wave_Seabed.argtypes = [c_double]*2
+        # grid updater (t) -- call once per time step (collective under MPI)
+        lib.wave_force_update.restype = None; lib.wave_force_update.argtypes = [c_double]
+        # water depth and MPI communicator (no-op unless built -DMPI_enable=1)
+        lib.wave_water_depth.restype  = c_double; lib.wave_water_depth.argtypes = []
+        lib.wave_set_mpi_comm.restype = None;     lib.wave_set_mpi_comm.argtypes = [c_int]
+
+    # lifecycle
+    def initialize(self): return self.lib.wave_Initialize()
+    def cleanup(self):    return self.lib.wave_Cleanup()
+    def set_mpi_comm(self, fortran_comm):  # Fortran comm handle; before initialize()
+        self.lib.wave_set_mpi_comm(int(fortran_comm))
+    # queries
+    def velocity(self, x, y, z, t):
+        return (self.lib.wave_VeloX(x, y, z, t),
+                self.lib.wave_VeloY(x, y, z, t),
+                self.lib.wave_VeloZ(x, y, z, t))
+    def surface_elevation(self, x, y, t):   return self.lib.wave_SurfElev(x, y, t)
+    def dynamic_pressure(self, x, y, z, t): return self.lib.wave_DynPres(x, y, z, t)
+    def water_depth(self):                  return self.lib.wave_water_depth()
+    def force_update(self, t):              self.lib.wave_force_update(t)
+\end{lstlisting}
+
+Using it from a script is then a matter of loading the library, initialising, and querying kinematics at arbitrary $(x,y,z,t)$:
+
+\begin{lstlisting}[language=Python, caption={Loading and calling the library.}, label={lst:pyuse}]
+from cfdwavemaker import CFDwavemaker
+
+wm = CFDwavemaker("builds/linux64/libCFDwavemaker_openmp.so",
+                  workdir="examples/python/case1_focused_unidirectional_wave")
+assert wm.initialize() == 0, "wave_Initialize failed -- is waveinput.dat present?"
+
+print("water depth :", wm.water_depth())
+t = 5.0
+print("eta(0,0,t)  :", wm.surface_elevation(0.0, 0.0, t))
+print("u(0,0,-1,t) :", wm.velocity(0.0, 0.0, -1.0, t))
+
+wm.cleanup()
+\end{lstlisting}
+
+\noindent A few practical notes:
+\begin{itemize}
+    \item \texttt{wave\_Initialize()} reads \texttt{waveinput.dat} from the \emph{current working directory}; the wrapper's \texttt{workdir} argument changes into the case folder for you.
+    \item When the second-order s-grid (\texttt{lsgrid}) is used, call \texttt{force\_update(t)} once per time step before querying, so the grid is advanced to the current time. Under an MPI build this call is collective and must be made on every rank.
+    \item To distribute the s-grid computation across MPI ranks, pass the host's communicator with \texttt{set\_mpi\_comm()} (a Fortran integer handle, \texttt{MPI\_Comm\_c2f}) \emph{before} \texttt{initialize()}. See Section~\ref{sec:mpi}.
+\end{itemize}
+
+\subsection{Link to OpenFOAM}
+OpenFOAM is written in C++. To get CFDwavemaker up an running as a source of kinematics for initialization or boundary input, we add it as an option in the waveModels library of OpenFOAM. 
+
+
+\input{theory}
+
+\section{Examples}
+
+\begin{lstlisting}[language=Python, caption={Python function returning power spectrum 3D power spectrum.}, label={lst:spec3Dtyx}]
+def spec3Dtyx(t, y, x, wp):
+    # Simple function which return the spectrum
+    dt = (t[-1] - t[0]) / (len(t) - 1)
+    dx = (x[-1] - x[0]) / (len(x) - 1)
+    dy = (y[-1] - y[0]) / (len(y) - 1)
+    Nt = len(t)
+    Nx = len(x)
+    Ny = len(y)
+    df = 1. / (dt * Nt)  # Calculate frequency step
+    dkx = 2. * np.pi / (dx * Nx)  # Calculate frequency step
+    dky = 2. * np.pi / (dy * Ny)  # Calculate frequency step
+    fnyq = 1 / (2 * dt)  # Determine Nyquist frequency
+    knyqx = np.pi / dx  # Determine Nyquist frequency
+    knyqy = np.pi / dy  # Determine Nyquist frequency
+    f = np.arange(-fnyq, fnyq, df)  # Frequency Components
+    kx = np.arange(-knyqx, knyqx, dkx)  # Frequency Components
+    ky = np.arange(-knyqy, knyqy, dky)  # Frequency Components
+
+    spec = np.fft.fftn(wp) / (Nt * Nx * Ny)
+    Sxx = spec * np.conj(spec) / (dkx * dky * df)
+    spec = np.fft.fftshift(spec)
+    Sxx = np.fft.fftshift(Sxx)
+    # finally, we flip the time-axis, to force our defined convention (+kx-wt)
+    Sxx = np.flip(Sxx,axis=0)
+    spec = np.flip(spec, axis=0)
+    return f, ky, kx, spec, np.abs(Sxx)
+\end{lstlisting}
+
+\appendix
+
+\section{Corrections to Smit et al.\ (2017)}\label{app:eq9_correction}
+
+The implementation of the $s$-coordinate second-order theory in CFDwavemaker is based on Smit et al.\ (2017). During implementation and verification, several errors were identified in the published paper. These are documented below for reference.
+
+\subsection{Known errata (corrections PDF)}
+The following errors were identified by the authors themselves and documented in a corrections document:
+\begin{enumerate}
+    \item In Eq.~9, $w_1$ and $w_2$ should be angular frequencies $\omega_1$ and $\omega_2$.
+    \item In Eq.~9, $\omega_{1,2}$ should be $\omega_1 + \omega_2$.
+    \item In Eq.~9, $w_{1,2}^2$ in the denominator should be $\omega_{1,2}^2 = (\omega_1 + \omega_2)^2$.
+    \item In Eq.~9, $g^2 2$ in the denominator of the bracket should be $g^2$.
+    \item In Eq.~9, $\sigma_{1+2}$ is not defined in the paper. It should be $\sigma_{1+2} = \sqrt{g|\mathbf{k}_1 + \mathbf{k}_2|\tanh(|\mathbf{k}_1+\mathbf{k}_2|h)}$.
+    \item In Eq.~13, the quantities $\mathrm{Ch}_{1+2}^z$ and $\mathrm{Sh}_{1+2}^z$ are not defined. They are obtained from the $s$-coordinate profiles by substituting $1 + s = (h+z)/(h+\eta)$.
+\end{enumerate}
+
+\subsection{Eq.~9: incorrect interaction coefficient formula}
+\label{app:eq9_error}
+
+Beyond the notation issues listed above, the bracket expression in Eq.~9 of Smit et al.\ (2017) produces \emph{structurally incorrect} values for the interaction coefficient $\mathscr{H}$. Specifically, the formula:
+\begin{equation}
+\mathscr{H}_{1,2}^{1,2} = \frac{i\omega_{1,2}g^2}{\sigma_{1+2}^2 - \omega_{1,2}^2}\left[\frac{\mathbf{k}_1\cdot\mathbf{k}_2}{\omega_1\omega_2} - \frac{\omega_1\omega_2 + \omega_1^2 + \omega_2^2}{g^2} + \frac{k_1^2\omega_2 + k_2^2\omega_1}{2\omega_1\omega_2\omega_{1,2}}\right] \quad\text{(incorrect)}
+\end{equation}
+does not satisfy self-consistency with the paper's own Eq.~10, which relates $\mathscr{H}$ to the second-order surface elevation coefficient $C_{1,2}$. Numerical verification shows:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Test case & $\mathscr{H}_\mathrm{real}$ from Eq.~10 inversion & $\mathscr{H}_\mathrm{real}$ from Eq.~9 \\
+\midrule
+Diagonal ($k_1 = k_2$) & $-2.69$ & $+1.02$ \\
+Off-diagonal (collinear) & $-1.74$ & $+1.12$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The sign and magnitude are both wrong. The ratios between the two columns are not constant ($-2.6$ vs.\ $-1.6$), confirming a structural error in the bracket formula rather than a simple missing factor.
+
+\paragraph{Root cause.} Eq.~9 is derived by solving the second-order boundary value problem in $s$-coordinates (the paper's Eqs.~7a--7b). The error originates in the evaluation of the nonlinear surface forcing terms $\mathscr{B}$ and $\mathscr{K}$ from Eq.~5.
+
+\paragraph{Workaround.} Eq.~10 of the paper, which relates the elevation interaction coefficient $C$ to $\mathscr{H}$, is verified to be correct. Since $C$ equals the well-established Sharma \& Dean (1981) coefficient ($C = \alpha/2$), we invert Eq.~10 to obtain $\mathscr{H}$:
+\begin{equation}
+\mathscr{H}_\mathrm{real}^{\pm} = -\frac{g}{\omega_n \pm \omega_m}\left[\frac{\alpha_{nm}^\pm}{2} - \frac{\omega_n^2 + \omega_m^2 \pm \omega_n\omega_m}{2g} + \frac{g\,\mathbf{k}_n\cdot\mathbf{k}_m}{2\omega_n\omega_m}\right]
+\end{equation}
+This is the formula implemented in CFDwavemaker (see Section~\ref{sec:H_coeff}).
+
+\subsection{BVP derivation and identification of the error}
+\label{app:bvp_derivation}
+
+To identify the root cause of the error in Eq.~9, we re-derive $\mathscr{H}$ from the second-order boundary value problem. The combined surface boundary condition (from Eqs.~7a--7b) gives:
+\begin{equation}
+\mathscr{H}(\sigma^2 - \omega_{1,2}^2) = -i\omega_{1,2}\hat{B}_{1,2} - g\hat{K}_{1,2} + \omega_{1,2}^2 P(0) - \frac{g}{h}P'(0),
+\end{equation}
+where $\hat{B}_{1,2}$ and $\hat{K}_{1,2}$ are the bilinear surface forcing coefficients (per $\hat{\eta}_1\hat{\eta}_2$), and $P(0)$, $P'(0)$ are the particular solution and its derivative at $s=0$.
+
+The particular solution values at the surface are exact:
+\begin{equation}
+P(0) = -\frac{i\omega_{1,2}}{2}, \qquad
+P'(0) = -\frac{i\omega_{1,2}}{2} - \frac{igh}{2}\left(\frac{k_1^2}{\omega_1} + \frac{k_2^2}{\omega_2}\right).
+\end{equation}
+
+Using the first-order solution $\phi_n = (-ig\hat{\eta}_n/\omega_n)\,\mathrm{Ch}_n^s\,e_n$, we evaluate the bilinear products in $B$ and $K$ at $s=0$:
+\begin{align}
+\hat{B}_{1,2} &= -\frac{g^2 \mathbf{k}_1\cdot\mathbf{k}_2}{\omega_1\omega_2} - \omega_1\omega_2, \\
+\hat{K}_{1,2} &= -\frac{ig\,\mathbf{k}_1\cdot\mathbf{k}_2\,\omega_{1,2}}{\omega_1\omega_2} + \frac{i\omega_{1,2}}{h}.
+\end{align}
+
+\paragraph{Consistency check.}
+These values can be verified against Eq.~10 by substituting into the dynamic BC
+$g\,C = i\omega_{1,2}(\mathscr{H} + P(0)) + \hat{B}_{1,2}$
+and requiring $C = \alpha/2$. This produces the constraint:
+\begin{equation}
+\omega_{1,2}^2/2 + \hat{B}_{1,2} \stackrel{!}{=} \frac{\omega_1^2+\omega_2^2+\omega_1\omega_2}{2} - \frac{g^2\mathbf{k}_1\cdot\mathbf{k}_2}{2\omega_1\omega_2}.
+\end{equation}
+The required $\hat{B}_{1,2}$ is $-\omega_1\omega_2/2 - g^2\mathbf{k}_1\cdot\mathbf{k}_2/(2\omega_1\omega_2)$, but our evaluation gives values that are \emph{exactly twice as large}: $-\omega_1\omega_2 - g^2\mathbf{k}_1\cdot\mathbf{k}_2/(\omega_1\omega_2)$.
+
+\paragraph{Diagnosis.} The systematic factor-of-2 discrepancy in $\hat{B}_{1,2}$ is traced to how bilinear forcing is attributed to specific ordered pairs $(\mathbf{k}_1, S_1, \mathbf{k}_2, S_2)$ in the double sum. The second-order field is written as:
+\begin{equation}
+\phi^{(2)} = \sum_{\mathbf{k}_1,\mathbf{k}_2,S_1,S_2} \hat{\phi}_{1,2}^{1,2}(s)\,e_1^1 e_2^2.
+\end{equation}
+For $\mathbf{k}_1 \neq \mathbf{k}_2$, both orderings $(\mathbf{k}_1,\mathbf{k}_2)$ and $(\mathbf{k}_2,\mathbf{k}_1)$ appear as separate entries in the sum. The bilinear surface forcing products fall into two categories:
+
+\emph{Symmetric products} (invariant under $1\leftrightarrow 2$ swap): $\nabla\phi_1\cdot\nabla\phi_2$ and $(\phi_1)_s(\phi_2)_s$. These contribute equally to both orderings, so each ordered pair receives \textbf{half}.
+
+\emph{Asymmetric products}: $\nabla\phi_1\cdot\nabla\eta_2 \neq \nabla\phi_2\cdot\nabla\eta_1$ and $(\eta_1)_t(\phi_2)_s \neq (\eta_2)_t(\phi_1)_s$. These naturally split between the two orderings: each ordered pair receives \textbf{one term only}.
+
+Applying this rule to the dynamic BC forcing:
+\begin{align}
+\hat{B}_{1,2}^{\text{(per pair)}} &= \underbrace{-\frac{g^2\mathbf{k}_1\cdot\mathbf{k}_2}{2\omega_1\omega_2}}_{\text{half of symmetric}}
++ \underbrace{\frac{\omega_1\omega_2}{2}}_{\text{half of symmetric}}
+\underbrace{-\;\omega_1\omega_2}_{\text{one asymmetric term}} \nonumber \\
+&= -\frac{g^2\mathbf{k}_1\cdot\mathbf{k}_2}{2\omega_1\omega_2} - \frac{\omega_1\omega_2}{2},
+\end{align}
+which matches exactly the value required for consistency with Eq.~10 and the Sharma \& Dean coefficient. Without this per-pair halving of symmetric products, the forcing is doubled, producing the erroneous Eq.~9.
+
+\paragraph{Interior forcing and the particular solution.}
+The same normalization convention also affects the interior field equation forcing $\hat{L}(s)$ and consequently the particular solution~$P$. We evaluated $\hat{L}$ for the per-pair ordering~$(\mathbf{k}_1,\mathbf{k}_2)$ and found that \emph{all} terms in~$L$ are asymmetric (each term pairs~$\eta_1$ with~$\phi_2$), so no halving is needed. The per-pair forcing is:
+\begin{equation}
+\hat{L}_{(\mathbf{k}_1,\mathbf{k}_2)}(s) = \frac{igh}{\omega_2}\left\{-2k_2^2\mathrm{Ch}_2(s) + (1+s)k_2 h(k_{1,2}^2-k_2^2)\mathrm{Sh}_2(s)\right\}.
+\end{equation}
+
+Direct substitution confirms that the paper's particular solution $P = -ig(1+s)/2\cdot(k_1\mathrm{Sh}_1/\omega_1 + k_2\mathrm{Sh}_2/\omega_2)$ satisfies the field equation for \textbf{half} the full forcing:
+\begin{equation}
+\partial_s^2 P - k_{1,2}^2 h^2 P = \frac{1}{2}\hat{L}_\mathrm{full},
+\end{equation}
+where $\hat{L}_\mathrm{full} = \hat{L}_{(\mathbf{k}_1,\mathbf{k}_2)} + \hat{L}_{(\mathbf{k}_2,\mathbf{k}_1)}$. This proves that the factor~$1/2$ in the paper's~$P$ formula is the per-pair normalization factor. The correct per-pair particular solution for ordering~$(\mathbf{k}_1,\mathbf{k}_2)$ is:
+\begin{equation}
+P_{(\mathbf{k}_1,\mathbf{k}_2)}(s) = -ig(1+s)\,\frac{k_2\,\mathrm{Sh}_2(s)}{\omega_2},
+\end{equation}
+which involves only component~2 and has no factor of~$1/2$.
+
+\paragraph{Remaining gap.} With the corrected per-pair~$\hat{B}$, $\hat{K}$, and~$P$, the surface BC gives an expression for~$\mathscr{H}$ whose numerator is approximately 100$\times$ smaller than the value required by the Eq.~10 inversion. This suggests that the surface boundary conditions (Eqs.~5) produce additional $O(\varepsilon^2)$ terms in the $s$-coordinate framework --- arising from the coupling between the coordinate transformation and the free-surface conditions --- that are not present in the Cartesian formulation. Tracking these terms through the full nonlinear coordinate transformation requires more extensive algebra than what is presented here or in the original paper. The error in Eq.~9 is a consequence of this incomplete accounting.
+
+\paragraph{Conclusion.} The per-pair normalization convention explains the factor-of-2 discrepancy in~$\hat{B}$ and proves that the paper's~$P$ is implicitly per-pair normalized. However, the complete BVP derivation of~$\mathscr{H}$ requires additional surface forcing terms from the coordinate transformation that are not fully captured in our analysis or in the paper's Eq.~9. The Eq.~10 inversion implemented in CFDwavemaker bypasses these complexities entirely and produces verified-correct results.
+
+\subsection{Literature survey}
+\label{app:literature}
+
+A survey of the scientific literature (as of April 2026) reveals that the Smit et al.\ (2017) paper has been cited approximately 27 times (Google Scholar). No published errata or corrigendum has been issued by the journal (Journal of Physical Oceanography) or the authors. The citing works primarily reference the paper for:
+\begin{itemize}
+    \item The conceptual contribution of deriving Wheeler stretching from first principles
+    \item The $s$-coordinate framework as a consistent approach to near-surface kinematics
+    \item Comparisons with conventional second-order theory and extrapolation methods
+\end{itemize}
+No citing paper was found that independently implements and validates the interaction coefficient formula (Eq.~9) from the paper. The most relevant citing works include Benoit, Zhang \& Ma (2024) on ``Kinematics of nonlinear waves over variable bathymetry'' (Coastal Engineering, vol.~193), which uses a different approach (Chebyshev polynomial expansion) rather than implementing the Smit $s$-coordinate theory directly.
+
+The SINTEF SIMA software implements second-order wave kinematics following Sharma \& Dean but does not appear to include the Smit $s$-coordinate extension. The error in Eq.~9 has therefore likely not been independently discovered prior to the present implementation in CFDwavemaker.
+
+\subsection{Complex-to-real phase conventions}
+
+The paper uses complex notation where $\mathscr{H} = i\mathscr{H}_\mathrm{real}$ (purely imaginary). When converting the second-order transfer functions to real-valued expressions, the following phase relationships apply:
+\begin{itemize}
+    \item Horizontal velocity bound wave: $i\mathbf{k}_{nm}\cdot\mathscr{H} = i\mathbf{k}_{nm}\cdot i\mathscr{H}_\mathrm{real} = -\mathbf{k}_{nm}\mathscr{H}_\mathrm{real}$ (real $\to$ $\cos\Phi$)
+    \item Vertical velocity bound wave: $k_{nm}\cdot\mathscr{H} = ik_{nm}\mathscr{H}_\mathrm{real}$ (imaginary $\to$ $-\sin\Phi$)
+    \item Vertical velocity correction: factor $-i$ gives $\mathrm{Re}[-ie^{i\Phi}] = \sin\Phi$ (positive sign)
+    \item Pressure bound wave: $i\omega_{nm}\cdot\mathscr{H} = -\omega_{nm}\mathscr{H}_\mathrm{real}$ (real $\to$ $\cos\Phi$)
+\end{itemize}
+
+These sign conventions are critical for correct implementation and are a common source of errors when translating complex-valued transfer functions to real-valued code.
+
+\printbibliography
+
+\end{document}

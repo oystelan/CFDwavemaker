@@ -1,0 +1,13 @@
+@v301
+# Wavedata CFDwavemaker
+[wave type]
+slope
+
+[general input data]
+swl 0
+
+[sloping water]
+slope_direction 0.
+slope_angle 10.
+limiting_radius 10.
+

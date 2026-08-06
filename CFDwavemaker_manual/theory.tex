@@ -1,0 +1,145 @@
+\section{Wave Theories and Sources}
+
+\subsection{Irregular wave kinematics}
+\label{sec:irregular}
+
+CFDwavemaker implements second-order irregular wave theory following the framework of Sharma \& Dean (1981), with an optional extension to the $s$-coordinate formulation of Smit et al.\ (2017). The theory is presented below in compact notation.
+
+\subsubsection{First-order solution}
+The free surface is represented as a superposition of $N$ linear (Airy) wave components:
+\begin{equation}
+    \eta^{(1)}(\mathbf{x},t) = \sum_{n=1}^{N} A_n \cos(\mathbf{k}_n \cdot \mathbf{x} - \omega_n t + \varphi_n),
+\end{equation}
+where $A_n$ is the amplitude, $\mathbf{k}_n$ the horizontal wavenumber vector, $\omega_n$ the angular frequency (related through the linear dispersion relation $\omega_n^2 = g k_n \tanh(k_n h)$), and $\varphi_n$ a random phase. The phase function for component $n$ is written as:
+\begin{equation}
+    \Phi_n = \mathbf{k}_n \cdot (\mathbf{x} - \mathbf{x}_0) - \omega_n (t - t_0) + \varphi_n,
+\end{equation}
+where $\mathbf{x}_0$ and $t_0$ are the reference point and time specified in the input file.
+
+The first-order velocity and dynamic pressure are:
+\begin{align}
+    u_n^{(1)} &= \frac{g k_n}{\omega_n} A_n\, \mathrm{Ch}_n \cos\theta_n \cos\Phi_n, \\
+    v_n^{(1)} &= \frac{g k_n}{\omega_n} A_n\, \mathrm{Ch}_n \sin\theta_n \cos\Phi_n, \\
+    w_n^{(1)} &= \frac{g k_n}{\omega_n} A_n\, \mathrm{Sh}_n \sin\Phi_n, \\
+    p_n^{(1)} &= \rho g A_n\, \mathrm{Ch}_n \cos\Phi_n,
+\end{align}
+where $\theta_n$ is the propagation direction of component $n$, and the vertical structure functions depend on the selected theory:
+
+\paragraph{Conventional (Sharma \& Dean):}
+\begin{equation}\label{eq:conv_profiles}
+    \mathrm{Ch}_n = \frac{\cosh[k_n(z+h)]}{\cosh(k_n h)}, \qquad
+    \mathrm{Sh}_n = \frac{\sinh[k_n(z+h)]}{\cosh(k_n h)},
+\end{equation}
+valid for $-h \leq z \leq 0$. Above $z = 0$, the kinematics are linearly extrapolated using the first-order vertical gradient:
+\begin{equation}
+    u(z) \approx u(0) + \left.\frac{\partial u}{\partial z}\right|_{z=0} \cdot z, \quad 0 < z \leq \eta.
+\end{equation}
+
+\paragraph{$s$-coordinate (Smit et al., 2017):}
+The vertical coordinate is replaced by a boundary-fitted $s$-coordinate:
+\begin{equation}\label{eq:s_coord}
+    s = \frac{z - \eta}{h + \eta}, \qquad 1 + s = \frac{h + z}{h + \eta},
+\end{equation}
+which maps the instantaneous water column $-h \leq z \leq \eta$ onto $-1 \leq s \leq 0$. The vertical structure functions become:
+\begin{equation}\label{eq:wheeler_profiles}
+    \mathrm{Ch}_n^s = \frac{\cosh\!\left[\displaystyle k_n h\,\frac{h + z}{h + \eta}\right]}{\cosh(k_n h)}, \qquad
+    \mathrm{Sh}_n^s = \frac{\sinh\!\left[\displaystyle k_n h\,\frac{h + z}{h + \eta}\right]}{\cosh(k_n h)}.
+\end{equation}
+These are equivalent to Wheeler stretching (Wheeler, 1970), but here derived from first principles. The profiles are valid for $-h \leq z \leq \eta$ and naturally evaluate to unity at the free surface $z = \eta$, eliminating the need for above-surface extrapolation. The surface elevation $\eta = \eta^{(1)} + \eta^{(2)}$ is computed first at each evaluation point.
+
+\subsubsection{Second-order solution}
+
+The second-order kinematics arise from nonlinear interactions between pairs of first-order components. The full second-order solution can be written compactly as:
+\begin{equation}\label{eq:2nd_order}
+    \begin{bmatrix} \eta \\ \mathbf{u} \\ w \\ p \end{bmatrix} =
+    \begin{bmatrix} 0 \\ \mathbf{0} \\ 0 \\ p^{(0)} \end{bmatrix}
+    + \sum_{n} \hat{\eta}_n
+    \begin{bmatrix} 1 \\ \mathbf{U}_n^{(1)} \\ W_n^{(1)} \\ P_n^{(1)} \end{bmatrix} e_n
+    + \sum_{n,m} \hat{\eta}_n \hat{\eta}_m
+    \begin{bmatrix} C_{n,m} \\ \mathbf{U}_{n,m}^{(2)} \\ W_{n,m}^{(2)} \\ P_{n,m}^{(2)} \end{bmatrix} e_n e_m,
+\end{equation}
+where $\hat{\eta}_n = A_n/2$ is the complex amplitude, $e_n = \exp(i\Phi_n)$, and $p^{(0)} = -\rho g z$ is the hydrostatic pressure.
+
+\paragraph{Second-order surface elevation.}
+The second-order elevation uses the Sharma \& Dean interaction coefficient $\alpha_{n,m}$:
+\begin{equation}
+    \eta^{(2)} = \frac{1}{4}\sum_n A_n^2\, \alpha_{nn}^+ \cos(2\Phi_n)
+    + \frac{1}{2}\sum_{n<m} A_n A_m \left[\alpha_{nm}^+ \cos(\Phi_n + \Phi_m) + \alpha_{nm}^- \cos(\Phi_n - \Phi_m)\right],
+\end{equation}
+where $\alpha_{nm}^\pm$ are the standard interaction coefficients from Sharma \& Dean (1981). The surface elevation is the same for both the conventional and $s$-coordinate theories.
+
+\paragraph{Conventional second-order velocity (Sharma \& Dean).}
+The second-order velocity uses the interaction coefficient $D_{nm}$ and the conventional vertical profiles (\ref{eq:conv_profiles}):
+\begin{align}
+    u_{nm}^{(2)} &= \frac{D_{nm}^\pm}{\omega_n \pm \omega_m}\cdot\frac{A_n A_m g^2}{4\omega_n \omega_m} \cdot (k_n\cos\theta_n \pm k_m\cos\theta_m)\, \mathrm{Ch}_{nm}^\pm\, \cos(\Phi_n \pm \Phi_m),
+\end{align}
+where $\mathrm{Ch}_{nm}^\pm = \cosh(k_{nm}^\pm(z+h))/\cosh(k_{nm}^\pm h)$ with $k_{nm}^\pm = |\mathbf{k}_n \pm \mathbf{k}_m|$. The formulas for $D_{nm}^\pm$ and $\alpha_{nm}^\pm$ follow Sharma \& Dean (1981) and are not repeated here.
+
+\paragraph{$s$-coordinate second-order velocity (Smit et al., 2017).}
+In the $s$-coordinate formulation, the second-order velocity has two contributions: a \emph{bound wave} term (controlled by the interaction coefficient $\mathscr{H}$) and a \emph{coordinate-transformation correction}:
+\begin{align}
+    \mathbf{U}_{n,m}^{(2)} &= -\mathbf{k}_{nm}\, \mathscr{H}_{nm}\, \mathrm{Ch}_{nm}^{s,\pm}\, \cos(\Phi_n \pm \Phi_m) \nonumber \\
+    &\quad + \frac{g(h+z)}{2(h+\eta)} \left(\frac{k_n \mathbf{k}_n}{\omega_n}\,\mathrm{Sh}_n^s + \frac{k_m \mathbf{k}_m}{\omega_m}\,\mathrm{Sh}_m^s\right) \cos(\Phi_n \pm \Phi_m), \label{eq:u2_smit}\\[6pt]
+    W_{n,m}^{(2)} &= -k_{nm}^\pm\, \mathscr{H}_{nm}\, \mathrm{Sh}_{nm}^{s,\pm}\, \sin(\Phi_n \pm \Phi_m) \nonumber \\
+    &\quad + \frac{g(h+z)}{2(h+\eta)} \left(\frac{k_n^2}{\omega_n}\,\mathrm{Ch}_n^s + \frac{k_m^2}{\omega_m}\,\mathrm{Ch}_m^s\right) \sin(\Phi_n \pm \Phi_m), \label{eq:w2_smit}
+\end{align}
+where $\mathrm{Ch}_{nm}^{s,\pm}$ and $\mathrm{Sh}_{nm}^{s,\pm}$ are Wheeler-stretched profiles (\ref{eq:wheeler_profiles}) evaluated at the combined wavenumber $k_{nm}^\pm$, and the individual profiles $\mathrm{Ch}_n^s$, $\mathrm{Sh}_n^s$ are also Wheeler-stretched.
+
+The correction terms (second lines of Eqs.~\ref{eq:u2_smit}--\ref{eq:w2_smit}) arise from the coordinate transformation and have no counterpart in conventional theory. They vanish at the seabed ($z = -h$) but contribute significantly near the free surface.
+
+\subsubsection{The $\mathscr{H}$ interaction coefficient}\label{sec:H_coeff}
+
+The interaction coefficient $\mathscr{H}_{nm}$ in the $s$-coordinate theory is derived from the second-order boundary value problem in the transformed coordinate system. The paper by Smit et al.\ (2017) provides an explicit formula (their Eq.~9), but this expression contains errors (see Appendix~\ref{app:eq9_correction}). In CFDwavemaker, $\mathscr{H}$ is instead obtained by inverting the relationship between the second-order surface elevation coefficient $C_{nm}$ and $\mathscr{H}$ (Smit et al., Eq.~10):
+\begin{equation}
+    C_{nm}^\pm = \frac{i\omega_{nm}^\pm}{g}\,\mathscr{H}_{nm}^\pm + \frac{\omega_n^2 + \omega_m^2 + \omega_n\omega_m}{2g} - \frac{g\,\mathbf{k}_n \cdot \mathbf{k}_m}{2\omega_n\omega_m}.
+\end{equation}
+Since the paper confirms that $C_{nm}$ equals the conventional Sharma \& Dean interaction coefficient ($C_{nm} = \alpha_{nm}/2$), we solve for the real part of $\mathscr{H}$ (noting $\mathscr{H} = i\mathscr{H}_\mathrm{real}$):
+\begin{equation}\label{eq:H_inversion}
+    \boxed{\mathscr{H}_\mathrm{real}^{\pm} = -\frac{g}{\omega_n \pm \omega_m}\left[\frac{\alpha_{nm}^\pm}{2} - \frac{\omega_n^2 + \omega_m^2 \pm \omega_n\omega_m}{2g} + \frac{g\,\mathbf{k}_n\cdot\mathbf{k}_m}{2\omega_n\omega_m}\right]}
+\end{equation}
+This formula uses the known-correct $\alpha_{nm}^\pm$ from Sharma \& Dean and produces results validated against Stokes 5th-order theory.
+
+\subsubsection{Summary of available vertical theories}
+CFDwavemaker provides the following options for the vertical structure of irregular wave kinematics, selected via the \texttt{vertical\_theory} keyword:
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Keyword & Theory & Description \\
+\midrule
+\texttt{conventional} & Sharma \& Dean (1981) & Standard $\cosh/\sinh$ profiles valid for $z \leq 0$. Above the surface, kinematics are linearly extrapolated using first-order gradients. \\
+\texttt{smit} & Smit et al.\ (2017) & Wheeler-stretched profiles valid from seabed to the instantaneous free surface. Includes second-order correction terms from the coordinate transformation. No above-surface extrapolation needed. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Spectral Wave Data}
+Reference is made to the \doclink{https://github.com/SpectralWaveData/spectral_wave_data}{Spectral-Wave-Data Github repository}, where thorough documentation of the theory and the format of the .swd files is given.
+
+\subsection{5th order Regular Stokes Waves}
+Through the years, there have been published several variations of the fifth order regular Stokes wave. The implementation in CFDwavemaker is based on Fenton's paper from 1990.
+
+\subsection{Fenton stream-function waves}
+Stokes theory is a perturbation expansion in wave steepness and breaks down for steep waves and in shallow water. For such conditions CFDwavemaker provides the \emph{stream-function} theory of Fenton (1988), based on the Fourier method of Rienecker \& Fenton (1981). Rather than truncating a perturbation series at a fixed order, the theory represents the stream function of the steady wave (in a frame moving with the celerity $c$) by a Fourier series whose coefficients are found numerically, so that the only approximation is the truncation of the series after $N$ terms.
+
+In the frame moving with the wave, the flow is steady and the stream function is written as
+\begin{equation}
+\psi(x,y) = -\bar{u}\,(d+y) + \sqrt{\frac{g}{k^3}}\sum_{j=1}^{N} B_j\,\frac{\sinh\!\big(jk(d+y)\big)}{\cosh(jkd)}\cos(jkx),
+\end{equation}
+where $k=2\pi/\lambda$ is the wavenumber, $d$ the water depth, $\bar u$ the mean fluid speed in the wave frame, and $B_j$ the dimensionless Fourier coefficients. This form automatically satisfies the field equation (Laplace) and the bottom boundary condition $\psi=0$ at $y=-d$. The free surface $y=\eta(x)$ is required to be a streamline (kinematic boundary condition) and to have constant pressure (dynamic/Bernoulli boundary condition). Enforcing these at $N+1$ points evenly spaced between crest and trough, together with the definitions relating wave height, length/period, celerity and current, yields a system of $2N+10$ nonlinear equations. Following Fenton (1988), the system is solved by Newton's method with a numerically evaluated Jacobian, using wave-height continuation (the solution is stepped up from zero height) to aid convergence for steep waves.
+
+Once the coefficients are known, the velocity field, surface elevation and pressure are recovered by direct evaluation of the Fourier series. The horizontal and vertical velocities in the physical (Eulerian) frame are
+\begin{align}
+u(x,y) &= c - \bar{u} + \sqrt{\frac{g}{k}}\sum_{j=1}^{N} j\,B_j\,\frac{\cosh\!\big(jk(d+y)\big)}{\cosh(jkd)}\cos(jkx),\\
+w(x,y) &= \sqrt{\frac{g}{k}}\sum_{j=1}^{N} j\,B_j\,\frac{\sinh\!\big(jk(d+y)\big)}{\cosh(jkd)}\sin(jkx),
+\end{align}
+and the (non-hydrostatic) pressure follows from the steady Bernoulli equation in the wave frame. The number of Fourier modes $N$ is set with the \texttt{wave\_order} keyword; $N$ of order 10--16 is sufficient for most engineering conditions, with larger values used for waves approaching the breaking limit. The implementation reproduces Fenton's published benchmark results (Table 3 of Fenton, 1988) to full precision.
+
+\subsection{Piston Wave maker theory}
+
+\subsection{Single-flap wavemaker theory}
+
+\subsection{Dual-flap wavemaker theory}
+
+\subsection{Kinematics from VTK}

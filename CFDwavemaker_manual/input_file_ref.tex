@@ -1,0 +1,447 @@
+\section{Input file reference}
+
+\subsection{[wave type]}
+CFDwavemaker currently support the following wave theories. Which branch of wave theory to used is controlled by the keyword \textbf{[wave type]}
+\begin{enumerate}
+    \item \textbf{irregular} - irregular wave theory (linear or second order)
+    \item \textbf{regular} - Stokes regular wave theory (up to 5th order)
+    \item \textbf{piston} - Wave maker theory
+    \item \textbf{swd} -  Spectral-Wave-Data file (swd)
+    \item \textbf{vtk} - VTK library is another external library which is supported by most CFD programs. By building and linking this with CFDwavemaker, kinematics can be imported from any program capable of writing vtk files.
+    \item \textbf{slope} - Initialise with water at rest with a given slope
+\end{enumerate}
+
+To chose one of the above use the following code word
+\begin{lstlisting}[]
+[wave type]
+# This is a comment
+irregular
+\end{lstlisting}
+where any lines starting with \# are regarded as comments in the input file and will be ignored during execution.
+
+\subsection{[general input data]}
+Some data are mandatory for all wave types. These parameters are specified under the keyword \textbf{[general input data]}.
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{r}{Default}\\
+\midrule
+depth&Water depth used to generate wave height & No\\
+mtheta&(mean) wave direction. In case of long-crested unidirectional waves, this input prepresents the wave direction, while for short-crested waves, this represents the mean wave direction. Value is given in degrees where a value of 0 corresponds to wave propagating along the x-axis in the positive direction.&Yes(0)\\
+swl&Still water level. default value = 0.&No\\
+normalize&Normalize the wave by dividing the spectral values by the spectral 0th moment. This is useful to produce focused irregular waves. Default value = 0 (False)&No\\
+gravity&gravity, which by default is set to 9.81 m/s\textsuperscript{2}&yes(9.81)\\
+amplify&Gain factor applied to all wave amplitudes. Useful for scaling the wave field up or down.&yes(1.0)\\
+rho&water density, which by default is set to 1025 kg/m\textsuperscript{3}&yes(1025)\\
+nhpres\_include\_kinetic&Controls the form of the nonhydrostatic pressure returned by \texttt{wave\_nhPres}. When \texttt{false} (default): linearized form $p_{nh} = -\rho(\partial\phi/\partial t + g\eta)$, suitable for use as a pressure boundary condition in non-hydrostatic CFD solvers (where the kinetic energy is captured by the convective terms in the solver's momentum equations). When \texttt{true}: full Bernoulli form $p_{nh} = -\rho(\partial\phi/\partial t + \tfrac{1}{2}|\mathbf{u}|^2 + g\eta)$, matching the pressure field that a fully-resolved CFD code would compute internally. Currently active for \texttt{wave\_nhPres} with SWD (\texttt{[wave type] = swd}).&yes(false)\\
+%scale&Froude scaling factor, used to scale output. & yes(1.0) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+Finally, an example:
+\begin{lstlisting}[]
+[general input data]
+depth  1.2
+mtheta  0.0000
+swl  0.
+normalize  0
+amplify  1.
+%scale 1.0
+\end{lstlisting}
+%\subsubsection{Note on Froude scaling}
+%Froude scaling of the output kinematics can sometime be useful. To be completely clear about the implementation, a list of statements are given
+%\begin{itemize}
+%    \item A scale factor $S_F$ less than 1.0, implies shrinking the domain which you extract kinematics. Scale factor $S_F$ greater than 1.0, implies enlarging.
+%    \item There are different scaling laws. We stick to Froude scaling law for now.
+%    \item both time and velocity scale with $S_F=\sqrt{scale}$.
+%    \item Lengths and pressure scales with $S_F=scale$
+%    \item $\eta_{scaled}(S_Fx,S_Fy,\sqrt{S_F}t) = S_F \eta(x,y,t)$$\
+%\end{itemize}
+
+\subsection{[wave reference point]}
+A reference point in time and space for the wave specification is needed. This is specified using the tag \textbf{[wave reference point]}, as shown in the example given below. time is given in seconds, position x and y are given in meters. Specifying the \textbf{[wave reference point]} is optional. If this is not given, default values will be assumed.
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+time& reference point in time. & yes(0.)\\
+x&reference point in space, x-axis.&Yes(0.)\\
+y&reference point in space, y-coordinate.&Yes(0.)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[]
+[wave reference point]
+# for focused waves this will correspond to the focus point in time and space
+time  15.0
+x  3.5
+y  0.0
+\end{lstlisting}
+
+\subsection{[ramps]}
+Ramps can sometimes be useful to avoid transient behaviour for example in at startup, or when specifying wave kinematics in corners of a domain. Ramps are specified in time and space (x and y plane only) by calling the keyword [ramps] followed by the ramp input. The ramp may be omitted all together, in which case no ramp of any kind is used.
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+time\_rampup&Adds a time rampup. Two values follow: the starttime and end time of the ramp. The function starts at a value of 0.0 at t <= starttime, and increases linearly towards a value of 1.0 at t >= endtime. Omit the keyword to disable.& disabled\\
+time\_rampdown&Adds a time rampdown. Two values follow: the starttime and end time of the ramp. The function starts with a value of 1.0 at time <= starttime, and linearly goes towards 0.0 at endtime. Omit the keyword to disable.&disabled\\
+x\_rampup&Adds a rampup in x-direction. Two values follow: the start position and end position of the ramp. The function starts at a value of 0.0 at x <= startpos, and increases linearly towards a value of 1.0 at x >= endpos. Omit the keyword to disable.&disabled\\
+x\_rampdown&Adds a rampdown in x-direction. Two values follow: the start position and end position of the ramp. The function starts with a value of 1.0 at x <= startpos, and linearly goes towards 0.0 at endpos. Omit the keyword to disable.&disabled\\
+y\_rampup&same description as x\_rampup, only for y-direction&disabled\\
+y\_rampdown&same description as x\_rampdown, only for y-direction&disabled\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{lstlisting}[]
+[ramps]
+# rampname starttime endtime
+time_rampup  0.0000  3.0
+# rampname startpos endpos
+x_rampup  -11.0000  -10.0
+x_rampdown  11.0000  12.0
+\end{lstlisting}
+
+
+
+
+\subsection{[wave input irregular]}
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+kinematics\_surf\_extrap& Switch between first order (linear and second order irregular wave kinematics. The default is second-order theory (2), with Taylor expansion of the kinematics profile above the SWL, consistent to second order. Generally, it is recommended to use second-order kinematics whenever the steepness is $ak > 0.1$.
+You may occasionally want to use linear wave theory. In such an event, you should set this parameter to 1. If linear wave kinematics is specified, kinematics for z > 0 will be equal to the kinematics at z=0.
+If you wish to use exponential extrapolation instead of a constant, you can set the parameter to 0. & 2 \\
+
+vertical\_theory& Vertical structure used for the second-order kinematics. The default (\texttt{sharma}, or omitting the keyword) uses the conventional Sharma \& Dean profile with Taylor extrapolation of the kinematics above the SWL. Setting \texttt{vertical\_theory smit} selects the boundary-fitted $s$-coordinate (``sigma'') formulation of Smit et al.\ (2017): the vertical profile follows the instantaneous free surface rather than being extrapolated, which is better behaved for steep crests. \textbf{Note: the \texttt{smit} option is EXPERIMENTAL / in development} --- the self-interaction (diagonal) terms are validated against exact Stokes theory, but the off-diagonal second-order interactions are still being verified, so it is not yet recommended for production use. See Section~\ref{app:eq9_correction} for the implementation status and the corrections applied to the published equations.& sharma \\
+
+bandwidth&control the bandwidth of which frequencies that are allowed to interact in the second-order sum and difference terms. For wide band spectra this is recommended. default value is “off”, which implies that all frequencies are allowed to interact in second-order terms. Alternatively bandwidth=auto can be used and CFDwavemaker will approximate a reasonable bandwidth for you from the spectral moments, i.e bandwidth``=0.7*m0/m1. The third alternative is to specify a value given in rad/s.&Yes(auto)\\
+
+cutoff&High-frequency cut-off for the second-order sum and difference interactions. Frequencies above this value will not contribute to second-order terms. Units in rad/s.&Yes(100000)\\
+
+
+individual\_ramp & If set to True, an additional three columns must be specified when giving the frequency component below. The three columns are ramp length, ramp start-up time, and duration. This gives full flexibility in switching on and off of single-frequency components at specific times. By default, all frequency components are turned on and will not be ramped in unless specified with this option & False \\
+
+nfreq&number of frequency components to read from input file. A list of frequency component data should follow, where the number of entries (lines) must correspond to the number of components specified with this parameter. For each component, the following data should be given on a single line, separate by space: 1. frequency: given in rad/s. 2. amplitude: given in metres. 3. wave number: wave number associated with frequency (specified in rad/m). 4. phase: Random phase, value between 0 and 2*PI (specified in radians). 5. theta: (only specified if ``ndir``= 0) direction of frequency component (specified in radians).&no\\
+
+ndir&number of directional components and the associated wave spreading, to read from input file. The directional components should follow directly after the list of frequency component data. ndir may be set to zero, in which case the library will look for an additional fifth column in the list of frequency component data, specifying the direction of each single frequency component.&no\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Immediately following the specification of of the parameters \textbf{nfreq} and \textbf{ndir}, follows a list of irregular wave components. The length of the list must naturally match the number of frequency and directional components specified. Here are a couple of examples.
+
+Example1:
+\begin{lstlisting}[]
+individual_ramp True
+nfreq 5
+ndir 0
+# OMEGA [rad/s]    A[m]       K[rad/m]        Phase[rad]    theta[rad]  rampup_length[sec] ramp_startup_time[sec] duration[sec]
+0.80684460     0.09098686     0.06636591    22.09105101    -0.51238946  1.0                2.0                    15.0
+0.57527858     0.08989138     0.03410555    -8.15520380    -1.01219701  1.0                1.8                    15.0
+0.59315305     0.20143761     0.03615181    -8.35009702    -0.92729522  1.0                1.6                    15.0
+0.71493207     0.09704876     0.05213889    11.00239563    -0.58800260  1.0                1.4                    15.0
+0.73560378     0.15043259     0.05518335    14.76881712    -0.55165498  1.0                1.2                    15.0
+\end{lstlisting}
+
+Example2:
+Linear wave theory specified in this case
+\begin{lstlisting}[]
+kinematics_surf_extrap 1
+nfreq 4
+ndir 19
+# OMEGA [rad/s] A [m]     K          Phase [rad]
+    5.2033     0.0369     2.7670     0.0000
+    5.3014     0.0356     2.8708     0.0000
+    5.3996     0.0343     2.9767     0.0000
+    5.4978     0.0331     3.0849     0.0000
+# DIRS [rad]      Density
+    -0.7854       0.042843
+     -0.69813     0.045853
+     -0.61087     0.048652
+      -0.5236     0.051192
+     -0.43633     0.053426
+     -0.34907     0.055313
+      -0.2618     0.056819
+     -0.17453     0.057916
+    -0.087266     0.058583
+            0     0.058806
+     0.087266     0.058583
+      0.17453     0.057916
+       0.2618     0.056819
+      0.34907     0.055313
+      0.43633     0.053426
+       0.5236     0.051192
+      0.61087     0.048652
+      0.69813     0.045853
+       0.7854     0.042843
+\end{lstlisting}
+
+
+\subsection{[wave input regular]}
+This section defines a single regular (periodic, permanent-form) wave. Two wave theories are available, selected with the \texttt{theory\_type} keyword:
+\begin{itemize}
+    \item \textbf{stokes} (default) --- 5th-order Stokes theory. Sir George Stokes solved this nonlinear wave problem in 1847 by expanding the relevant potential flow quantities in a Taylor series around the mean (or still) surface elevation. As a result, the boundary conditions can be expressed in terms of quantities at the mean (or still) surface elevation. Stokes' regular wave theory is of direct practical use for regular waves in intermediate and deep water. The implementation in CFDwavemaker is based on Fenton (1985) and goes up to 5th order.
+    \item \textbf{stream} --- Fenton stream-function theory. Instead of a fixed-order perturbation expansion, the Fourier coefficients of the stream function are found numerically by solving the fully nonlinear steady-wave boundary-value problem (Fenton, 1988; Rienecker \& Fenton, 1981). This is accurate for steep and/or shallow-water waves where the Stokes expansion loses accuracy, up to close to the breaking limit. The number of Fourier modes is set by \texttt{wave\_order}.
+\end{itemize}
+Both theories share the same wave-property keywords (\texttt{wave\_length}/\texttt{wave\_period}, \texttt{wave\_height}, \texttt{current\_speed}); if \texttt{theory\_type} is omitted the Stokes theory is used, so existing input files remain valid.
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+theory\_type&Regular wave theory to use: \texttt{stokes} (5th-order Stokes) or \texttt{stream} (Fenton stream function). &{yes (stokes)}\\
+wave\_order&Number of Fourier modes $N$ used by the stream-function solver. Ignored when \texttt{theory\_type} is \texttt{stokes}. Larger $N$ gives higher accuracy for steep waves; $N\approx 10$--$16$ is adequate for most conditions, and up to $\sim20$ near the breaking limit.&{yes (16)}\\
+wave\_length&Wave length in metres. Either \texttt{wave\_length} or \texttt{wave\_period} must be specified.& no\\
+wave\_period&Wave period in seconds. For Stokes theory the wave length is computed from the linear dispersion relation; for stream-function theory the (nonlinear) length is found by the solver. Either \texttt{wave\_length} or \texttt{wave\_period} must be specified.& no\\
+wave\_height&Wave height, measured from trough to crest (i.e. not amplitude). Units in metres.&no\\
+current\_speed&Current speed in the same direction as wave propagation, interpreted as the Eulerian mean current. Units in m/s.&yes(0.)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Example, using the Fenton stream-function theory:
+\begin{lstlisting}[]
+[wave input regular]
+theory_type stream
+wave_length 1.5668
+wave_height 0.03
+wave_order 11
+\end{lstlisting}
+
+\subsection{[wave input piston]}
+A piston wave maker is a flat wall that moves horizontally, thus generating waves (see Fig. 4.1). In some cases, one may be so lucky to get the position of the wall as output from a wave basin tests. This position signal may be used to generate kinematics using piston wavemaker theory [5]. To use piston wave maker theory [wave type] must first be set to wavemaker. Secondly, the piston wave maker input signal must be specified. This is done through [piston wavemaker properties] A list of the required input is given below.
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+ntimesteps&number of timesteps that the time series that follows consists of. Three columns are required. The first is time, second is the horizontal amplitude of the Piston, and third is the horizontal velocity of the Piston. The horizontal amplitude of the piston is the position signal of the piston (subtracting the mean). If velocity is not available, it is recommended to use the gradient of the piston position signal&no\\
+\bottomrule
+\end{tabularx}
+\end{table}
+The time-series describing the wave maker motions (time, position, velocity and eta) shall follow directly after the input parameter as shown in the example below.
+Example:
+\begin{lstlisting}[]
+[wave input piston]
+# for piston wave maker
+# alpha values for adjusting elevation and velocity
+ntimesteps 24000
+# Number of lines to be read (time,position,velocity, eta)
+0.0000  0.0000942  0.0109990 0.00000
+0.0025  0.0001217  0.0103278 0.00000
+0.0050  0.0001458  0.0089456 0.00000
+0.0075  0.0001664  0.0075024 0.00000
+0.0100  0.0001833  0.0060345 0.00000
+0.0125  0.0001966  0.0045800 0.00000
+0.0150  0.0002062  0.0031888 0.00000
+0.0175  0.0002125  0.0019247 0.00000
+0.0200  0.0002159  0.0008472 0.00000
+...
+\end{lstlisting}
+All should be given in SI units (seconds, metre, meter/second and meter). The elevation of the wave in front of the wave paddle may not be measured or used for wave generation. In such cases, you still need to specify it to avoid read error from the file. Adding a column of zeros is sufficient.
+Also, make sure that the time spans the entire simulation time from beginning to end. No checks are made to ensure that your simulation is within the bounds of the specified wave-paddle timeseries.
+
+
+\subsection{[wave input swd]}
+The Spectral-Wave-Data library is an open-source library which provides an open interface for how to exchange spectral ocean wave kinematics between computer programmes. This provides a very useful extension to CFDwavemaker, which facilitates external wave theories, as long as they can write the output in the SWD format. This includes wave theories such as (but of course not limited to):
+\begin{itemize}
+    \item higher order spectral methods (HOSM) such as generated by WAMOD (REFXX)
+    \item Fenton-Stream waves and other regular wave theories, using the open python source code raschii (REFXX)
+\end{itemize}
+To read swd files in CFDwavemaker, [wave type] = swd, and the following list of parameters can be specified under the keyword \textbf{[wave input swd]}:
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+swdfile&Name of swd file. Obviously, this is mandatory. a full path may be specified if the file is located in another directory than the default run directory. (Spaces in the file path is not permitted)& no\\
+nsumx&Number of spectral components to apply in x direction (<0: apply all)&yes\\
+nsumy&Number of spectral components to apply in y direction (<0: apply all)&Yes\\
+impl&Index to determine the actual derived class. 0 = Default. <0 = In-house and experimental implementations. >0 = Validated implementations available open software&yes\\
+ipol&Index to request actual temporal interpolation scheme. 0 = Default ($C^2$ continuous scheme). 1 = $C^1$ continuous. 2 = $C^3$ continuous&yes(0)\\
+norder&Expansion order to apply in kinematics for z>0. 0 = Apply expansion order specified in swd file (default). <0 = Apply exp(kj z). >0 = Apply expansion order = norder&yes\\
+dc\_bias&Control application of zero-frequency bias present in SWD file. false = Suppress contribution from zero frequency amplitudes (default). true = Apply zero frequency amplitudes from SWD file.&yes\\
+\bottomrule
+\end{tabularx}
+\end{table}
+An example of the required input parameters which needs to be specified in waveinput.data is given below:
+\begin{lstlisting}[]
+[wave input swd]
+swdfile constant/fenton_h1.2_d1_l2.swd
+# Optional SWD parameters. You probably do not need to change these. See the SWD documentation for what they mean
+nsumx -1
+nsumy -1
+impl 0
+ipol 0
+norder 0
+dc_bias false
+\end{lstlisting}
+Some additional notes regarding the use of SWD:
+\begin{itemize}
+    \item Water depth specified in the SWD file will overrule the specified water depth given in \textbf{[general input data]}
+    \item Like irregular second order wave theory, the grid interpolation schemes presented in Section 4.11 are fully supported when using SWD. This comes very much in handy when large short crested irregular sea states from HOSM simulations are used as input.
+    \item The default reference position of the swd simulation is x0=y0=t0=0 and the wave propagation direction is in accordance with the coordinate system definition in (see Section 4.3). To change reference position, see Section 4.4 and \textbf{swl} in Section 4.3.
+\end{itemize}
+
+\subsection{[wave input vtk]}
+The VTK library (Visialization Toolkit) is open source and widely used in the CFD industry. It supports a wide range of formats, covering pretty much all thinkable grid types used by CFD solvers. Compiling CFDwavemaker with this extension library therefore expands its usage and enables CFDwavemaker to read kinematics from most wave models, as long as they can export their result into one of the hundreds of formats that VTK supports.
+
+However, the many formats supported in the VTK library have different functions for loading and extracting data. Hence, supporting them all implies a lot of coding. For now, the structuredXMLGrid format (.vts) is supported, which is an ideal format for storing Eulerian and Lagrangian mesh data on a cartisian grid. More formats, like the octree-format (.htg) or the versatile UnstructuredXML format (.vtu), will surely be implemented in the future as the need arises.
+
+The input format in the waveinput.dat file is fairly simple. First, \textbf{[wave type]} must also be set as vtk. The keyword for providing additional required vtk properties is specified in the keyword \textbf{[wave input vtk]}. The following list of properties shall/may be specified
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+storage\_path&Absolute or relative path to the folder containing the VTS files.&no\\
+filename&string containing reoccurring characters in all VTK files. These may typically be named sim0000.vts, sim0001.vts, sim0002.vts, etc... and then you can either specify filename sim or filename *.vts. Both will work. This is convenient and useful to ensure that the right files are read (in the case of folder containing other files)&no\\
+name\_velocity\_field&Name of the vector field variable which contains kinematics (u,v,w). This may vary depending on what code was used to output the data.&no\\
+t\_start&delta time, to start reading from another time value than the default $t=0$.&yes(0.)\\
+update\_height\_function\_every\_timestep&the height function betah is by default computed only once (at t=0) when reading kinematics from the Lagrangian grid. This works well, except when reading the kinematics from a location that is dry at t = 0 (cell heights of the grid = 0), but becomes wet for t>0. If this is the case, the beta function should be updated every time a new vts file is loaded.&yes(0)\\
+vertical\_interp&Vertical velocity reconstruction used when the .vts files carry a cell-centred layer-thickness field \texttt{h} (multilayer output, see below): \texttt{ppr} (default, conservative piecewise-parabolic) or \texttt{linear} (piecewise linear between cell centres). Ignored when \texttt{h} is absent.&{yes (ppr)}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\textbf{NOTE:} The .vts format was implemented to specifically read kinematics from a multilayer solver, on a vertical lagrangian grid. This means that the free surface is given by the grid itself and not a volume fraction (as the example given in Fig. 4.2). Reading multiphase data separated by volume fraction field data is surely something that will be added but not done yet.
+
+\textbf{Multilayer fields (\texttt{h} and \texttt{phi}).} When the .vts files come from a multilayer solver they may additionally carry two cell-centred fields, which CFDwavemaker detects automatically (checked once, on the first file loaded):
+\begin{itemize}
+    \item \texttt{h} --- the layer thickness of each cell. When present, the free-surface elevation $\eta$ is computed as the exact per-column sum of the layer thicknesses (more accurate than reading the top grid point), and the velocity is reconstructed directly from the cell centres --- using the scheme selected by \texttt{vertical\_interp} --- rather than by averaging the cell data onto the grid nodes.
+    \item \texttt{phi} --- the non-hydrostatic pressure. It is stored at the cell centres but is defined on the \emph{lower} interface of each layer, so the value in the lowest cell is the seabed value and the value at the free surface is zero by definition. It is reconstructed on the layer interfaces and returned through \texttt{wave\_nhPres()}.
+\end{itemize}
+If neither field is present the reader falls back to its original behaviour, so older files remain valid.
+
+\textbf{2D data used in a 3D domain.} A 2D (long-crested) simulation is written in the $x$--$y$ plane with $y$ as the \emph{vertical} axis, whereas a 3D CFD domain uses $z$ as the vertical axis. CFDwavemaker reconciles the two automatically: if the .vts grid is 2D (a single cell in the third index) the kinematics are interpolated in the $x$--$y$ plane, the requested \texttt{z} coordinate is used as the vertical position (mapped onto the vts $y$-axis), and the requested \texttt{y} coordinate is ignored. The velocity components are mapped to match, so that
+\begin{center}
+\texttt{wave\_VeloX}$=u$ (horizontal),\quad \texttt{wave\_VeloZ}$=w$ (vertical),\quad \texttt{wave\_VeloY}$=0$.
+\end{center}
+For genuinely 3D .vts data the natural mapping is used. In short, within CFDwavemaker \texttt{z} is always the vertical axis, whether the source data is 2D or 3D.
+
+An example of reading kinematics input from .vts files are given below
+\begin{lstlisting}[]
+@v301
+# wave kinematics read from vtk files
+[wave type]
+vtk
+
+[wave input vtk]
+storage_path ../subdomain/
+filename subdomain
+name_velocity_field Velocity
+\end{lstlisting}
+\subsection{[sloping water]}
+Input parameters for specifying a slope of water at rest is given below
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+slope\_direction&Direction of the slop. (0-360 degrees)&yes (0)\\
+slope\_angle&Slope angle (degrees) positive value gives upward slope&no\\
+limiting\_radius&Limiting radius [m] of slope (flat outside this radius)&yes (HUGE)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Example of input script for sloping water
+\begin{lstlisting}[]
+@v301
+# Wavedata CFDwavemaker
+[wave type]
+slope
+
+[general input data]
+swl 0
+
+[sloping water]
+slope_direction 0.
+slope_angle 10.
+limiting_radius 10.
+\end{lstlisting}
+
+\subsection{[lsgrid]}
+The lsgrid may be combined with two kinematics sources: \textbf{[wave type] irregular} (second-order irregular wave theory) and \textbf{[wave type] swd} (Spectral-Wave-Data files). With SWD, the wave field --- possibly of higher order, e.g.\ from a HOSM simulation --- is pregenerated once into a \texttt{.swd} file and then sampled onto the grid; all CFD-side queries are subsequently served by thread-safe spline interpolation, which avoids the serialization otherwise required when querying the (stateful) swd library directly from a multithreaded solver. Note that the swd sampling itself runs serially within each process (the swd library supports a single reader object per process); under MPI, each rank samples its own column block of the grid.
+
+The following tags may be used to specify the properties of the lsgrid
+\begin{xltabular}{\textwidth}{@{}lXl@{}}
+%\renewcommand{\arraystretch}{1.5}
+%\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+bounds&To generate a grid for which to generate wave kinematics, the boundaries need to be known. The vertical boundary is known from the specified depth of water (lower) and the elevation of the wave (upper); however, for the horizontal directions (x and y), the boundaries must be specified here. Four values are needed: XMIN XMAX YMIN and YMAX. The specified values are in units of metres. Note: Be sure to specify bounds that are well outside of your CFD domain. Most CFD codes use ghost cells at the boundaries which also need to be initialised. LSgrid will snap to the closest grid point at the boundaries, hence if you CFD code asks for a kinematics at a point which is outside of the specified domain boundaries, your simulation may be inaccurate or in worst case crash. A warning is given if kinematics is requested at a point outside of the domain is requested.&no\\
+nx&Number of grid points in the x-direction. Be sure to have sufficient grid points so that the highest frequency components are well defined within the grid. The grid is static in the horizontal directions&no\\
+ny&Number of grid points in the y-direction.&no\\
+nl&Number of layers used to specify the wave profile in z-direction. In the z-direction the grid is Lagrangian (hence named layers) and unevenly distributed using a stretching factor. The amount of stretching is controlled by stretch\_parameters. Default value for nl = 15.&yes(15)\\
+t0&Time (sec) to use when initializing the interpolation grid at start-up. Time-step interpolation is performed using essentially two LSgrids, on for t0 and one for t0 + dt. If the CFD simulation requires a point that is larger than t0 + dt, the two grids are updated to reflect the next interpolation interval (t0 + dt to t0 + 2dt). default value t0 = 0.&yes(0)\\
+dt&Resolution in time (sec). Be sure to check that the specified resolution is sufficient to capture the highest frequency components.&yes(0.1)\\
+stretch\_params&Parameters which controls the ammount of stretching used. Reference is made to Section XX for the definition of stretching&yes(?)\\
+ignore\_subdomain&ignore subdomain is a nifty little feature that comes in hand when propagating waves into a domain from the boundaries at $t > 0$. Often a kinematics description of the entire domain is only required during initialization ($t=0$). For all remaining time steps, it is sufficient to only update the LSgrid in the areas around the boundary. This little feature lets you do just that by specifying a set of “inner bounds”, which tells the code to ignore all cells within the bounding box for t > 0. This saves a lot of unnecessary compute. The bounds of \textbf{ignore\_subdomain} are defined identical to \textbf{bounds}. Four parameters are given on the same line, XMIN, XMAX, YMIN and YMAX. By default no cells are ignored for $t > 0$.&yes(0)\\
+ignore\_at\_init&Initializing the entire grid with second order wave theory is time consuming. If you wish to start the simulation from still water (as in a model test tank), you should set this feature to 1. The initialization of the lsgrid will then be skipped and all kinematics will be set to zero.&yes(0)\\
+init\_only&If you are only interested in kinematics at time=`t0`, which is the case if you want to use it for initialization of the domain only, without any boundary values for time > 0, then some speedup may be achieved by setting this parameter = 1.&yes(0)\\
+\bottomrule
+%\end{tabularx}
+\end{xltabular}
+
+\textbf{Additional notes on LSgrid:}
+\begin{itemize}
+    \item For long crested simulations it is sufficient to have a resolutions ny=1, assuming wave propagates along the x-axis. The value of ymin and ymax is then not of importances since interpolation is only done in x and z direction.
+    \item VTK files can be writted as long as at least nx or ny > 1. (i.e. 3D or 2D).
+    \item The LSgrid functions are parallelized using openMP, hence a a significant performance boost is gain by running on multiple cores.
+\end{itemize}
+Example of LSgrid specification in \textit{waveinput.dat}:
+\begin{lstlisting}[]
+[lsgrid]
+#         XMIN   XMAX   YMIN   YMAX
+bounds -1401.00 601.00 -901.00 1101.00
+nx  500
+ny  500
+nl  16
+t0  0.0
+dt  0.5
+stretch_params 0.7   1.5
+#                 xmin     xmax   ymin   ymax
+ignore_subdomain -1398.00 602.00 -902.00 1102.00
+ignore_at_init 0
+\end{lstlisting}
+
+\subsection{[lsgrid2vtk]}
+The primary objective of the library is to provide kinematics by calling the C extern functions provided in CFDwavemaker.h. It is also possible to make CFDwavemaker dump kinematics directly to file. This can be convenient for QA, or if wave kinematics is needed for other purposes.
+When using interpolation scheme, wave kinematics is stored on a grid for quick interpolation. This grid can be dumped a VTK file (.vtu) which is a well established format provided through the VTK library . The files may be visualized and processed further using Paraview or other software. To achieve this, the tag [vtk output] needs to be specified. Everytime the grid is updated, a new .vtu file is written for the time t = t0.
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\multicolumn{1}{l}{Variable}&\multicolumn{1}{l}{Description}&\multicolumn{1}{l}{Default}\\
+\midrule
+storage\_path&Path to the directory where the .vtu files should be stored.&no\\
+filename&prefix kinematics files. Defaults is “kinematics”. Hence files will be named kinematics0000.vtu, kinematics0001.vtu, … etc.&yes(kinematics)\\
+vtk\_timelabel&If you wish to compare the resulting output vtu files to vtu files from the CFD simulation, then it is important that the time label is the same in both vtu file sets. The default value is TimeValue which works well with OpenFOAM. For ComFLOW, set this value to TIME.&yes(TimeValue)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+For now, it is not possible to choose a different time step than what is used to in \textbf{[LSgrid]}. 
+Example:
+\begin{lstlisting}[]
+[lsgrid2vtk]
+storage_path ./vtk/
+filename kinematics
+\end{lstlisting}

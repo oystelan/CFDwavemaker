@@ -1,0 +1,25 @@
+@v301
+# Wavedata CFDwavemaker
+# test 006 two regular transient wave groups ramped in at different times.
+[wave type]
+irregular
+
+[general input data]
+depth 0.6
+mtheta 0.0000
+gravity 9.819
+rho 1000.
+
+[wave reference point]
+# for focused waves this will correspond to the focus point in time and space
+time 0.0
+x 0.0
+y 0.0
+
+[wave input irregular]
+individual_ramp true
+nfreq 2
+ndir 0
+# OMEGA[rad/s], A[m],  K[1/m],  Phase[rad], Theta [rad], rampuptime[sec], starttime[sec], duration[sec]
+5.21467        0.3     2.93749  0.00000     0.00000      1.              0.               19. 
+10.07306       0.3     10.33379 0.00000     0.00000      1.              9.               3.

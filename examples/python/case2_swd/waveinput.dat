@@ -1,0 +1,31 @@
+@v300
+# CFDwavemaker SWD example: steady Fenton wave read from a
+# Spectral-Wave-Data (.swd) file (depth 1.0 m, H = 0.2 m, T = 1.08 s).
+#
+# The [lsgrid] block below samples the swd kinematics onto the Lagrangian
+# stretched spline grid: the swd file is read once per grid time step
+# (serially -- the swd library is stateful), and all CFD-side queries are
+# then served from the grid with thread-safe spline interpolation. Remove
+# the [lsgrid] block to query the swd file directly instead (slower when
+# the CFD solver calls from many threads, since direct swd access is
+# serialized).
+
+[wave type]
+swd
+
+[general input data]
+depth 1.00
+mtheta 0.0000
+
+[wave input swd]
+swdfile  fenton_h1.2_d1_l2.swd
+
+[lsgrid]
+#       XMIN  XMAX YMIN YMAX
+bounds  -5.0  5.0  -1.0 1.0
+nx  101
+ny  3
+nl  32
+t0  0.0
+dt  0.1
+stretch_params 0.7 1.5
