@@ -7,6 +7,18 @@
 
 
 double Irregular::eta(double t, double x, double y) {
+	// variable bathymetry: slope-corrected first order plus the
+	// depth-local Sharma & Dean second order (full pair set)
+	if (seabed.active()) {
+		if (order >= 2)
+			return (swl + eta1_slope(t, x, y) + eta2_slope(t, x, y));
+		return (swl + eta1_slope(t, x, y));
+	}
+	// smit s-coordinate: export the same (untruncated) second-order
+	// surface that the smit kinematics stretch and clamp against, so the
+	// CFD-visible surface and the kinematics are consistent
+	if (vertical_theory == 1 && order >= 1)
+		return (swl + eta1(t, x, y) + eta_smit(t, x, y));
 	switch(order){
 		case 2:
 			//return eta2(t,x,y);
@@ -22,6 +34,11 @@ double Irregular::eta(double t, double x, double y) {
 };
 
 double Irregular::u(double t, double x, double y, double z) {
+	if (seabed.active()) {
+		double u1v = uvwp1_slope(t, x, y, z - swl).u;
+		if (order >= 2) u1v += uvwp2_slope(t, x, y, z - swl).u;
+		return u1v;
+	}
 	if (vertical_theory == 1) return u_smit(t, x, y, z);
 
 	switch (order) {
@@ -50,6 +67,11 @@ double Irregular::u(double t, double x, double y, double z) {
 	}
 };
 double Irregular::v(double t, double x, double y, double z) {
+	if (seabed.active()) {
+		double v1v = uvwp1_slope(t, x, y, z - swl).v;
+		if (order >= 2) v1v += uvwp2_slope(t, x, y, z - swl).v;
+		return v1v;
+	}
 	if (vertical_theory == 1) return v_smit(t, x, y, z);
 	switch (order) {
 		case 3:
@@ -74,6 +96,11 @@ double Irregular::v(double t, double x, double y, double z) {
 	}
 };
 double Irregular::w(double t, double x, double y, double z) {
+	if (seabed.active()) {
+		double w1v = uvwp1_slope(t, x, y, z - swl).w;
+		if (order >= 2) w1v += uvwp2_slope(t, x, y, z - swl).w;
+		return w1v;
+	}
 	if (vertical_theory == 1) return w_smit(t, x, y, z);
 	switch (order) {
 		case 3:
@@ -94,25 +121,328 @@ double Irregular::w(double t, double x, double y, double z) {
 	}
 };
 
-/* velocity profile for horizontal component. For implmentation of sloping bottom*/
+/* velocity profile for horizontal component */
 double Irregular::profileX(int ind, double x, double y, double z) {
-	switch (sloping_bottom) {
-	case 0:
-		return (cosh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
-	case 1:
-		return 0.0;
-	}
-	return 0.0;
+	return (cosh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
 }
 
 double Irregular::profileZ(int ind, double x, double y, double z) {
-	switch (sloping_bottom) {
-	case 0:
-		return (sinh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
-	case 1:
-		return 0.0;
+	return (sinh(k[ind] * (z + depth)) / cosh(k[ind] * depth));
+}
+
+/* Local wavenumber from the dispersion relation om^2 = g k tanh(k h)
+   (Newton iteration from the deep-water start k = om^2/g). */
+double Irregular::dispersion_k(double om, double h) const {
+	double kk = om * om / g;
+	for (int it = 0; it < 50; it++) {
+		double th = tanh(std::min(kk * h, 50.));
+		double f = g * kk * th - om * om;
+		double df = g * th + g * kk * h * (1. - th * th);
+		double dk = f / df;
+		kk -= dk;
+		if (std::fabs(dk) < 1e-14 * kk) break;
 	}
-	return 0.0;
+	return kk;
+}
+
+/* Slope-corrected first-order kinematics over variable bathymetry
+   (theory: seabed_development/sloping_seabed_notes.tex; validation:
+   seabed_development/rb_residual/). Per evaluation point the depth and
+   bed slope are probed from the seabed surface, each component's
+   wavenumber is re-solved from the local dispersion relation, and the
+   complex vertical eigenfunction
+
+     F(z) = [cosh k(z+h) - i b sinh k(z+h)] / [cosh kh - i b sinh kh]
+
+   with b = khat . grad h replaces the Airy profile. All horizontal
+   derivatives use frozen coefficients (grad phi ~ i k phi). This makes
+   the bottom kinematic BC w + grad h . u_H = 0 exact at z = -h, while
+   the free-surface conditions keep an O(b) defect that vanishes in
+   deep water (see FINDINGS_seabed.md). zz is measured from the swl. */
+namespace {
+// per-thread local-wavenumber cache: a water column (fixed x, y, hence
+// fixed h) evaluates uvwp1_slope once per layer, order term and time
+// level -- the Newton dispersion solves only depend on (owner, h, N)
+struct FirstOrderLocal {
+	const void* owner = nullptr;
+	double h = 0.;
+	std::vector<double> kl;
+};
+thread_local FirstOrderLocal first_order_cache;
+} // namespace
+
+UVWP Irregular::uvwp1_slope(double t, double xx, double yy, double zz) {
+	double h = seabed.depth(xx, yy);
+	double hx, hy;
+	seabed.gradient(xx, yy, hx, hy);
+
+	const int N = ndir * nfreq;
+	FirstOrderLocal& f = first_order_cache;
+	if (f.owner != this || f.h != h || (int)f.kl.size() != N) {
+		f.owner = this; f.h = h; f.kl.resize(N);
+		for (int i = 0; i < N; i++)
+			f.kl[i] = dispersion_k(omega[i], h);
+	}
+
+	UVWP res;
+	res.u = 0.; res.v = 0.; res.w = 0.; res.p = 0.;
+	const std::complex<double> I(0., 1.);
+	for (int i = 0; i < N; i++) {
+		double thi = theta[i] + (mtheta * PI / 180.);
+		double cth = cos(thi), sth = sin(thi);
+		double kl = f.kl[i];
+		double beta = cth * hx + sth * hy; // khat . grad h
+		double arg = kl * (cth * (xx - fpoint[0]) + sth * (yy - fpoint[1]))
+			- omega[i] * t + omega[i] * tofmax + phase[i];
+		double kzh = kl * std::max(zz + h, 0.); // clamp below the bed
+		double kh = kl * h;
+		double C = cosh(kzh) / cosh(kh);
+		double S = sinh(kzh) / cosh(kh);
+		std::complex<double> den(1., -beta * tanh(kh));
+		std::complex<double> F = (C - I * beta * S) / den;
+		std::complex<double> Fp = (S - I * beta * C) / den; // dF/dz / k
+		std::complex<double> E(cos(arg), sin(arg));
+		double ramp = freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+			freq_duration[i]);
+		double fac = A[i] * g / omega[i] * ramp;
+		double FE = std::real(F * E);
+		res.u += fac * kl * cth * FE;
+		res.v += fac * kl * sth * FE;
+		res.w += fac * kl * std::imag(Fp * E);
+		res.p += rho * g * A[i] * ramp * FE;
+	}
+	return res;
+}
+
+/* First-order elevation over variable bathymetry. The slope-corrected
+   potential gives eta1 = -(1/g) dphi/dt at z = 0 with F(0) = 1
+   identically, i.e. the plain component sum but with the LOCAL
+   wavenumbers in the phase - the same phase function as uvwp1_slope
+   and eta2_slope, keeping surface and kinematics in phase on a slope. */
+double Irregular::eta1_slope(double t, double xx, double yy) {
+	double h = seabed.depth(xx, yy);
+
+	const int N = ndir * nfreq;
+	FirstOrderLocal& f = first_order_cache;
+	if (f.owner != this || f.h != h || (int)f.kl.size() != N) {
+		f.owner = this; f.h = h; f.kl.resize(N);
+		for (int i = 0; i < N; i++)
+			f.kl[i] = dispersion_k(omega[i], h);
+	}
+
+	double welev = 0.;
+	for (int i = 0; i < N; i++) {
+		double thi = theta[i] + (mtheta * PI / 180.);
+		double arg = f.kl[i] * (cos(thi) * (xx - fpoint[0])
+			+ sin(thi) * (yy - fpoint[1]))
+			- omega[i] * t + omega[i] * tofmax + phase[i];
+		welev += A[i] * cos(arg)
+			* freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+				freq_duration[i]);
+	}
+	return welev;
+}
+
+/* Build the depth-local Sharma & Dean interaction coefficients for
+   depth h: local wavenumbers from the local dispersion relation, then
+   the same D/alpha formulas as rebuild_pair_cache(). Bandwidth/cutoff
+   gates (dw_bandwidth, dw_cutoff) are honoured; cross sum interactions
+   carry the interaction-limit flag kmax_p (see Irregular.h). */
+void Irregular::build_local_pair_set(double h, LocalPairSet& s) const {
+	const int N = nfreq * ndir;
+	const double mt = mtheta * PI / 180.;
+
+	s.h = h;
+	s.owner = this;
+	s.kl.resize(N); s.Rl.resize(N); s.Rsl.resize(N); s.c2kd.resize(N);
+	s.cth.resize(N); s.sth.resize(N);
+	s.diagD.resize(N);
+	s.pairs.clear();
+	s.pairs.reserve(N * (N - 1) / 2);
+
+	for (int i = 0; i < N; i++) {
+		const double kl = dispersion_k(omega[i], h);
+		s.kl[i] = kl;
+		s.Rl[i] = kl * tanh(kl * h);
+		s.Rsl[i] = sqrt(s.Rl[i]);
+		s.c2kd[i] = cosh(2. * kl * h);
+		s.cth[i] = cos(theta[i] + mt);
+		s.sth[i] = sin(theta[i] + mt);
+		s.diagD[i] = (6. * s.Rl[i] * (kl * kl - s.Rl[i] * s.Rl[i]))
+			/ (2. * s.Rl[i] - kl * tanh(2. * kl * h));
+	}
+	double kmax_l = 0.;
+	for (int i = 0; i < N; i++) kmax_l = std::max(kmax_l, s.kl[i]);
+
+	for (int i = 0; i < N; i++) {
+		if (omega[i] > dw_cutoff) continue;
+		const double ki = s.kl[i], Rni = s.Rl[i], Rsni = s.Rsl[i];
+		for (int m = i + 1; m < N; m++) {
+			if (omega[m] > dw_cutoff) continue;
+			if (std::abs(omega[i] - omega[m]) > dw_bandwidth) continue;
+
+			const double km = s.kl[m], Rnm = s.Rl[m], Rsm = s.Rsl[m];
+			const double gamma_nm = s.cth[i] * s.cth[m] + s.sth[i] * s.sth[m];
+			const double ki2 = ki * ki, km2 = km * km, kikm = ki * km;
+
+			LocalPairSet::P p{};
+			p.i = i; p.m = m;
+			p.kmax_p = ((ki + km) <= kmax_l); // interaction limit
+			p.k_p = sqrt(ki2 + km2 + 2. * kikm * gamma_nm);
+			p.k_mn = sqrt(ki2 + km2 - 2. * kikm * gamma_nm);
+
+			const double sp = Rsni + Rsm, sm2 = Rsni - Rsm;
+			{
+				const double R2p = sp * sp;
+				const double den = R2p - p.k_p * tanh(p.k_p * h);
+				p.D_p = (2. * R2p * (kikm * gamma_nm - Rni * Rnm)) / den
+					+ (sp * (Rsni * (km2 - Rnm * Rnm)
+						+ Rsm * (ki2 - Rni * Rni))) / den;
+				p.a_p = (p.D_p - (kikm * gamma_nm - Rni * Rnm))
+					/ sqrt(Rni * Rnm) + (Rni + Rnm);
+			}
+			p.has_minus = (ki != km);
+			if (p.has_minus) {
+				const double R2m = sm2 * sm2;
+				const double den = R2m - p.k_mn * tanh(p.k_mn * h);
+				p.D_mn = (2. * R2m * (kikm * gamma_nm + Rni * Rnm)) / den
+					+ (sm2 * (-Rsni * (km2 - Rnm * Rnm)
+						+ Rsm * (ki2 - Rni * Rni))) / den;
+				p.a_mn = (p.D_mn - (kikm * gamma_nm + Rni * Rnm))
+					/ sqrt(Rni * Rnm) + (Rni + Rnm);
+			}
+			s.pairs.push_back(p);
+		}
+	}
+}
+
+namespace {
+// per-thread coefficient cache keyed on the local depth: a water
+// column (fixed x, y) reuses the set across layers and time levels
+thread_local Irregular::LocalPairSet local_pair_cache;
+}
+
+/* Depth-local second-order surface elevation (full pair set). */
+double Irregular::eta2_slope(double t, double xx, double yy) {
+	const int N = nfreq * ndir;
+	const double h = seabed.depth(xx, yy);
+	LocalPairSet& s = local_pair_cache;
+	if (s.owner != this || s.h != h || (int)s.kl.size() != N)
+		build_local_pair_set(h, s);
+
+	const double dxp = xx - fpoint[0], dyp = yy - fpoint[1];
+	std::vector<double> cphi(N), sphi(N), rmp(N);
+	for (int i = 0; i < N; i++) {
+		const double ph = s.kl[i] * (s.cth[i] * dxp + s.sth[i] * dyp)
+			- omega[i] * t + omega[i] * tofmax + phase[i];
+		cphi[i] = cos(ph); sphi[i] = sin(ph);
+		rmp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+			freq_duration[i]);
+	}
+
+	double e2 = 0.;
+	for (int i = 0; i < N; i++) {
+		if (omega[i] > dw_cutoff) continue;
+		const double alpha_nn = (s.diagD[i]
+			- (s.kl[i] * s.kl[i] - s.Rl[i] * s.Rl[i])) / s.Rl[i]
+			+ 2. * s.Rl[i];
+		const double cos2 = cphi[i] * cphi[i] - sphi[i] * sphi[i];
+		e2 += 0.25 * A[i] * A[i] * alpha_nn * cos2 * rmp[i];
+	}
+	for (size_t q = 0; q < s.pairs.size(); q++) {
+		const LocalPairSet::P& p = s.pairs[q];
+		const double amp = 0.5 * A[p.i] * A[p.m] * rmp[p.i];
+		if (p.kmax_p)
+			e2 += amp * p.a_p
+				* (cphi[p.i] * cphi[p.m] - sphi[p.i] * sphi[p.m]);
+		if (p.has_minus)
+			e2 += amp * p.a_mn
+				* (cphi[p.i] * cphi[p.m] + sphi[p.i] * sphi[p.m]);
+	}
+	return e2;
+}
+
+/* Depth-local second-order kinematics (full pair set). Mirrors uvw2()
+   with local coefficients; the Bernoulli term uses the slope-corrected
+   first-order velocities (phi = phi1_mod + phi2_SD). The returned p
+   INCLUDES the rho factor (unlike uvw2). zz measured from swl. */
+UVWP Irregular::uvwp2_slope(double t, double xx, double yy, double zz) {
+	const int N = nfreq * ndir;
+	const double h = seabed.depth(xx, yy);
+	LocalPairSet& s = local_pair_cache;
+	if (s.owner != this || s.h != h || (int)s.kl.size() != N)
+		build_local_pair_set(h, s);
+
+	const double dxp = xx - fpoint[0], dyp = yy - fpoint[1];
+	const double zpd = std::max(zz + h, 0.);
+	std::vector<double> cphi(N), sphi(N), rmp(N);
+	for (int i = 0; i < N; i++) {
+		const double ph = s.kl[i] * (s.cth[i] * dxp + s.sth[i] * dyp)
+			- omega[i] * t + omega[i] * tofmax + phase[i];
+		cphi[i] = cos(ph); sphi[i] = sin(ph);
+		rmp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+			freq_duration[i]);
+	}
+
+	double us = 0., vs = 0., ws = 0., ps = 0.;
+	for (int i = 0; i < N; i++) {
+		if (omega[i] > dw_cutoff) continue;
+		const double ki = s.kl[i], oi = omega[i];
+		const double agi = A[i] * g / oi;
+		const double AA = 0.25 * agi * agi * (s.diagD[i] / (2. * oi));
+		const double cos2 = cphi[i] * cphi[i] - sphi[i] * sphi[i];
+		const double sin2 = 2. * sphi[i] * cphi[i];
+		const double cc = cosh(2. * ki * zpd) / s.c2kd[i];
+		const double sc = sinh(2. * ki * zpd) / s.c2kd[i];
+		us += AA * (2. * ki * s.cth[i]) * cos2 * cc * rmp[i];
+		vs += AA * (2. * ki * s.sth[i]) * cos2 * cc * rmp[i];
+		ws += AA * (2. * ki) * sin2 * sc * rmp[i];
+		ps += AA * (2. * oi) * cos2 * cc * rmp[i];
+	}
+	for (size_t q = 0; q < s.pairs.size(); q++) {
+		const LocalPairSet::P& p = s.pairs[q];
+		const int i = p.i, m = p.m;
+		const double ki = s.kl[i], km = s.kl[m];
+		const double oi = omega[i], om = omega[m];
+		const double AA = 0.5 * (A[i] * g / oi) * (A[m] * g / om);
+		const double ri = rmp[i];
+		if (p.kmax_p) {
+			const double BB = p.D_p / (oi + om);
+			const double cp = cphi[i] * cphi[m] - sphi[i] * sphi[m];
+			const double sp2 = sphi[i] * cphi[m] + cphi[i] * sphi[m];
+			const double den = cosh(p.k_p * h);
+			const double cc = cosh(p.k_p * zpd) / den;
+			const double sc = sinh(p.k_p * zpd) / den;
+			us += AA * BB * (ki * s.cth[i] + km * s.cth[m]) * cp * cc * ri;
+			vs += AA * BB * (ki * s.sth[i] + km * s.sth[m]) * cp * cc * ri;
+			ws += AA * BB * p.k_p * sp2 * sc * ri;
+			ps += AA * BB * (oi + om) * cp * cc * ri;
+		}
+		if (p.has_minus) {
+			const double CC = p.D_mn / (oi - om);
+			const double cm = cphi[i] * cphi[m] + sphi[i] * sphi[m];
+			const double sm2 = sphi[i] * cphi[m] - cphi[i] * sphi[m];
+			const double den = cosh(p.k_mn * h);
+			const double cc = cosh(p.k_mn * zpd) / den;
+			const double sc = sinh(p.k_mn * zpd) / den;
+			us += AA * CC * (ki * s.cth[i] - km * s.cth[m]) * cm * cc * ri;
+			vs += AA * CC * (ki * s.sth[i] - km * s.sth[m]) * cm * cc * ri;
+			ws += AA * CC * p.k_mn * sm2 * sc * ri;
+			ps += AA * CC * (oi - om) * cm * cc * ri;
+		}
+	}
+
+	// quadratic Bernoulli term from the slope-corrected first order
+	{
+		UVWP s1 = uvwp1_slope(t, xx, yy, zz);
+		double u1v = s1.u, v1v = s1.v, w1v = s1.w;
+		ps -= 0.5 * (u1v * u1v + v1v * v1v + w1v * w1v);
+	}
+
+	UVWP res;
+	res.u = us; res.v = vs; res.w = ws;
+	res.p = rho * ps;
+	return res;
 }
 
 /* Smit et al. (2017) s-coordinate stretched profiles.
@@ -140,6 +470,11 @@ double Irregular::profileZ_s2(double k_nm, double z, double eta) {
 }
 
 double Irregular::dp(double t, double x, double y, double z) {
+	if (seabed.active()) {
+		double p1v = uvwp1_slope(t, x, y, z - swl).p;
+		if (order >= 2) p1v += uvwp2_slope(t, x, y, z - swl).p;
+		return p1v;
+	}
 	if (vertical_theory == 1) return dp_smit(t, x, y, z);
 	switch (order) {
 		case 2:
@@ -205,7 +540,9 @@ double Irregular::freq_ramp(double t, double ramptime, double tstart, double dur
 
 int Irregular::bw_limiter(int i1) {
 	int cc = i1;
-	while ((omega[cc]-omega[i1] < dw_bandwidth) && (cc < nfreq * ndir)) {	
+	// bounds check FIRST: with the old order omega[cc] was read one past
+	// the end before cc < N stopped the loop
+	while ((cc < nfreq * ndir) && (omega[cc] - omega[i1] < dw_bandwidth)) {
 		cc++;
 	}
 	return cc;
@@ -220,11 +557,199 @@ void Irregular::calculate_bwindices() {
 }
 
 
+/* Detect whether the components form a long-crested equal-dk wavenumber
+   grid; if so, precompute the bin mapping for factorized evaluation. */
+void Irregular::factored_init()
+{
+    // NOTE: fact_checked is stored by the caller AFTER this returns (inside
+    // fact_mutex); storing it here/early would let concurrent threads bypass
+    // the mutex and read half-built state without memory ordering.
+    fact_ok = false;
+    const int N = nfreq * ndir;
+    if (N < 2) return;
+
+    // long-crested: all components propagate in the same direction
+    for (int i = 1; i < N; ++i) {
+        if (std::abs(theta[i] - theta[0]) > 1.e-12) {
+            std::cout << "equal_dk: components are not long-crested, "
+                      << "falling back to direct second-order evaluation."
+                      << std::endl;
+            return;
+        }
+    }
+
+    // initial dk estimate: smallest spacing (k is sorted ascending)
+    double dk0 = HUGE;
+    for (int i = 1; i < N; ++i) {
+        dk0 = std::min(dk0, std::abs(k[i] - k[i - 1]));
+    }
+    if (dk0 <= SMALL) return;
+
+    // integer bin indices, then refine dk by least squares through origin
+    fact_n.resize(N);
+    double skn = 0.0, snn = 0.0;
+    for (int i = 0; i < N; ++i) {
+        fact_n[i] = (int)std::lround(k[i] / dk0);
+        if (fact_n[i] < 1) { fact_n.clear(); return; }
+        skn += k[i] * fact_n[i];
+        snn += (double)fact_n[i] * (double)fact_n[i];
+    }
+    const double dk = skn / snn;
+
+    int nmax = 0;
+    for (int i = 0; i < N; ++i) {
+        if (std::abs(fact_n[i] * dk - k[i]) > 1.e-5 * std::max(1.0, k[i])) {
+            std::cout << "equal_dk: wavenumbers are not on an equal-dk grid, "
+                      << "falling back to direct second-order evaluation."
+                      << std::endl;
+            fact_n.clear();
+            return;
+        }
+        nmax = std::max(nmax, fact_n[i]);
+    }
+
+    fact_dk = dk;
+    fact_nbins = 2 * nmax + 1;
+
+    fact_ok = true;
+    std::cout << "Second order: factorized equal-dk evaluation enabled "
+              << "(dk = " << dk << " 1/m, " << fact_nbins << " bins)."
+              << std::endl;
+}
+
+/* Fetch (or build) the immutable coefficient set for time level t.
+   Multiple time levels can be requested concurrently (the spline lsgrid
+   fills four knots in one parallel region), so entries live in a small
+   cache; an entry is completed under fact_mutex before it is returned and
+   never mutated afterwards, except for adding the independent uvw part
+   (also under the mutex). */
+std::shared_ptr<Irregular::FactCoeffs> Irregular::fact_get(double t,
+                                                           bool need_uvw)
+{
+    std::lock_guard<std::mutex> lock(fact_mutex);
+    for (auto& e : fact_cache) {
+        if (e->t == t) {
+            if (need_uvw && !e->has_uvw) fact_build_uvw(*e, t);
+            if (!need_uvw && !e->has_eta2) fact_build_eta2(*e, t);
+            return e;
+        }
+    }
+    auto e = std::make_shared<FactCoeffs>();
+    e->t = t;
+    if (need_uvw) fact_build_uvw(*e, t);
+    else fact_build_eta2(*e, t);
+    if ((int)fact_cache.size() >= 8) {
+        fact_cache.erase(fact_cache.begin());
+    }
+    fact_cache.push_back(e);
+    return e;
+}
+
+/* Accumulate the complex wavenumber-bin coefficients C_j(t) such that
+   eta2(x) = sum_j Re{ C_j * exp(i*j*dk*X) }, X along the wave direction.
+   O(N^2) once per time level; mirrors the direct eta2() term by term. */
+void Irregular::fact_build_eta2(FactCoeffs& c, double t)
+{
+    const int N = nfreq * ndir;
+    c.eta2_bins.assign(fact_nbins, std::complex<double>(0.0, 0.0));
+    if (c.ramp.empty()) {
+        c.ramp.resize(N);
+        for (int i = 0; i < N; ++i) {
+            c.ramp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+                                  freq_duration[i]);
+        }
+    }
+
+    std::vector<std::complex<double>> E(N);
+    for (int i = 0; i < N; ++i) {
+        const double psi = -omega[i] * t + phase0_cache[i];
+        E[i] = std::complex<double>(std::cos(psi), std::sin(psi));
+    }
+
+    // diagonal terms -> bin 2*n_i
+    for (int i = 0; i < N; ++i) {
+        if (omega[i] > dw_cutoff) continue;
+
+        const double ki = k[i];
+        const double Rni = R_cache[i];
+        const double Rsni = Rs_cache[i];
+
+        const double D_nn_plus =
+            (6.0 * Rsni * Rsni * (ki * ki - Rni * Rni)) /
+            (2.0 * Rsni * Rsni - ki * std::tanh(2.0 * ki * depth));
+        const double alpha_nn_plus =
+            (D_nn_plus - (ki * ki - Rni * Rni)) / Rni + 2.0 * Rni;
+
+        if (2.0 * ki <= kmax_cache) {
+            c.eta2_bins[2 * fact_n[i]] +=
+                (0.25 * A[i] * A[i] * alpha_nn_plus * c.ramp[i]) * E[i] * E[i];
+        }
+    }
+
+    // pair terms -> bins n_i + n_m (sum) and n_m - n_i (difference)
+    for (const auto& pair : pair_cache) {
+        const int i = pair.i;
+        const int m = pair.m;
+        const double amp = 0.5 * A[i] * A[m] * c.ramp[i];
+
+        if (pair.has_plus && pair.kmax_plus) {
+            c.eta2_bins[fact_n[i] + fact_n[m]] +=
+                (amp * pair.alpha_nm_plus) * E[i] * E[m];
+        }
+        if (pair.has_minus) {
+            // cos(phi_i - phi_m) with k_m > k_i: bin n_m - n_i, conjugated
+            c.eta2_bins[fact_n[m] - fact_n[i]] +=
+                (amp * pair.alpha_nm_minus) * E[m] * std::conj(E[i]);
+        }
+    }
+    c.has_eta2 = true;
+}
+
+/* Evaluate the collapsed Fourier series at one point: O(n_bins). */
+double Irregular::eta2_factored_eval(const FactCoeffs& c, double xx,
+                                     double yy)
+{
+    const double X = cth_cache[0] * (xx - fpoint[0])
+                   + sth_cache[0] * (yy - fpoint[1]);
+    const std::complex<double> rot(std::cos(fact_dk * X),
+                                   std::sin(fact_dk * X));
+    std::complex<double> Ej(1.0, 0.0);
+    double s = 0.0;
+    for (int j = 0; j < fact_nbins; ++j) {
+        s += c.eta2_bins[j].real() * Ej.real()
+           - c.eta2_bins[j].imag() * Ej.imag();
+        Ej *= rot;
+    }
+    return s;
+}
+
 double Irregular::eta2(double t, double xx, double yy)
 {
     const int N = nfreq * ndir;
     const double dxp = xx - fpoint[0];
     const double dyp = yy - fpoint[1];
+
+    // factorized path for long-crested equal-dk grids: the O(N^2) pair sum
+    // runs once per time level; every point evaluation is O(n_bins).
+    // The cache rebuild must be serialized here: the factored update writes
+    // through bin indices derived from pair_cache, so a concurrent lazy
+    // rebuild (benign for the read-only direct path) would corrupt memory.
+    if (equal_dk) {
+        if (!fact_checked.load()) {
+            std::lock_guard<std::mutex> lock(fact_mutex);
+            if (!fact_checked.load()) {
+                if ((int)cth_cache.size() != N) {
+                    rebuild_second_order_cache();
+                }
+                factored_init();
+                fact_checked.store(true);   // release: init fully visible
+            }
+        }
+        if (fact_ok) {
+            auto c = fact_get(t, false);
+            return eta2_factored_eval(*c, xx, yy);
+        }
+    }
 
     if ((int)cth_cache.size() != N) {
         rebuild_second_order_cache();
@@ -275,6 +800,84 @@ double Irregular::eta2(double t, double xx, double yy)
 
         const double amp = 0.5 * A[i] * A[m];
         const double ri = ramp[i];  // preserves your original weighting convention
+
+        if (pair.has_plus && pair.kmax_plus) {
+            const double cos_phi_plus =
+                cphi[i] * cphi[m] - sphi[i] * sphi[m];
+            eta2_total += amp * pair.alpha_nm_plus * cos_phi_plus * ri;
+        }
+
+        if (pair.has_minus) {
+            const double cos_phi_minus =
+                cphi[i] * cphi[m] + sphi[i] * sphi[m];
+            eta2_total += amp * pair.alpha_nm_minus * cos_phi_minus * ri;
+        }
+    }
+
+    return eta2_total;
+}
+
+/* Untruncated second-order elevation for the smit s-coordinate path.
+   Same Sharma & Dean interaction coefficients as eta2(), but WITHOUT the
+   kmax truncation: the sigma-theory free surface must carry the full
+   bound harmonics for the dynamic BC p(eta) = rho*g*eta to close (the
+   kmax convention drops ALL self-interactions of the upper half of the
+   spectrum - for a single component it removes the entire Stokes second
+   harmonic). Mean set-down (i=m difference terms) remains excluded,
+   matching the S&D convention. */
+double Irregular::eta2_full(double t, double xx, double yy)
+{
+    const int N = nfreq * ndir;
+    const double dxp = xx - fpoint[0];
+    const double dyp = yy - fpoint[1];
+
+    if ((int)cth_cache.size() != N) {
+        rebuild_second_order_cache();
+    }
+
+    double eta2_total = 0.0;
+
+    std::vector<double> cphi(N), sphi(N), ramp(N);
+
+    for (int i = 0; i < N; ++i) {
+        const double ph =
+            k[i] * (cth_cache[i] * dxp + sth_cache[i] * dyp)
+            - omega[i] * t
+            + phase0_cache[i];
+
+        cphi[i] = std::cos(ph);
+        sphi[i] = std::sin(ph);
+        ramp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i], freq_duration[i]);
+    }
+
+    // diagonal terms (no 2k <= kmax gate)
+    for (int i = 0; i < N; ++i) {
+        if (omega[i] > dw_cutoff) {
+            continue;
+        }
+
+        const double ki = k[i];
+        const double Rni = R_cache[i];
+        const double Rsni = Rs_cache[i];
+
+        const double D_nn_plus =
+            (6.0 * Rsni * Rsni * (ki * ki - Rni * Rni)) /
+            (2.0 * Rsni * Rsni - ki * std::tanh(2.0 * ki * depth));
+
+        const double alpha_nn_plus =
+            (D_nn_plus - (ki * ki - Rni * Rni)) / Rni + 2.0 * Rni;
+
+        const double cos_2phi_i = cphi[i] * cphi[i] - sphi[i] * sphi[i];
+        eta2_total += 0.25 * A[i] * A[i] * alpha_nn_plus * cos_2phi_i * ramp[i];
+    }
+
+    // off-diagonal terms (no kmax gate on the sum interaction)
+    for (const auto& pair : pair_cache) {
+        const int i = pair.i;
+        const int m = pair.m;
+
+        const double amp = 0.5 * A[i] * A[m];
+        const double ri = ramp[i];
 
         if (pair.has_plus) {
             const double cos_phi_plus =
@@ -749,11 +1352,9 @@ double Irregular::dp2(double t, double xx, double yy, double zz) {
 		double Rsn = sqrt(Rn);
 
 		// Diagonal terms
-		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));		
+		double D_nn_plus = ( 6.*Rsn*Rsn * (k[i] * k[i] - Rn * Rn))/(2.* Rsn* Rsn - k[i] * tanh(2*k[i] * depth));
 		double AA = 0.25*(A[i] * g/ omega[i])*(A[i] * g / omega[i])*(D_nn_plus/(2*omega[i]));
-		psum2 += AA*(2*omega[i]) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); // first term
-		psum2 -= (g*g*(2*k[i]*cos(thi)+2*k[i]*sin(thi))*2*profileX(i, xx, yy, zz))/(2*omega[i]); // second term
-		psum2 += (g*g*(2*k[i])*2*profileZ(i, xx, yy, zz))/(2*omega[i]); // second term
+		psum2 += AA*(2*omega[i]) * cos(2*phi_i) * cosh(2*k[i]*(zz+depth)) / cosh(2*k[i]*depth); // -d(phi2)/dt, diagonal
 
 		// Off-diagonals
 		for (int m = i + 1; m < nfreq * ndir; m++) {
@@ -782,9 +1383,7 @@ double Irregular::dp2(double t, double xx, double yy, double zz) {
 			double coshcosh_plus = cosh(k_nm_plus*(zz+depth))/cosh(k_nm_plus*depth);
 
 			// Sum terms
-			psum2 += AA * BB * (omega[i] + omega[m]) * cos(phi_i + phi_m) * coshcosh_plus; //first term
-			psum2 -= (g*g*(k[i]*cos(thi)*k[m]*cos(thm)+k[i]*sin(thi)*k[m]*sin(thm))*profileX(i, xx, yy, zz)*profileX(m, xx, yy, zz))/(omega[i]*omega[m]); // second term
-			psum2 += (g*g*(k[i]*k[m])*profileZ(i, xx, yy, zz)*profileZ(m, xx, yy, zz))/(omega[i]*omega[m]); // second term
+			psum2 += AA * BB * (omega[i] + omega[m]) * cos(phi_i + phi_m) * coshcosh_plus; // -d(phi2)/dt, sum
 	
 			if (k[i] != k[m]){
 				double CC = (D_nm_minus/(omega[i]-omega[m])); 
@@ -796,6 +1395,18 @@ double Irregular::dp2(double t, double xx, double yy, double zz) {
 		}
 		psum2_t += psum2*freq_ramp(t,freq_ramptime[i],freq_starttime[i], freq_duration[i]);
 	}
+
+	// Quadratic Bernoulli term -0.5*|grad(phi1)|^2, evaluated exactly from
+	// the first-order velocity sums (their per-component ramps included).
+	// This replaces earlier per-pair profile products that lacked both the
+	// component amplitudes and the phase dependence.
+	{
+		double u1v = u1(t, xx, yy, zz);
+		double v1v = v1(t, xx, yy, zz);
+		double w1v = w1(t, xx, yy, zz);
+		psum2_t -= 0.5 * (u1v * u1v + v1v * v1v + w1v * w1v);
+	}
+
 	// dp2 terms above were assembled without the density factor; dp1 includes rho,
 	// so multiply here to keep the second-order dynamic pressure dimensionally
 	// consistent (dynamic pressure = rho * [potential + kinetic terms]).
@@ -841,7 +1452,26 @@ void Irregular::rebuild_pair_cache()
 {
     const int N = nfreq * ndir;
     pair_cache.clear();
-    pair_cache.reserve(N * (N - 1) / 2);
+    // Count the surviving pairs first and reserve exactly: a blind
+    // N*(N-1)/2 reserve commits gigabytes for large component sets
+    // (e.g. dense equal-dk lattices) before any filtering happens.
+    size_t npairs = 0;
+    for (int i = 0; i < N; ++i) {
+        if (omega[i] > dw_cutoff) continue;
+        for (int m = i + 1; m < N; ++m) {
+            if (omega[m] > dw_cutoff) continue;
+            if (std::abs(omega[i] - omega[m]) > dw_bandwidth) continue;
+            ++npairs;
+        }
+    }
+    if (npairs > (size_t)20000000)
+        std::cerr << "WARNING: second-order pair cache has " << npairs
+            << " entries (" << N << " components, ~"
+            << (npairs * sizeof(PairCacheEntry)) / (1024 * 1024 * 1024)
+            << " GB per process). The second-order machinery is O(N^2) in "
+            "the component count - reduce the number of components (coarser "
+            "lattice / narrower band) or tighten 'bandwidth'." << std::endl;
+    pair_cache.reserve(npairs);
 
     for (int i = 0; i < N; ++i) {
         if (omega[i] > dw_cutoff) {
@@ -893,6 +1523,7 @@ void Irregular::rebuild_pair_cache()
             entry.k_nm_minus = k_nm_minus;
             entry.has_plus = false;
             entry.has_minus = false;
+            entry.kmax_plus = false;
             entry.D_nm_plus = 0.0;
             entry.D_nm_minus = 0.0;
             entry.alpha_nm_plus = 0.0;
@@ -900,7 +1531,7 @@ void Irregular::rebuild_pair_cache()
             entry.H_nm_plus = 0.0;
             entry.H_nm_minus = 0.0;
 
-            if ((ki + km) <= kmax_cache) {
+            {
                 const double denom_plus =
                     Rsnm2plus - k_nm_plus * std::tanh(k_nm_plus * depth);
 
@@ -913,6 +1544,7 @@ void Irregular::rebuild_pair_cache()
                     + (Rni + Rnm);
 
                 entry.has_plus = true;
+                entry.kmax_plus = ((ki + km) <= kmax_cache);
                 entry.D_nm_plus = D_nm_plus;
                 entry.alpha_nm_plus = alpha_nm_plus;
 
@@ -972,6 +1604,147 @@ void Irregular::rebuild_second_order_cache()
     rebuild_pair_cache();
 }
 
+/* Accumulate wavenumber-bin coefficients for the oscillatory part of the
+   second-order kinematics. Mirrors uvw2() term by term:
+     u(x,z) = cth0 * sum_j Re{Qk_j E_j(X)} * CR_j(z)
+     v(x,z) = sth0 * sum_j Re{Qk_j E_j(X)} * CR_j(z)
+     w(x,z) =        sum_j Re{Qw_j E_j(X)} * SR_j(z)
+     p(x,z) =        sum_j Re{Qp_j E_j(X)} * CR_j(z)  + O(N) DC terms
+   with E_j = exp(i*j*dk*X), CR_j = cosh(j*dk*(z+d))/cosh(j*dk*d) and
+   SR_j the sinh analogue. O(N^2) once per time level. */
+void Irregular::fact_build_uvw(FactCoeffs& c, double t)
+{
+    const int N = nfreq * ndir;
+    const std::complex<double> I(0.0, 1.0);
+
+    c.Qk.assign(fact_nbins, std::complex<double>(0.0, 0.0));
+    c.Qw.assign(fact_nbins, std::complex<double>(0.0, 0.0));
+    c.Qp.assign(fact_nbins, std::complex<double>(0.0, 0.0));
+    if (c.ramp.empty()) {
+        c.ramp.resize(N);
+        for (int i = 0; i < N; ++i) {
+            c.ramp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i],
+                                  freq_duration[i]);
+        }
+    }
+
+    std::vector<std::complex<double>> E(N);
+    for (int i = 0; i < N; ++i) {
+        const double psi = -omega[i] * t + phase0_cache[i];
+        E[i] = std::complex<double>(std::cos(psi), std::sin(psi));
+    }
+
+    // diagonal terms -> bin 2*n_i (note: no kmax condition, as in uvw2)
+    for (int i = 0; i < N; ++i) {
+        if (omega[i] > dw_cutoff) continue;
+
+        const double ki = k[i];
+        const double oi = omega[i];
+        const double Rni = R_cache[i];
+        const double Rsni = Rs_cache[i];
+        const double agi = ag_over_om_cache[i];
+
+        const double D_nn_plus =
+            (6.0 * Rsni * Rsni * (ki * ki - Rni * Rni)) /
+            (2.0 * Rsni * Rsni - ki * std::tanh(2.0 * ki * depth));
+        const double AA_diag = 0.25 * agi * agi * (D_nn_plus / (2.0 * oi));
+
+        const std::complex<double> P = (AA_diag * c.ramp[i]) * E[i] * E[i];
+        const int j = 2 * fact_n[i];
+        c.Qk[j] += (2.0 * ki) * P;
+        c.Qw[j] += -I * (2.0 * ki) * P;
+        c.Qp[j] += (2.0 * oi) * P;
+    }
+
+    // pair terms
+    for (const auto& pair : pair_cache) {
+        const int i = pair.i;
+        const int m = pair.m;
+        const double ki = k[i];
+        const double km = k[m];
+        const double oi = omega[i];
+        const double om = omega[m];
+        const double AA = 0.5 * ag_over_om_cache[i] * ag_over_om_cache[m]
+                        * c.ramp[i];
+
+        if (pair.has_plus && pair.kmax_plus) {
+            const double BB = pair.D_nm_plus / (oi + om);
+            const std::complex<double> P = (AA * BB) * E[i] * E[m];
+            const int j = fact_n[i] + fact_n[m];
+            c.Qk[j] += (ki + km) * P;
+            c.Qw[j] += -I * pair.k_nm_plus * P;
+            c.Qp[j] += (oi + om) * P;
+        }
+        if (pair.has_minus) {
+            // cos(phi_i - phi_m): bin n_m - n_i with conjugated phasor
+            const double CC = pair.D_nm_minus / (oi - om);
+            const std::complex<double> P = (AA * CC) * E[m] * std::conj(E[i]);
+            const int j = fact_n[m] - fact_n[i];
+            c.Qk[j] += (ki - km) * P;
+            c.Qw[j] += I * pair.k_nm_minus * P;
+            c.Qp[j] += (oi - om) * P;
+        }
+    }
+    c.has_uvw = true;
+}
+
+/* Evaluate factorized second-order kinematics at one point.
+   O(n_bins) for the oscillatory part + O(N) for the phase-free quadratic
+   pressure terms (which are products of first-order profile sums). */
+UVWP Irregular::uvw2_factored_eval(const FactCoeffs& c, double xx,
+                                   double yy, double zz)
+{
+    const int N = nfreq * ndir;
+    const double zpd = zz + depth;
+    const double gg = g * g;
+    const double X = cth_cache[0] * (xx - fpoint[0])
+                   + sth_cache[0] * (yy - fpoint[1]);
+
+    // per-bin recurrences: phase rotation and stable vertical ratios
+    //   CR_j = cosh(a*zpd)/cosh(a*d) = (e^{a(zpd-d)} + e^{-a(zpd+d)}) /
+    //                                  (1 + e^{-2ad}),  a = j*dk
+    const std::complex<double> rot(std::cos(fact_dk * X),
+                                   std::sin(fact_dk * X));
+    const double g1 = std::exp(fact_dk * (zpd - depth));
+    const double g2 = std::exp(-fact_dk * (zpd + depth));
+    const double g3 = std::exp(-2.0 * fact_dk * depth);
+
+    std::complex<double> Ej(1.0, 0.0);
+    double e1 = 1.0, e2 = 1.0, e3 = 1.0;
+
+    double u = 0.0, w = 0.0, p = 0.0;
+    for (int j = 0; j < fact_nbins; ++j) {
+        const double CR = (e1 + e2) / (1.0 + e3);
+        const double SR = (e1 - e2) / (1.0 + e3);
+        const double reQk = c.Qk[j].real() * Ej.real()
+                          - c.Qk[j].imag() * Ej.imag();
+        const double reQw = c.Qw[j].real() * Ej.real()
+                          - c.Qw[j].imag() * Ej.imag();
+        const double reQp = c.Qp[j].real() * Ej.real()
+                          - c.Qp[j].imag() * Ej.imag();
+        u += reQk * CR;
+        w += reQw * SR;
+        p += reQp * CR;
+        Ej *= rot;
+        e1 *= g1; e2 *= g2; e3 *= g3;
+    }
+
+    // quadratic Bernoulli term -0.5*|grad(phi1)|^2 from the first-order
+    // velocity sums (O(N), exact; per-component ramps included in u1/v1/w1)
+    const double cth0 = cth_cache[0];
+    const double sth0 = sth_cache[0];
+    {
+        // the caller's time is the entry's time level
+        const double t = c.t;
+        const double u1v = u1(t, xx, yy, zz);
+        const double v1v = v1(t, xx, yy, zz);
+        const double w1v = w1(t, xx, yy, zz);
+        p -= 0.5 * (u1v * u1v + v1v * v1v + w1v * w1v);
+    }
+
+    return { cth0 * u, sth0 * u, w, p };
+}
+
 UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
 {
     const int N = nfreq * ndir;
@@ -979,6 +1752,25 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
     const double dyp = yy - fpoint[1];
     const double zpd = zz + depth;
     const double gg = g * g;
+
+    // factorized path for long-crested equal-dk grids; cache rebuild is
+    // serialized under the mutex (see eta2 for the rationale)
+    if (equal_dk) {
+        if (!fact_checked.load()) {
+            std::lock_guard<std::mutex> lock(fact_mutex);
+            if (!fact_checked.load()) {
+                if ((int)cth_cache.size() != N) {
+                    rebuild_second_order_cache();
+                }
+                factored_init();
+                fact_checked.store(true);   // release: init fully visible
+            }
+        }
+        if (fact_ok) {
+            auto c = fact_get(t, true);
+            return uvw2_factored_eval(*c, xx, yy, zz);
+        }
+    }
 
     if ((int)cth_cache.size() != N) {
         rebuild_second_order_cache();
@@ -989,7 +1781,7 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
     double wsum2_t = 0.0;
     double psum2_t = 0.0;
 
-    std::vector<double> cphi(N), sphi(N), ramp(N), px(N), pz(N);
+    std::vector<double> cphi(N), sphi(N), ramp(N);
 
     for (int i = 0; i < N; ++i) {
         const double ph =
@@ -1000,8 +1792,6 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
         cphi[i] = std::cos(ph);
         sphi[i] = std::sin(ph);
         ramp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i], freq_duration[i]);
-        px[i] = profileX(i, xx, yy, zz);
-        pz[i] = profileZ(i, xx, yy, zz);
     }
 
     // diagonal terms
@@ -1037,9 +1827,6 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
         w += AA_diag * (2.0 * ki) * sin_2phi_i * sinhcosh_diag;
         p += AA_diag * (2.0 * oi) * cos_2phi_i * coshcosh_diag;
 
-        p -= (gg * (2.0 * ki * cti + 2.0 * ki * sti) * 2.0 * px[i]) / (2.0 * oi);
-        p += (gg * (2.0 * ki) * 2.0 * pz[i]) / (2.0 * oi);
-
         const double ri = ramp[i];
         usum2_t += u * ri;
         vsum2_t += v * ri;
@@ -1064,7 +1851,7 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
 
         const double AA = 0.5 * ag_over_om_cache[i] * ag_over_om_cache[m];
 
-        if (pair.has_plus) {
+        if (pair.has_plus && pair.kmax_plus) {
             const double BB = pair.D_nm_plus / (oi + om);
             const double cos_phi_plus = cphi[i] * cphi[m] - sphi[i] * sphi[m];
             const double sin_phi_plus = sphi[i] * cphi[m] + cphi[i] * sphi[m];
@@ -1077,9 +1864,6 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
             vsum2_t += AA * BB * (ki * sti + km * stm) * cos_phi_plus * coshcosh_plus * ri;
             wsum2_t += AA * BB * pair.k_nm_plus * sin_phi_plus * sinhcosh_plus * ri;
             psum2_t += AA * BB * (oi + om) * cos_phi_plus * coshcosh_plus * ri;
-
-            psum2_t -= (gg * (ki * cti * km * ctm + ki * sti * km * stm) * px[i] * px[m]) / (oi * om) * ri;
-            psum2_t += (gg * (ki * km) * pz[i] * pz[m]) / (oi * om) * ri;
         }
 
         if (pair.has_minus) {
@@ -1096,6 +1880,15 @@ UVWP Irregular::uvw2(double t, double xx, double yy, double zz)
             wsum2_t += AA * CC * pair.k_nm_minus * sin_phi_minus * sinhcosh_minus * ri;
             psum2_t += AA * CC * (oi - om) * cos_phi_minus * coshcosh_minus * ri;
         }
+    }
+
+    // quadratic Bernoulli term -0.5*|grad(phi1)|^2 from the first-order
+    // velocity sums (per-component ramps included in u1/v1/w1)
+    {
+        const double u1v = u1(t, xx, yy, zz);
+        const double v1v = v1(t, xx, yy, zz);
+        const double w1v = w1(t, xx, yy, zz);
+        psum2_t -= 0.5 * (u1v * u1v + v1v * v1v + w1v * w1v);
     }
 
     return {usum2_t, vsum2_t, wsum2_t, psum2_t};
@@ -1511,111 +2304,19 @@ void Irregular::print_spectral_parameters() {
    a coordinate-transformation correction term g(h+z)/(2(h+η)) · (...)
    ========================================================================== */
 
-/* Second-order surface elevation built ENTIRELY from Smit's published formulas:
-   H from Eq. 9 (paper formula, with the colleague's typo corrections applied),
-   then C from Eq. 10, then eta2 = sum over pairs of C * eta_hat_i * eta_hat_m.
+/* Second-order surface elevation for the smit s-coordinate path.
 
-   This is a deliberately independent route to eta2 so it can be compared, term
-   by term, against the trusted Sharma & Dean eta2(). If the two disagree we
-   have isolated a transcription error in Smit's equations.
-
-   Conventions (matching SD eta2()):
-     - off-diagonal sum, per unordered pair {i,m}:  A_i A_m C_nm cos(phi_i+phi_m)
-       with C = alpha/2, so this equals 0.5 A_i A_m alpha cos(...)  [== SD]
-     - diagonal:  0.5 A_i^2 C_nn cos(2 phi_i)  =  0.25 A_i^2 alpha_nn cos(...) */
+   Historical note: this function originally implemented Smit's Eq. 9 for
+   H (with typo corrections) as an independent cross-check route. That
+   investigation (sigma_developments/) established that Eq. 9 is
+   structurally wrong - the correct H comes from inverting Eq. 10 with
+   C = alpha/2 (Sharma & Dean), which is what the kinematics use. The
+   correct sigma-consistent surface is therefore simply the S&D
+   second-order elevation WITHOUT the kmax truncation (eta2_full), the
+   same surface the smit kinematics stretch and clamp against. */
 double Irregular::eta_smit(double t, double xx, double yy)
 {
-	const int N = nfreq * ndir;
-	const double dxp = xx - fpoint[0];
-	const double dyp = yy - fpoint[1];
-	if ((int)cth_cache.size() != N) rebuild_second_order_cache();
-
-	std::vector<double> cphi(N), sphi(N), ramp(N);
-	for (int i = 0; i < N; ++i) {
-		const double ph = k[i] * (cth_cache[i] * dxp + sth_cache[i] * dyp)
-			- omega[i] * t + phase0_cache[i];
-		cphi[i] = std::cos(ph);
-		sphi[i] = std::sin(ph);
-		ramp[i] = freq_ramp(t, freq_ramptime[i], freq_starttime[i], freq_duration[i]);
-	}
-
-	double eta2_total = 0.0;
-
-	// --- Diagonal terms (component i with itself, sum frequency 2*omega_i) ---
-	for (int i = 0; i < N; ++i) {
-		if (omega[i] > dw_cutoff) continue;
-		if (2.0 * k[i] > kmax_cache) continue;
-
-		const double ki = k[i], oi = omega[i];
-		const double k1dk2 = ki * ki;          // k_i . k_i (collinear self)
-		const double om12 = 2.0 * oi;
-		const double k12 = 2.0 * ki;           // |k_i + k_i|
-		const double sigma2 = g * k12 * std::tanh(k12 * depth);
-
-		// Smit Eq. 9 (typo-corrected), H = i * H_real:
-		//   H_real = om12 g^2 / (sigma^2 - om12^2) *
-		//            [ k1.k2/(o1 o2) - (o1 o2 + o1^2 + o2^2)/g^2
-		//              + (k1^2 o2 + k2^2 o1)/(2 o1 o2 om12) ]
-		const double bracket =
-			k1dk2 / (oi * oi)
-			- (oi * oi + oi * oi + oi * oi) / (g * g)
-			+ (ki * ki * oi + ki * ki * oi) / (2.0 * oi * oi * om12);
-		const double H_real = om12 * g * g / (sigma2 - om12 * om12) * bracket;
-
-		// Eq. 10:  C = (i om12/g) H + (o1^2+o2^2+o1 o2)/(2g) - g k1.k2/(2 o1 o2)
-		//   with H = i H_real  =>  (i om12/g) H = -om12 H_real / g
-		const double C = -om12 * H_real / g
-			+ (oi * oi + oi * oi + oi * oi) / (2.0 * g)
-			- g * k1dk2 / (2.0 * oi * oi);
-
-		const double cos_2phi = cphi[i] * cphi[i] - sphi[i] * sphi[i];
-		eta2_total += 0.5 * A[i] * A[i] * C * cos_2phi * ramp[i];
-	}
-
-	// --- Off-diagonal terms (unordered pairs) ---
-	for (const auto& p : pair_cache) {
-		const int i = p.i, m = p.m;
-		const double ki = k[i], km = k[m];
-		const double oi = omega[i], om = omega[m];
-		const double k1dk2 = ki * km * p.gamma_nm;     // k_i . k_m
-
-		if (p.has_plus) {
-			const double om12 = oi + om;
-			const double k12 = p.k_nm_plus;
-			const double sigma2 = g * k12 * std::tanh(k12 * depth);
-			const double bracket =
-				k1dk2 / (oi * om)
-				- (oi * om + oi * oi + om * om) / (g * g)
-				+ (ki * ki * om + km * km * oi) / (2.0 * oi * om * om12);
-			const double H_real = om12 * g * g / (sigma2 - om12 * om12) * bracket;
-			const double C = -om12 * H_real / g
-				+ (oi * oi + om * om + oi * om) / (2.0 * g)
-				- g * k1dk2 / (2.0 * oi * om);
-			const double cos_phi_plus = cphi[i] * cphi[m] - sphi[i] * sphi[m];
-			eta2_total += A[i] * A[m] * C * cos_phi_plus * ramp[i];
-		}
-
-		if (p.has_minus) {
-			const double om12 = oi - om;
-			const double k12 = p.k_nm_minus;
-			const double sigma2 = g * k12 * std::tanh(k12 * depth);
-			// difference: omega_2 -> -omega_2, k_2 -> -k_2 in Eq. 9 & Eq. 10
-			if (std::abs(om12) > SMALL) {
-				const double bracket =
-					k1dk2 / (oi * om)                       // k1.(-k2)/(o1.(-o2)) = k1.k2/(o1 o2)
-					+ (oi * om - oi * oi - om * om) / (g * g)
-					+ (ki * ki * (-om) + km * km * oi) / (2.0 * oi * (-om) * om12);
-				const double H_real = om12 * g * g / (sigma2 - om12 * om12) * bracket;
-				const double C = -om12 * H_real / g
-					+ (oi * oi + om * om - oi * om) / (2.0 * g)
-					- g * k1dk2 / (2.0 * oi * om);
-				const double cos_phi_minus = cphi[i] * cphi[m] + sphi[i] * sphi[m];
-				eta2_total += A[i] * A[m] * C * cos_phi_minus * ramp[i];
-			}
-		}
-	}
-
-	return eta2_total;
+	return eta2_full(t, xx, yy);
 }
 
 
@@ -1623,7 +2324,7 @@ double Irregular::u_smit(double t, double xx, double yy, double zz) {
 
 	// Step 1: compute surface elevation for the stretch factor
 	double eta_val = eta1(t, xx, yy);
-	if (order >= 1) eta_val += eta2(t, xx, yy);
+	if (order >= 1) eta_val += eta2_full(t, xx, yy);
 
 	// Step 2: clamp to water column
 	if (zz > eta_val + swl) return 0.0;
@@ -1719,12 +2420,15 @@ double Irregular::u_smit(double t, double xx, double yy, double zz) {
 			double kx12 = ki * cth_cache[i] + km * cth_cache[m];
 			double Ch12 = profileX_s2(p.k_nm_plus, zz, eta_val);
 			u2_val += AA * p.H_nm_plus * kx12 * (-cos(phi_plus)) * Ch12;
-			u2_val += AA * kx12 * g1s * (ki * Sh_i / oi + km * Sh_m / om) * cos(phi_plus);
+			// P-derivative ∂ₓP: factor 0.5 like the diagonal (the paper's P is
+			// already the total per unordered pair; eps-scaling budget gives
+			// xP = 1/2 exactly, see sigma_developments/FINDINGS_eps_scaling.md)
+			u2_val += 0.5 * AA * kx12 * g1s * (ki * Sh_i / oi + km * Sh_m / om) * cos(phi_plus);
 
-			// ∂_s φ² (sum): bound  φ=−AA·H·Ch12·sinφ₊,  P-pot φ=AA·g(1+s)(...)·sinφ₊
+			// ∂_s φ² (sum): bound  φ=−AA·H·Ch12·sinφ₊,  P-pot φ=0.5·AA·g(1+s)(...)·sinφ₊
 			double Sh12 = profileZ_s2(p.k_nm_plus, zz, eta_val);
 			dphi2ds += -AA * p.H_nm_plus * (p.k_nm_plus * depth * Sh12) * sin(phi_plus);
-			dphi2ds +=  AA * g * ((ki * Sh_i / oi + km * Sh_m / om)
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi + km * Sh_m / om)
 				+ sp1 * (ki * (ki * depth * Ch_i) / oi + km * (km * depth * Ch_m) / om)) * sin(phi_plus);
 		}
 
@@ -1734,12 +2438,13 @@ double Irregular::u_smit(double t, double xx, double yy, double zz) {
 			double kx12 = ki * cth_cache[i] - km * cth_cache[m];
 			double Ch12 = profileX_s2(p.k_nm_minus, zz, eta_val);
 			u2_val += AA * p.H_nm_minus * kx12 * (-cos(phi_minus)) * Ch12;
-			u2_val += AA * kx12 * g1s * (ki * Sh_i / oi - km * Sh_m / om) * cos(phi_minus);
+			// P-derivative ∂ₓP with the same 0.5 factor as the sum interaction
+			u2_val += 0.5 * AA * kx12 * g1s * (ki * Sh_i / oi - km * Sh_m / om) * cos(phi_minus);
 
 			// ∂_s φ² (difference): k₂→−k₂, ω₂→−ω₂
 			double Sh12 = profileZ_s2(p.k_nm_minus, zz, eta_val);
 			dphi2ds += -AA * p.H_nm_minus * (p.k_nm_minus * depth * Sh12) * sin(phi_minus);
-			dphi2ds +=  AA * g * ((ki * Sh_i / oi - km * Sh_m / om)
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi - km * Sh_m / om)
 				+ sp1 * (ki * (ki * depth * Ch_i) / oi - km * (km * depth * Ch_m) / om)) * sin(phi_minus);
 		}
 	}
@@ -1773,7 +2478,7 @@ double Irregular::u_smit(double t, double xx, double yy, double zz) {
 double Irregular::v_smit(double t, double xx, double yy, double zz) {
 
 	double eta_val = eta1(t, xx, yy);
-	if (order >= 1) eta_val += eta2(t, xx, yy);
+	if (order >= 1) eta_val += eta2_full(t, xx, yy);
 	if (zz > eta_val + swl) return 0.0;
 	zz = std::max(-depth, zz - swl);
 
@@ -1790,9 +2495,12 @@ double Irregular::v_smit(double t, double xx, double yy, double zz) {
 			* sth_cache[i] * cos(phi) * fr;
 	}
 
-	// Second order
+	// Second order — mirrors u_smit with y-components (∂φ/∂y mapping:
+	// v = ∂ᵧφ̃ − (1+s)/D·η_y·∂ₛφ̃)
 	double v2_val = 0.0;
 	if (order >= 1) {
+
+	double dphi2ds = 0.0;
 
 	// Diagonal terms
 	for (int i = 0; i < N; i++) {
@@ -1812,6 +2520,18 @@ double Irregular::v_smit(double t, double xx, double yy, double zz) {
 		double ky2 = 2.0 * ki * sth_cache[i];
 		double Ch2 = profileX_s2(k2, zz, eta_val);
 		v2_val += 0.5 * AA * H_diag * ky2 * (-cos(2.0 * phi_i)) * Ch2;
+
+		// P-derivative ∂ᵧP (same 0.5 convention as u_smit)
+		double sp1 = (depth + zz) / (depth + eta_val);
+		double g1s = g * sp1;
+		double Sh_i = profileZ_s(i, zz, eta_val);
+		v2_val += 0.5 * AA * ky2 * g1s * (ki * Sh_i / oi) * cos(2.0 * phi_i);
+
+		double Ch_i = profileX_s(i, zz, eta_val);
+		double Sh2  = profileZ_s2(k2, zz, eta_val);
+		dphi2ds += -0.5 * AA * H_diag * (k2 * depth * Sh2) * sin(2.0 * phi_i);
+		dphi2ds +=  0.5 * AA * g * (ki * Sh_i / oi
+			+ sp1 * ki * (ki * depth * Ch_i) / oi) * sin(2.0 * phi_i);
 	}
 
 	// Off-diagonal terms
@@ -1829,11 +2549,24 @@ double Irregular::v_smit(double t, double xx, double yy, double zz) {
 		double fr_m = freq_ramp(t, freq_ramptime[m], freq_starttime[m], freq_duration[m]);
 		double AA = Ai * Am * fr_i * fr_m;
 
+		double sp1 = (depth + zz) / (depth + eta_val);
+		double g1s = g * sp1;
+		double Sh_i = profileZ_s(i, zz, eta_val);
+		double Sh_m = profileZ_s(m, zz, eta_val);
+		double Ch_i = profileX_s(i, zz, eta_val);
+		double Ch_m = profileX_s(m, zz, eta_val);
+
 		if (p.has_plus) {
 			double phi_plus = phi_i + phi_m;
 			double ky12 = ki * sth_cache[i] + km * sth_cache[m];
 			double Ch12 = profileX_s2(p.k_nm_plus, zz, eta_val);
 			v2_val += AA * p.H_nm_plus * ky12 * (-cos(phi_plus)) * Ch12;
+			v2_val += 0.5 * AA * ky12 * g1s * (ki * Sh_i / oi + km * Sh_m / om) * cos(phi_plus);
+
+			double Sh12 = profileZ_s2(p.k_nm_plus, zz, eta_val);
+			dphi2ds += -AA * p.H_nm_plus * (p.k_nm_plus * depth * Sh12) * sin(phi_plus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi + km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi + km * (km * depth * Ch_m) / om)) * sin(phi_plus);
 		}
 
 		if (p.has_minus) {
@@ -1841,7 +2574,30 @@ double Irregular::v_smit(double t, double xx, double yy, double zz) {
 			double ky12 = ki * sth_cache[i] - km * sth_cache[m];
 			double Ch12 = profileX_s2(p.k_nm_minus, zz, eta_val);
 			v2_val += AA * p.H_nm_minus * ky12 * (-cos(phi_minus)) * Ch12;
+			v2_val += 0.5 * AA * ky12 * g1s * (ki * Sh_i / oi - km * Sh_m / om) * cos(phi_minus);
+
+			double Sh12 = profileZ_s2(p.k_nm_minus, zz, eta_val);
+			dphi2ds += -AA * p.H_nm_minus * (p.k_nm_minus * depth * Sh12) * sin(phi_minus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi - km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi - km * (km * depth * Ch_m) / om)) * sin(phi_minus);
 		}
+	}
+
+	// Lagrangian→Eulerian chain term:  v += -(1+s)/D · η_y · φ_s
+	{
+		double eta_y = 0.0, phi_s = 0.0;
+		for (int n = 0; n < N; n++) {
+			double phi_n = k[n] * (cth_cache[n] * (xx - fpoint[0]) + sth_cache[n] * (yy - fpoint[1]))
+				- omega[n] * t + phase0_cache[n];
+			double fr = freq_ramp(t, freq_ramptime[n], freq_starttime[n], freq_duration[n]);
+			double sphi = sin(phi_n);
+			eta_y += -A[n] * k[n] * sth_cache[n] * sphi * fr;                   // ∂η₁/∂y
+			phi_s += (g * A[n] / omega[n]) * k[n] * depth
+				* profileZ_s(n, zz, eta_val) * sphi * fr;                       // ∂φ₁/∂s
+		}
+		phi_s += dphi2ds;
+		double oneplus_s_over_D = (depth + zz) / ((depth + eta_val) * (depth + eta_val));
+		v2_val += -oneplus_s_over_D * eta_y * phi_s;
 	}
 	} // end if (order >= 1)
 
@@ -1852,26 +2608,33 @@ double Irregular::v_smit(double t, double xx, double yy, double zz) {
 double Irregular::w_smit(double t, double xx, double yy, double zz) {
 
 	double eta_val = eta1(t, xx, yy);
-	if (order >= 1) eta_val += eta2(t, xx, yy);
+	if (order >= 1) eta_val += eta2_full(t, xx, yy);
 	if (zz > eta_val + swl) return 0.0;
 	zz = std::max(-depth, zz - swl);
 
 	const int N = ndir * nfreq;
 	if ((int)cth_cache.size() != N) rebuild_second_order_cache();
 
-	// First order with stretched profiles
-	double w1_val = 0.0;
+	// Exact vertical mapping:  w = ∂φ/∂z|ₓ = ∂ₛφ̃ / (h+η)  with φ̃ = φ¹+φ²
+	// in σ-coordinates. The 1/(h+η) Jacobian and the ∂ₛ of the particular
+	// solution P are required for Eulerian consistency (eps-scaling budget,
+	// sigma_developments/FINDINGS_eps_scaling.md).
+
+	// ∂φ¹/∂s
+	double phi_s = 0.0;
 	for (int i = 0; i < N; i++) {
 		double phi = k[i] * (cth_cache[i] * (xx - fpoint[0]) + sth_cache[i] * (yy - fpoint[1]))
 			- omega[i] * t + phase0_cache[i];
 		double fr = freq_ramp(t, freq_ramptime[i], freq_starttime[i], freq_duration[i]);
-		w1_val += A[i] * g * k[i] / omega[i] * profileZ_s(i, zz, eta_val)
-			* sin(phi) * fr;
+		phi_s += (g * A[i] / omega[i]) * k[i] * depth
+			* profileZ_s(i, zz, eta_val) * sin(phi) * fr;
 	}
 
-	// Second order
-	double w2_val = 0.0;
+	// ∂φ²/∂s (bound + P parts, diagonal and pairs) — same accumulation as u_smit
+	double dphi2ds = 0.0;
 	if (order >= 1) {
+
+	double sp1 = (depth + zz) / (depth + eta_val);              // (1+s)
 
 	// Diagonal terms
 	for (int i = 0; i < N; i++) {
@@ -1888,9 +2651,13 @@ double Irregular::w_smit(double t, double xx, double yy, double zz) {
 		double H_diag = -g / om2 * (alpha_nn / 2.0
 			- (3.0 * oi * oi) / (2.0 * g)
 			+ g * ki * ki / (2.0 * oi * oi));
-		// W bound: -|k₁₂|·H·Sh(2k)·sin(2φ)  (bound wave only, no correction term)
-		double Sh2 = profileZ_s2(k2, zz, eta_val);
-		w2_val += 0.5 * AA * H_diag * k2 * (-sin(2.0 * phi_i)) * Sh2;
+
+		double Ch_i = profileX_s(i, zz, eta_val);
+		double Sh_i = profileZ_s(i, zz, eta_val);
+		double Sh2  = profileZ_s2(k2, zz, eta_val);
+		dphi2ds += -0.5 * AA * H_diag * (k2 * depth * Sh2) * sin(2.0 * phi_i);
+		dphi2ds +=  0.5 * AA * g * (ki * Sh_i / oi
+			+ sp1 * ki * (ki * depth * Ch_i) / oi) * sin(2.0 * phi_i);
 	}
 
 	// Off-diagonal terms
@@ -1908,28 +2675,60 @@ double Irregular::w_smit(double t, double xx, double yy, double zz) {
 		double fr_m = freq_ramp(t, freq_ramptime[m], freq_starttime[m], freq_duration[m]);
 		double AA = Ai * Am * fr_i * fr_m;
 
+		double Sh_i = profileZ_s(i, zz, eta_val);
+		double Sh_m = profileZ_s(m, zz, eta_val);
+		double Ch_i = profileX_s(i, zz, eta_val);
+		double Ch_m = profileX_s(m, zz, eta_val);
+
 		if (p.has_plus) {
 			double phi_plus = phi_i + phi_m;
 			double Sh12 = profileZ_s2(p.k_nm_plus, zz, eta_val);
-			w2_val += AA * p.H_nm_plus * p.k_nm_plus * (-sin(phi_plus)) * Sh12;
+			dphi2ds += -AA * p.H_nm_plus * (p.k_nm_plus * depth * Sh12) * sin(phi_plus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi + km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi + km * (km * depth * Ch_m) / om)) * sin(phi_plus);
 		}
 
 		if (p.has_minus) {
 			double phi_minus = phi_i - phi_m;
 			double Sh12 = profileZ_s2(p.k_nm_minus, zz, eta_val);
-			w2_val += AA * p.H_nm_minus * p.k_nm_minus * (-sin(phi_minus)) * Sh12;
+			dphi2ds += -AA * p.H_nm_minus * (p.k_nm_minus * depth * Sh12) * sin(phi_minus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi - km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi - km * (km * depth * Ch_m) / om)) * sin(phi_minus);
 		}
 	}
 	} // end if (order >= 1)
 
-	return w1_val + w2_val;
+	return (phi_s + dphi2ds) / (depth + eta_val);
 }
 
+
+// First-order dynamic pressure, smit stretched profile: the dp1 block of
+// dp_smit() with the stretching referenced to the FIRST-order elevation
+// (consistent truncation, and eta2_full would cost the O(N^2) pair sums
+// this fast path exists to avoid).
+double Irregular::dp1_smit(double t, double xx, double yy, double zz) {
+
+	double eta_val = eta1(t, xx, yy);
+	if (zz > eta_val + swl) return 0.0;
+	zz = std::max(-depth, zz - swl);
+
+	const int N = ndir * nfreq;
+	if ((int)cth_cache.size() != N) rebuild_second_order_cache();
+
+	double dp1_val = 0.0;
+	for (int i = 0; i < N; i++) {
+		double phi = k[i] * (cth_cache[i] * (xx - fpoint[0]) + sth_cache[i] * (yy - fpoint[1]))
+			- omega[i] * t + phase0_cache[i];
+		double fr = freq_ramp(t, freq_ramptime[i], freq_starttime[i], freq_duration[i]);
+		dp1_val += A[i] * rho * g * profileX_s(i, zz, eta_val) * cos(phi) * fr;
+	}
+	return dp1_val;
+}
 
 double Irregular::dp_smit(double t, double xx, double yy, double zz) {
 
 	double eta_val = eta1(t, xx, yy);
-	if (order >= 1) eta_val += eta2(t, xx, yy);
+	if (order >= 1) eta_val += eta2_full(t, xx, yy);
 	if (zz > eta_val + swl) return 0.0;
 	zz = std::max(-depth, zz - swl);
 
@@ -1945,11 +2744,21 @@ double Irregular::dp_smit(double t, double xx, double yy, double zz) {
 		dp1_val += A[i] * rho * g * profileX_s(i, zz, eta_val) * cos(phi) * fr;
 	}
 
-	// Second order pressure — bound wave + Bernoulli kinetic-energy term
+	// Second order pressure via the exact σ-mapping
+	//   p = −ρ[∂ₜφ̃ − (1+s)/D·η_t·∂ₛφ̃] − ½ρ|∇φ¹|²
+	// (∂ₜ at fixed z picks up the s_t = −(1+s)/D·η_t Jacobian term; the
+	// Bernoulli part is the exact field product of the first-order
+	// stretched velocities, matching the corrected S&D dp2 formulation.)
 	double dp2_val = 0.0;
 	if (order >= 1) {
 
-	// Diagonal pressure terms
+	double sp1 = (depth + zz) / (depth + eta_val);              // (1+s)
+	double g1s = g * sp1;                                       // g(1+s)
+
+	double dphi2dt = 0.0;   // ∂φ²/∂t (σ-frame, at fixed s)
+	double dphi2ds = 0.0;   // ∂φ²/∂s
+
+	// Diagonal terms
 	for (int i = 0; i < N; i++) {
 		double phi_i = k[i] * (cth_cache[i] * (xx - fpoint[0]) + sth_cache[i] * (yy - fpoint[1]))
 			- omega[i] * t + phase0_cache[i];
@@ -1964,16 +2773,21 @@ double Irregular::dp_smit(double t, double xx, double yy, double zz) {
 		double H_diag = -g / om2 * (alpha_nn / 2.0
 			- (3.0 * oi * oi) / (2.0 * g)
 			+ g * ki * ki / (2.0 * oi * oi));
-		// P bound: -ω₁₂·H·Ch(2k)·cos(2φ)·ρ
+
 		double Ch2 = profileX_s2(k2, zz, eta_val);
-		dp2_val += 0.5 * AA * rho * om2 * H_diag * (-cos(2.0 * phi_i)) * Ch2;
-		// P kinetic (Bernoulli -rho/2 |grad phi|^2): -ρg²k²(Ch²−Sh²)/(ω²)·cos(2φ)
 		double Ch_i = profileX_s(i, zz, eta_val);
 		double Sh_i = profileZ_s(i, zz, eta_val);
-		dp2_val -= 0.5 * AA * rho * g * g * ki * ki * (Ch_i * Ch_i - Sh_i * Sh_i) / (oi * oi) * cos(2.0 * phi_i);
+		double Sh2  = profileZ_s2(k2, zz, eta_val);
+
+		// φ²(diag) = −0.5·AA·H·Ch₂·sin2φ + 0.5·AA·g(1+s)(k·Sh/ω)·sin2φ
+		dphi2dt += 0.5 * AA * H_diag * om2 * Ch2 * cos(2.0 * phi_i);
+		dphi2dt += -0.5 * AA * g1s * (ki * Sh_i / oi) * om2 * cos(2.0 * phi_i);
+		dphi2ds += -0.5 * AA * H_diag * (k2 * depth * Sh2) * sin(2.0 * phi_i);
+		dphi2ds +=  0.5 * AA * g * (ki * Sh_i / oi
+			+ sp1 * ki * (ki * depth * Ch_i) / oi) * sin(2.0 * phi_i);
 	}
 
-	// Off-diagonal pressure terms
+	// Off-diagonal terms
 	for (const auto& p : pair_cache) {
 		const int i = p.i, m = p.m;
 		const double Ai = A[i], Am = A[m];
@@ -1988,39 +2802,60 @@ double Irregular::dp_smit(double t, double xx, double yy, double zz) {
 		double fr_m = freq_ramp(t, freq_ramptime[m], freq_starttime[m], freq_duration[m]);
 		double AA = Ai * Am * fr_i * fr_m;
 
+		double Ch_i = profileX_s(i, zz, eta_val);
+		double Ch_m = profileX_s(m, zz, eta_val);
+		double Sh_i = profileZ_s(i, zz, eta_val);
+		double Sh_m = profileZ_s(m, zz, eta_val);
+
 		if (p.has_plus) {
 			double phi_plus = phi_i + phi_m;
 			double om12 = oi + om;
 			double Ch12 = profileX_s2(p.k_nm_plus, zz, eta_val);
+			double Sh12 = profileZ_s2(p.k_nm_plus, zz, eta_val);
 
-			// Bound wave pressure: iω₁₂·H·Ch_{1+2} → ω₁₂·H·(−cos(phase))·ρ
-			dp2_val += AA * rho * om12 * p.H_nm_plus * (-cos(phi_plus)) * Ch12;
-
-			// Kinetic energy (Bernoulli): sum-freq bracket [Ch·Ch − Sh·Sh]
-			double Ch_i = profileX_s(i, zz, eta_val);
-			double Ch_m = profileX_s(m, zz, eta_val);
-			double Sh_i = profileZ_s(i, zz, eta_val);
-			double Sh_m = profileZ_s(m, zz, eta_val);
-			double k1dk2 = ki * km * p.gamma_nm;
-			dp2_val -= AA * rho * g * g * k1dk2 * (Ch_i * Ch_m - Sh_i * Sh_m) / (oi * om) * cos(phi_plus);
+			// φ²(sum) = −AA·H·Ch₁₂·sinφ₊ + 0.5·AA·g(1+s)(k₁Sh₁/ω₁+k₂Sh₂/ω₂)·sinφ₊
+			dphi2dt += AA * p.H_nm_plus * om12 * Ch12 * cos(phi_plus);
+			dphi2dt += -0.5 * AA * g1s * (ki * Sh_i / oi + km * Sh_m / om) * om12 * cos(phi_plus);
+			dphi2ds += -AA * p.H_nm_plus * (p.k_nm_plus * depth * Sh12) * sin(phi_plus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi + km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi + km * (km * depth * Ch_m) / om)) * sin(phi_plus);
 		}
 
 		if (p.has_minus) {
 			double phi_minus = phi_i - phi_m;
 			double om12 = oi - om;
 			double Ch12 = profileX_s2(p.k_nm_minus, zz, eta_val);
+			double Sh12 = profileZ_s2(p.k_nm_minus, zz, eta_val);
 
-			dp2_val += AA * rho * om12 * p.H_nm_minus * (-cos(phi_minus)) * Ch12;
-
-			// Kinetic energy (Bernoulli): diff-freq bracket [Ch·Ch + Sh·Sh]
-			double Ch_i = profileX_s(i, zz, eta_val);
-			double Ch_m = profileX_s(m, zz, eta_val);
-			double Sh_i = profileZ_s(i, zz, eta_val);
-			double Sh_m = profileZ_s(m, zz, eta_val);
-			double k1dk2 = ki * km * p.gamma_nm;
-			dp2_val -= AA * rho * g * g * k1dk2 * (Ch_i * Ch_m + Sh_i * Sh_m) / (oi * om) * cos(phi_minus);
+			// difference: k₂→−k₂, ω₂→−ω₂
+			dphi2dt += AA * p.H_nm_minus * om12 * Ch12 * cos(phi_minus);
+			dphi2dt += -0.5 * AA * g1s * (ki * Sh_i / oi - km * Sh_m / om) * om12 * cos(phi_minus);
+			dphi2ds += -AA * p.H_nm_minus * (p.k_nm_minus * depth * Sh12) * sin(phi_minus);
+			dphi2ds +=  0.5 * AA * g * ((ki * Sh_i / oi - km * Sh_m / om)
+				+ sp1 * (ki * (ki * depth * Ch_i) / oi - km * (km * depth * Ch_m) / om)) * sin(phi_minus);
 		}
 	}
+
+	// First-order η_t, ∂ₛφ¹ and velocities (stretched profiles)
+	double eta_t = 0.0, phi_s1 = 0.0, u1v = 0.0, v1v = 0.0;
+	for (int n = 0; n < N; n++) {
+		double phi_n = k[n] * (cth_cache[n] * (xx - fpoint[0]) + sth_cache[n] * (yy - fpoint[1]))
+			- omega[n] * t + phase0_cache[n];
+		double fr = freq_ramp(t, freq_ramptime[n], freq_starttime[n], freq_duration[n]);
+		double cphi = cos(phi_n), sphi = sin(phi_n);
+		eta_t += A[n] * omega[n] * sphi * fr;                              // ∂η₁/∂t
+		phi_s1 += (g * A[n] / omega[n]) * k[n] * depth
+			* profileZ_s(n, zz, eta_val) * sphi * fr;                      // ∂φ₁/∂s
+		double uampl = A[n] * g * k[n] / omega[n] * profileX_s(n, zz, eta_val) * cphi * fr;
+		u1v += uampl * cth_cache[n];
+		v1v += uampl * sth_cache[n];
+	}
+	double w1v = phi_s1 / (depth + eta_val);
+
+	double oneplus_s_over_D = (depth + zz) / ((depth + eta_val) * (depth + eta_val));
+	dp2_val = rho * (-dphi2dt
+		+ oneplus_s_over_D * eta_t * (phi_s1 + dphi2ds)
+		- 0.5 * (u1v * u1v + v1v * v1v + w1v * w1v));
 	} // end if (order >= 1)
 
 	return dp1_val + dp2_val;

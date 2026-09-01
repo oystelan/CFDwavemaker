@@ -10,7 +10,7 @@ VERSION := $(strip $(shell cat VERSION))
 CC      := g++
 CCFLAGS := -O3 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL) -DCFDWM_VERSION=\"v$(VERSION)\"
 LDFLAGS := -L./ -L../swd/lib
-LIBS += -lm -lgfortran -lfftw3
+LIBS += -lm -lgfortran
 
 
 #export PATH:=$(VTK_INCL):${PATH}
@@ -21,7 +21,7 @@ TARGETS_SHARED_SWD:= $(addsuffix _v$(VERSION)_openmp.so, $(TARGETS))
 TARGETS_STATIC_SWD:= $(addsuffix _v$(VERSION)_openmp.a, $(TARGETS))
 
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ	   := $(MAINS) Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o probes.o lsgrid_spline.o
+OBJ	   := $(MAINS) Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o probes.o input_reader.o lsgrid_spline.o sigma_fft.o fftw_stubs.o seabed.o
 
 
 .PHONY: clean all

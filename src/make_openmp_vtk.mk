@@ -12,7 +12,7 @@ VERSION := $(strip $(shell cat VERSION))
 
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -fopenmp -DSWD_enable=1 -I$(SWD_INCL) -DVTK_enable=1 -I$(VTK_INCL) -DCFDWM_VERSION=\"v$(VERSION)\" 
 LDFLAGS := -L./ -L../swd/lib 
-LIBS += -lm -lgfortran -lfftw3
+LIBS += -lm -lgfortran
 BUILD_DIR += ../builds/linux64/
 # -D_GLIBCXX_USE_CXX11_ABI=0
 
@@ -26,7 +26,7 @@ TARGETS_STATIC_OMP_ALL:= $(addsuffix _v$(VERSION)_openmp_vtk.a, $(TARGETS))
 
 #TARGETS_STATIC_OMP:= $(addsuffix _openmp.a, $(TARGETS))
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o lsgrid_spline.o SpectralWaveData.o probes.o VTKreader.o $(MAINS)
+OBJ    := Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o input_reader.o lsgrid_spline.o sigma_fft.o fftw_stubs.o seabed.o SpectralWaveData.o probes.o VTKreader.o $(MAINS)
 
 
 .PHONY: all clean 

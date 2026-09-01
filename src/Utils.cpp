@@ -4,10 +4,10 @@
 #include <stdexcept>
 #include <cmath>
 #include <sys/stat.h>
-//#if defined(_WIN32)
-//#include < direct.h >
-//#endif
-#ifdef WINDOWS
+// _WIN32 is the guard the code below uses for _mkdir/_getcwd, so the
+// matching header must come in under the same macro (MinGW builds define
+// _WIN32 but not WINDOWS)
+#if defined(_WIN32)
 #include <direct.h>
 #define GetCurrentDir _getcwd
 #else

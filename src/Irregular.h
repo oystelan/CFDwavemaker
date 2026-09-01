@@ -4,6 +4,11 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <complex>
+#include <mutex>
+#include <atomic>
+#include <memory>
+#include "seabed.h"
 #ifndef SMALL
 #define SMALL 1.e-12
 #endif
@@ -27,6 +32,13 @@ struct PairCacheEntry {
 
     bool has_plus;
     bool has_minus;
+
+    // Sharma & Dean truncation flag: ki+km <= kmax. The S&D evaluation
+    // paths (eta2, uvw2, factored) drop sum interactions beyond kmax; the
+    // smit velocity/pressure paths must NOT (their first-order stretching
+    // and chain content cannot be truncated per-pair, so consistency
+    // requires the full pair set).
+    bool kmax_plus;
 
     double gamma_nm;
 
@@ -77,7 +89,7 @@ public:
 
 	// Variables
 	int nfreq, ndir;
-	bool normalize, sloping_bottom;
+	bool normalize;
 	int extrapolation_met = 0; // 0 = exponential all components. 1
 	int order; // 0 = linear airy wave theory; 2= second order wave theory
 	int vertical_theory = 0; // 0 = conventional Sharma & Dean, 1 = Smit s-coordinate
@@ -122,6 +134,50 @@ public:
 	void rebuild_second_order_cache();
 	void rebuild_pair_cache();
 
+	// Factorized second-order elevation for long-crested components on an
+	// equal-dk wavenumber grid (waveinput keyword "equal_dk 1"): all pair
+	// interactions collapse into wavenumber bins j*dk, so the O(N^2) pair
+	// work is spent once per time level (independent of evaluation points)
+	// and each eta2() call costs O(n_bins).
+	bool equal_dk = false;              // set by the input file parser
+	// new 4-column table with equal_dk: the k column is primary and
+	// omega is derived from the dispersion relation (post-parse)
+	bool k_first = false;
+	// legacy 5-column table: k was supplied in the file (recomputed;
+	// used only to decide whether a mismatch warning makes sense)
+	bool k_column_read = false;
+	std::atomic<bool> fact_checked{ false };
+	bool fact_ok = false;
+	double fact_dk = 0.0;
+	int fact_nbins = 0;
+	std::vector<int> fact_n;            // k[i] = fact_n[i] * fact_dk
+	std::mutex fact_mutex;
+	void factored_init();
+
+	// Per-time-level coefficient sets. Callers (e.g. the spline lsgrid)
+	// evaluate SEVERAL time levels concurrently, so coefficients are kept
+	// in a small cache of immutable entries handed out as shared pointers:
+	// an entry is fully built under fact_mutex before it becomes visible
+	// and is never mutated afterwards (except adding the independent uvw
+	// part under the same mutex).
+	struct FactCoeffs {
+		double t = 0.0;
+		bool has_eta2 = false;
+		bool has_uvw = false;
+		std::vector<double> ramp;                    // per-component ramp
+		std::vector<std::complex<double>> eta2_bins;
+		std::vector<std::complex<double>> Qk;        // u,v: k-weighted
+		std::vector<std::complex<double>> Qw;        // w: sin-type
+		std::vector<std::complex<double>> Qp;        // p: omega-weighted
+	};
+	std::vector<std::shared_ptr<FactCoeffs>> fact_cache;
+	std::shared_ptr<FactCoeffs> fact_get(double t, bool need_uvw);
+	void fact_build_eta2(FactCoeffs& c, double t);
+	void fact_build_uvw(FactCoeffs& c, double t);
+	double eta2_factored_eval(const FactCoeffs& c, double xx, double yy);
+	UVWP uvw2_factored_eval(const FactCoeffs& c, double xx, double yy,
+	                        double zz);
+
 	void print();
 
 	// First order
@@ -135,6 +191,7 @@ public:
 
 	// second order
 	double eta2(double t, double xx, double yy);
+	double eta2_full(double t, double xx, double yy); // no kmax truncation (smit path)
 	double u2(double t, double xx, double yy, double zz);
 	double v2(double t, double xx, double yy, double zz);
 	double w2(double t, double xx, double yy, double zz);
@@ -146,6 +203,59 @@ public:
 	double phi1_dydz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component V */
 	double phi1_dzdz(double t, double xx, double yy); /* vertical velocity gradient at z=0 for velocity component W */
 	double dp1_dz(double t, double xx, double yy); /* vertical pressure gradient at z=0*/
+
+	// Sloping seabed (variable bathymetry). When seabed.active(), the
+	// kinematics dispatch to the slope-corrected first-order evaluation
+	// below: per point, the local depth h(x,y) and bed slope grad h come
+	// from the Seabed probe, each component's wavenumber is re-solved
+	// from the local dispersion relation, and the Airy vertical
+	// eigenfunction is replaced by (see seabed_development/):
+	//   F_j(z) = [cosh k(z+h) - i b sinh k(z+h)]
+	//            / [cosh kh - i b sinh kh],   b = khat_j . grad h,
+	// which satisfies the sloping-bottom kinematic condition
+	// w + grad h . u_H = 0 at z = -h exactly (pointwise identity).
+	Seabed seabed;
+	// local wavenumber from om^2 = g k tanh(k h) (Newton)
+	double dispersion_k(double om, double h) const;
+	// slope-corrected first-order kinematics; zz measured from swl
+	UVWP uvwp1_slope(double t, double xx, double yy, double zz);
+	// first-order elevation with LOCAL wavenumbers in the phase (the
+	// dynamic surface BC of the slope-corrected potential; F(0) = 1
+	// exactly, so no slope term remains at z = 0). Must be used instead
+	// of eta1() whenever the seabed is active, so the surface and the
+	// kinematics/eta2_slope share the same local phase function.
+	double eta1_slope(double t, double xx, double yy);
+
+	// Depth-local Sharma & Dean second order (variable bathymetry):
+	// the same interaction coefficients as rebuild_pair_cache()/uvw2(),
+	// but built for the LOCAL depth h(x, y) with local wavenumbers.
+	// The interaction limit (Johannessen, APOR_736: sum interactions
+	// with the high-k spectral tail misbehave for wide-banded spectra,
+	// e.g. Torsethaugen's w^-4 decay) is applied to CROSS sum
+	// interactions: k_i + k_m <= kmax (max local component k). The
+	// DIAGONAL self-interaction (each component's own Stokes second
+	// harmonic - bounded and physical) is kept in both the elevation
+	// and the kinematics, unlike the constant-depth S&D path which
+	// drops it from eta2 only; this keeps the exported surface and the
+	// kinematics mutually consistent. A per-thread coefficient set is
+	// cached on h, so evaluations down a water column (same x, y)
+	// rebuild nothing.
+	struct LocalPairSet {
+		double h = -1.0;               // depth this set was built for
+		const void* owner = nullptr;   // Irregular instance it belongs to
+		std::vector<double> kl, Rl, Rsl, c2kd, cth, sth;
+		std::vector<double> diagD;     // diagonal D_nn+
+		struct P {
+			int i, m;
+			bool has_minus;
+			bool kmax_p;               // ki + km <= local kmax
+			double k_p, k_mn, D_p, D_mn, a_p, a_mn;
+		};
+		std::vector<P> pairs;
+	};
+	void build_local_pair_set(double h, LocalPairSet& s) const;
+	double eta2_slope(double t, double xx, double yy);
+	UVWP uvwp2_slope(double t, double xx, double yy, double zz);
 
 	// main kinematics functions
 	double eta(double t, double x, double y);
@@ -165,6 +275,12 @@ public:
 	double v_smit(double t, double x, double y, double z);
 	double w_smit(double t, double x, double y, double z);
 	double dp_smit(double t, double x, double y, double z);
+	// First-order-only dynamic pressure with the smit stretched profile:
+	// the dp1 part of dp_smit(), O(nfreq) per call (no O(nfreq^2) pair
+	// sums). Used to serve p_nh in lsgrid mode (wavetype 5), where the
+	// spline grid stores no pressure field and the full second-order
+	// evaluation is too expensive per boundary query.
+	double dp1_smit(double t, double x, double y, double z);
 	double dp(double t, double x, double y, double z);
 
 	void normalize_data();

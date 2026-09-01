@@ -14,14 +14,14 @@ VERSION := $(strip $(shell cat VERSION))
 CC      := mpicxx
 CCFLAGS := -O2 -fPIC -pthread -std=c++11 -DMPI_enable=1 -DOMPI_SKIP_MPICXX -DSWD_enable=1 -I$(SWD_INCL) -DCFDWM_VERSION=\"v$(VERSION)\"
 LDFLAGS := -L./ -L../swd/lib
-LIBS += -lm -lgfortran -lfftw3
+LIBS += -lm -lgfortran
 
 TARGETS:= CFDwavemaker
 TARGETS_SHARED_MPI:= $(addsuffix _v$(VERSION)_mpi.so, $(TARGETS))
 TARGETS_STATIC_MPI:= $(addsuffix _v$(VERSION)_mpi.a, $(TARGETS))
 
 MAINS  := $(addsuffix .o, $(TARGETS) )
-OBJ    := Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o lsgrid_spline.o probes.o $(MAINS)
+OBJ    := Stokes5.o FentonStream.o Irregular.o Utils.o Wavemaker.o SpectralWaveData.o input_reader.o lsgrid_spline.o sigma_fft.o fftw_stubs.o seabed.o probes.o $(MAINS)
 
 .PHONY: clean mpi
 

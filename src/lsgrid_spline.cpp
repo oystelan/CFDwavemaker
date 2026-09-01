@@ -32,32 +32,167 @@ static inline int omp_get_num_threads() { return 1; }
 
 
 // Allocation of memory to storage matrices
+void lsGridSpline::build_identity_slot() {
+	// dense layout: storage index == i*ny + j, nothing dropped
+	slot.resize((size_t)nx * ny);
+	for (long k = 0; k < (long)nx * ny; k++) slot[k] = (int)k;
+	col_off.resize(nx + 1);
+	for (int i = 0; i <= nx; i++) col_off[i] = (long)i * ny;
+	nkept = (long)nx * ny;
+	trash = nkept;
+	nnodes = nkept + 1;
+	compacted = false;
+}
+
+/* Drop every node the ignore box covers, keeping a two-node halo around the
+   retained set:
+
+     ring 1  the bilinear / tricubic gather in square_vals()/cube_vals()
+             reads the FAR corner (i+1, j+1) of the query cell, so a query
+             anywhere in the retained area touches one node beyond it;
+     ring 2  those corner nodes must carry VALID finite-difference
+             gradients, and a gradient is built from the node's own
+             neighbours;
+     ring 3  margin, so that the gradient-valid region (kept minus one ring)
+             extends TWO full nodes past the retained region rather than
+             sitting exactly on its edge. Interpolation stays accurate for a
+             client whose stencil reaches slightly beyond the box, instead of
+             failing at the first node.
+
+   Anything past ring 3 is never read, by either the interpolation or the
+   gradient stencils, and is what this frees. One extra ring costs very
+   little: the retained set is a thin frame, so its area grows roughly
+   linearly with the halo width. Called either before the first
+   fill (ignore_at_init: nothing to preserve) or after it (the retained data
+   is carried across into the smaller arrays). */
+void lsGridSpline::compact() {
+	if (compacted) return;
+	if (slot.size() != (size_t)nx * ny) build_identity_slot();
+
+	const int HALO = 3;
+	std::vector<char> keep((size_t)nx * ny, 0);
+	long nignored = 0;
+	for (int i = 0; i < nx; i++)
+		for (int j = 0; j < ny; j++) {
+			if (IGNORE[i * ny + j]) { nignored++; continue; }
+			for (int a = -HALO; a <= HALO; a++) {
+				const int ii = std::min(std::max(i + a, 0), nx - 1);
+				for (int b = -HALO; b <= HALO; b++) {
+					const int jj = std::min(std::max(j + b, 0), ny - 1);
+					keep[(size_t)ii * ny + jj] = 1;
+				}
+			}
+		}
+	if (nignored == 0) return;   // no ignore box: nothing to gain
+
+	// assign storage indices in i-major order, so each rank's column range
+	// stays a CONTIGUOUS slot range (the MPI gather relies on that)
+	const std::vector<int> old_slot = slot;
+	const long old_nnodes = nnodes;
+	std::vector<int> new_slot((size_t)nx * ny, -1);
+	std::vector<long> new_col_off(nx + 1, 0);
+	long k = 0;
+	for (int i = 0; i < nx; i++) {
+		new_col_off[i] = k;
+		for (int j = 0; j < ny; j++)
+			if (keep[(size_t)i * ny + j]) new_slot[(size_t)i * ny + j] = (int)k++;
+	}
+	new_col_off[nx] = k;
+	const long new_nkept = k, new_nnodes = k + 1;
+
+	if (new_nnodes >= old_nnodes) return;   // nothing to save
+
+	// move each field into its smaller array, carrying the retained values
+	struct Fld { double** p; int lev; bool layered; };
+	std::vector<Fld> flds = {
+		{&ETA,4,false},{&ETAdx,2,false},{&ETAdy,2,false},{&ETAdt,4,false},
+		{&UX,4,true},{&UY,4,true},{&UZ,4,true},
+		{&Udt,4,true},{&Udx,2,true},{&Udy,2,true},{&Uds,2,true},
+		{&Vdt,4,true},{&Vdx,2,true},{&Vdy,2,true},{&Vds,2,true},
+		{&Wdt,4,true},{&Wdx,2,true},{&Wdy,2,true},{&Wds,2,true}
+	};
+	if (store_pressure) {
+		flds.push_back({&P,4,true});
+		flds.push_back({&Pdt,4,true});
+		flds.push_back({&Pdx,2,true});
+		flds.push_back({&Pdy,2,true});
+		flds.push_back({&Pds,2,true});
+	}
+	for (Fld& f : flds) {
+		const long per = f.layered ? nl : 1;
+		double* dst = new double[(size_t)f.lev * new_nnodes * per]();
+		if (*f.p) {
+			for (int i = 0; i < nx; i++)
+				for (int j = 0; j < ny; j++) {
+					const long ns = new_slot[(size_t)i * ny + j];
+					const long os = old_slot[(size_t)i * ny + j];
+					if (ns < 0 || os < 0) continue;
+					for (int t = 0; t < f.lev; t++)
+						for (long m = 0; m < per; m++)
+							dst[(t * new_nnodes + ns) * per + m] =
+								(*f.p)[(t * old_nnodes + os) * per + m];
+				}
+			delete[] *f.p;
+		}
+		*f.p = dst;
+	}
+
+	slot.swap(new_slot);
+	col_off.swap(new_col_off);
+	nkept = new_nkept;
+	trash = new_nkept;
+	nnodes = new_nnodes;
+	compacted = true;
+
+	const double mb_old = (double)old_nnodes / new_nnodes;
+	cfdwm_mpi::out() << "lsgrid: storage compacted to " << new_nkept << " of "
+		<< (long)nx * ny << " nodes (" << 100.0 * new_nkept / ((double)nx * ny)
+		<< "%), " << mb_old << "x less memory -- the selected borders plus a "
+		<< HALO << "-node halo (interpolation + gradient stencils, with 2 "
+		"nodes of accurate margin past the retained region)."
+		<< std::endl;
+}
+
 void lsGridSpline::allocate() {
+	// Field arrays are sized by the STORAGE node count. Until compact()
+	// runs that is the full grid, so this is the original dense layout.
+	if (slot.size() != (size_t)nx * ny || nnodes == 0)
+		build_identity_slot();
+
 	// Primary fields
-	ETA = new double[4 * nx * ny];
-	UX = new double[4 * nx * ny * nl];
-	UY = new double[4 * nx * ny * nl];
-	UZ = new double[4 * nx * ny * nl];
+	ETA = new double[4 * nnodes];
+	UX = new double[4 * nnodes * nl];
+	UY = new double[4 * nnodes * nl];
+	UZ = new double[4 * nnodes * nl];
 
 	// secondary fields (derivatives)
-	ETAdx = new double[2 * nx * ny];
-	ETAdy = new double[2 * nx * ny];
-	ETAdt = new double[4 * nx * ny];
-	Udt = new double[4 * nx * ny * nl];
-	Udx = new double[2 * nx * ny * nl];
-	Udy = new double[2 * nx * ny * nl];
-	Uds = new double[2 * nx * ny * nl];
-	Vdt = new double[4 * nx * ny * nl];
-	Vdx = new double[2 * nx * ny * nl];
-	Vdy = new double[2 * nx * ny * nl];
-	Vds = new double[2 * nx * ny * nl];
-	Wdt = new double[4 * nx * ny * nl];
-	Wdx = new double[2 * nx * ny * nl];
-	Wdy = new double[2 * nx * ny * nl];
-	Wds = new double[2 * nx * ny * nl];
+	ETAdx = new double[2 * nnodes];
+	ETAdy = new double[2 * nnodes];
+	ETAdt = new double[4 * nnodes];
+	Udt = new double[4 * nnodes * nl];
+	Udx = new double[2 * nnodes * nl];
+	Udy = new double[2 * nnodes * nl];
+	Uds = new double[2 * nnodes * nl];
+	Vdt = new double[4 * nnodes * nl];
+	Vdx = new double[2 * nnodes * nl];
+	Vdy = new double[2 * nnodes * nl];
+	Vds = new double[2 * nnodes * nl];
+	Wdt = new double[4 * nnodes * nl];
+	Wdx = new double[2 * nnodes * nl];
+	Wdy = new double[2 * nnodes * nl];
+	Wds = new double[2 * nnodes * nl];
+
+	// Dynamic pressure (optional: the GABC's p_nh source)
+	if (store_pressure) {
+		P   = new double[4 * nnodes * nl];
+		Pdt = new double[4 * nnodes * nl];
+		Pdx = new double[2 * nnodes * nl];
+		Pdy = new double[2 * nnodes * nl];
+		Pds = new double[2 * nnodes * nl];
+	}
 
 	// Misc fields
-	IGNORE = new int[nx * ny];
+	IGNORE = new int[nnodes];
 }
 
 // A streching function for setting variable layer thickness
@@ -97,28 +232,189 @@ double lsGridSpline::s2z(double s, double wave_elev, double depth) {
 	return (wave_elev - swl) + s * (depth + (wave_elev - swl));
 }
 
-double lsGridSpline::s2tan(double s) {
-	// s defined between -1 and 0, where -1 is seabed, 0 is sea surface
-	// returns tangens strethced coordintates tan, which is also defined between -1 and 0	
-	return -std::pow(std::tan(-s * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
+/* Exponential vertical stretching; see layer_stretch.h for the mapping and for
+   how stretch_beta is chosen when it is left automatic. */
+double lsGridSpline::u2sigma(double u) {
+	return layer_stretch::u2sigma(u, stretch_beta);
 }
 
-double lsGridSpline::tan2s(double t) {
-	// The inverse of the above function s2tan. from tan stretched to normal constant spacing	
-	return -std::atan(std::pow(-t * std::pow(std::tan(tan_a) , tan_b) , 1. / tan_b)) / tan_a;
+double lsGridSpline::sigma2u(double sigma) {
+	return layer_stretch::sigma2u(sigma, stretch_beta);
+}
+
+double lsGridSpline::layer_thickness_ratio() const {
+	return layer_stretch::thickness_ratio(stretch_beta, nl);
+}
+
+/* Automatic vertical layer distribution ('stretch_beta auto'): pick the
+   stretching that minimises the vertical interpolation error for the loaded
+   sea state. The mathematics lives in layer_stretch.h; this only assembles the
+   component set and reports the outcome. */
+void lsGridSpline::resolve_auto_stretch(Irregular& irregular) {
+	if (!stretch_auto && !nl_auto) return;
+
+	const int nc = irregular.nfreq * irregular.ndir;
+	const double h = water_depth;
+
+	// per-component horizontal velocity amplitude squared at the surface;
+	// summing over direction removes any dependence on the mean heading
+	std::vector<double> c, kk;
+	c.reserve(std::max(nc, 0));
+	kk.reserve(std::max(nc, 0));
+	for (int j = 0; j < nc; j++) {
+		const double amp = (irregular.omega[j] > 0.0)
+			? irregular.A[j] * irregular.g * irregular.k[j] / irregular.omega[j]
+			: 0.0;
+		c.push_back(amp * amp);
+		kk.push_back(irregular.k[j]);
+	}
+
+	/* Automatic layer count: the smallest nl whose vertical Hermite
+	   reconstruction of the RMS velocity profile meets nl_tol. Under
+	   stretch_auto each candidate is evaluated at its own optimal grading
+	   (which then also resolves the stretching); with a prescribed beta the
+	   candidates are evaluated at that grading. */
+	if (nl_auto) {
+		nl_auto = false;                 // resolve once
+		const int NL_AUTO_MAX = 25;
+		int pick = -1;
+		double pick_beta = stretch_beta, pick_err = -1.0;
+		for (int n = 3; n <= NL_AUTO_MAX; n++) {
+			double e = -1.0, b = stretch_beta;
+			if (stretch_auto) b = layer_stretch::optimal_beta(n, c, kk, h, &e);
+			else e = layer_stretch::profile_error(stretch_beta, n, c, kk, h);
+			if (e < 0.0 || (stretch_auto && b < 0.0)) { pick = -1; break; }
+			pick = n; pick_beta = b; pick_err = e;
+			if (e <= nl_tol) break;
+		}
+		if (pick < 0) {
+			if (cfdwm_mpi::rank() == 0)
+				std::cout << "lsgrid: automatic nl requested but the sea state "
+					"does not define a velocity profile; keeping nl=" << nl
+					<< std::endl;
+			// fall through: stretch_auto (if set) resolves at the kept nl
+		}
+		else {
+			if (pick != nl) {
+				nl = pick;
+				ds = 1. / std::max(1., double(nl - 1));
+				/* the storage is sized by nl -> rebuild it. The IGNORE mask
+				   (set_ignore ran before initialization) is nl-independent
+				   and reallocate() would wipe it, so carry it across. */
+				std::vector<int> keep_ignore(IGNORE, IGNORE + nnodes);
+				reallocate();
+				std::copy(keep_ignore.begin(), keep_ignore.end(), IGNORE);
+			}
+			if (cfdwm_mpi::rank() == 0)
+				std::cout << "lsgrid: nl auto -> nl=" << nl
+					<< " (relative L2 error of the RMS velocity profile "
+					<< pick_err << ", tolerance " << nl_tol
+					<< (pick_err > nl_tol ? " NOT met at the search cap" : "")
+					<< ")" << std::endl;
+			if (stretch_auto) {
+				stretch_auto = false;   // the search already optimised it
+				stretch_beta = pick_beta;
+				if (cfdwm_mpi::rank() == 0)
+					std::cout << "Layer stretching: auto -> beta=" << stretch_beta
+						<< " (bottom/surface layer thickness ratio "
+						<< layer_thickness_ratio() << " for nl=" << nl
+						<< "), relative L2 error of the RMS velocity profile "
+						<< pick_err << std::endl;
+			}
+			return;
+		}
+	}
+
+	if (!stretch_auto) return;
+	stretch_auto = false;                    // resolve once
+
+	double err = 0.0;
+	const double beta = layer_stretch::optimal_beta(nl, c, kk, h, &err);
+	if (beta < 0.0) {
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "Layer stretching: auto requested but the sea state "
+				"does not define a velocity profile; keeping beta="
+				<< stretch_beta << std::endl;
+		return;
+	}
+	stretch_beta = beta;
+
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "Layer stretching: auto -> beta=" << stretch_beta
+			<< " (bottom/surface layer thickness ratio "
+			<< layer_thickness_ratio() << " for nl=" << nl
+			<< "), relative L2 error of the RMS velocity profile "
+			<< err << std::endl;
+	}
 }
 
 double lsGridSpline::cart2sigmaS(double zpt, double wave_elev, double depth){
     double z = std::min(zpt, wave_elev); // impose an upper bound
     double sigma = std::max(z2s(z, wave_elev, depth), -1.); // transform to sigma coordinates
-    return 1 - std::atan(std::pow(-sigma * std::pow(std::tan(tan_a), tan_b), 1. / tan_b)) / tan_a;
+    return sigma2u(sigma);
     // defined now from 0 to 1 where 0 is sea bed and 1 is surface
 }
 
 double lsGridSpline::sigmaS2cart(double s, double wave_elev, double depth){
 	// s defined now from 0 to 1 where 0 is sea bed and 1 is surface
-    double sigma = -std::pow(std::tan(-(s - 1) * tan_a) , tan_b) / std::pow(std::tan(tan_a), tan_b);
-	return s2z(sigma, wave_elev, depth);
+	return s2z(u2sigma(s), wave_elev, depth);
+}
+
+void lsGridSpline::reallocate() {
+	delete[] ETA; delete[] UX; delete[] UY; delete[] UZ;
+	delete[] ETAdx; delete[] ETAdy; delete[] ETAdt;
+	delete[] Udt; delete[] Udx; delete[] Udy; delete[] Uds;
+	delete[] Vdt; delete[] Vdx; delete[] Vdy; delete[] Vds;
+	delete[] Wdt; delete[] Wdx; delete[] Wdy; delete[] Wds;
+	delete[] P; delete[] Pdt; delete[] Pdx; delete[] Pdy; delete[] Pds;
+	P = Pdt = Pdx = Pdy = Pds = nullptr;
+	delete[] IGNORE;
+	allocate();
+}
+
+bool lsGridSpline::try_sigma_fft_setup(Irregular& irregular) {
+	// the sigma-FFT fast path assumes a uniform depth and a spatially
+	// periodic field: incompatible with variable bathymetry
+	if (irregular.seabed.active()) return false;
+	if (sfft.enabled) return true;
+	// sigma value of each layer (x-independent by construction)
+	std::vector<double> svals(nl);
+	for (int m = 0; m < nl; m++) {
+		svals[m] = u2sigma(ds * m);
+	}
+	// grid spacings; the sigma-FFT requires them to equal the lattice
+	// tile node spacing (the input reader snaps the grid accordingly)
+	const double dxg = (nx > 1)
+		? (domain[1] - domain[0]) / (nx - 1) : 0.0;
+	const double dyg = (ny > 1)
+		? (domain[3] - domain[2]) / (ny - 1) : 0.0;
+	return sfft.setup(irregular, dxg, dyg,
+		domain[0], domain[2], svals, swl, nx, ny);
+}
+
+void lsGridSpline::sigma_fft_fill_level(Irregular& irregular, double t,
+                                        int tt) {
+	std::vector<double> eta_v, u_v, v_v, w_v, p_v;
+	sfft.fill(irregular, t, eta_v, u_v, v_v, w_v,
+		store_pressure ? &p_v : nullptr);
+	const int nfx = sfft.nfftx, nfy = sfft.nffty;
+	const int NP = nfx * nfy;
+	for (int i = 0; i < nx; i++) {
+		const int ii = i % nfx;       // node nx-1 wraps onto node 0
+		for (int j = 0; j < ny; j++) {
+			if (!fill_node(i, j)) continue;   // not stored / inside the ignore box
+			const int jj = sfft.twodim ? (j % nfy) : 0;
+			const int p = ii * nfy + jj;
+			ETA[tt * nnodes + nid(i, j)] = eta_v[p] + swl;
+			for (int m = 0; m < nl; m++) {
+				const long idx = ((long)tt * nnodes + nid(i, j)) * nl + m;
+				UX[idx] = u_v[(size_t)m * NP + p];
+				UY[idx] = v_v[(size_t)m * NP + p];
+				UZ[idx] = w_v[(size_t)m * NP + p];
+				if (store_pressure) P[idx] = p_v[(size_t)m * NP + p];
+			}
+		}
+	}
 }
 
 void lsGridSpline::update_gradient_dt(double* data, double* graddt){
@@ -128,15 +424,15 @@ void lsGridSpline::update_gradient_dt(double* data, double* graddt){
         int tid1 = (tstep + 3) % 4;
         int tid0 = (tstep + 1) % 4;
 		#pragma omp for
-		for (int i = 0; i < nx*ny*nl; i++) {
-            graddt[tid * nx * ny * nl + i] = (data[tid1 * nx * ny * nl + i] - data[tid0 * nx * ny * nl + i]) / (2 * dt);
+		for (int i = 0; i < nnodes * nl; i++) {
+            graddt[tid * nnodes * nl + i] = (data[tid1 * nnodes * nl + i] - data[tid0 * nnodes * nl + i]) / (2 * dt);
 		}
 	}
     else {
 		#pragma omp for
-        for (int i = 0; i < nx*ny*nl; i++) {
-            graddt[1 * nx * ny * nl + i] = (data[2 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / dt;
-            graddt[2 * nx * ny * nl + i] = (data[3 * nx * ny * nl + i] - data[1 * nx * ny * nl + i]) / (2 * dt);
+        for (int i = 0; i < nnodes * nl; i++) {
+            graddt[1 * nnodes * nl + i] = (data[2 * nnodes * nl + i] - data[1 * nnodes * nl + i]) / dt;
+            graddt[2 * nnodes * nl + i] = (data[3 * nnodes * nl + i] - data[1 * nnodes * nl + i]) / (2 * dt);
 		}
 	}
 }
@@ -149,15 +445,15 @@ void lsGridSpline::update_gradient_eta_dt(double* data, double* graddt){
         int tid0 = (tstep + 1) % 4;
 
 		#pragma omp for
-        for (int i = 0; i < nx*ny; i++) {
-            graddt[tid * nx * ny + i] = (data[tid1 * nx * ny + i] - data[tid0 * nx * ny + i]) / (2 * dt);
+        for (int i = 0; i < nnodes; i++) {
+            graddt[tid * nnodes + i] = (data[tid1 * nnodes + i] - data[tid0 * nnodes + i]) / (2 * dt);
 		}
 	}
     else {
 		#pragma omp for
-        for (int i = 0; i < nx*ny; i++) {
-            graddt[1 * nx * ny + i] = (data[2 * nx * ny + i] - data[1 * nx * ny + i]) / dt;
-            graddt[2 * nx * ny + i] = (data[3 * nx * ny + i] - data[1 * nx * ny + i]) / (2 * dt);
+        for (int i = 0; i < nnodes; i++) {
+            graddt[1 * nnodes + i] = (data[2 * nnodes + i] - data[1 * nnodes + i]) / dt;
+            graddt[2 * nnodes + i] = (data[3 * nnodes + i] - data[1 * nnodes + i]) / (2 * dt);
 		}
 	}
 }
@@ -172,38 +468,38 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 	if (nx == 1){
 		#pragma omp for
 		for (int j = 0; j < ny; j++) {
-            gradx[0 * ny + j] = 0.;
-            gradx[1 * ny + j] = 0.;
+            gradx[0 * nnodes + nid(0, j)] = 0.;
+            gradx[1 * nnodes + nid(0, j)] = 0.;
 		}
 	}
 	else{
 		#pragma omp for
 		for (int i = 1; i < (nx-1); i++) {
 			for (int j = 0; j < ny; j++) {
-				gradx[0 * nx * ny + i * ny + j] = (eta[tid0 * nx * ny + (i + 1) * ny + j] -
-													eta[tid0 * nx * ny +(i - 1) * ny + j]) / (2 * dx);
-				gradx[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + (i + 1) * ny + j] -
-													eta[tid1 * nx * ny + (i - 1) * ny + j]) / (2 * dx);
+				gradx[0 * nnodes + nid(i, j)] = (eta[tid0 * nnodes + nid(i + 1, j)] -
+													eta[tid0 * nnodes + nid(i - 1, j)]) / (2 * dx);
+				gradx[1 * nnodes + nid(i, j)] = (eta[tid1 * nnodes + nid(i + 1, j)] -
+													eta[tid1 * nnodes + nid(i - 1, j)]) / (2 * dx);
 			}
 		}
 		
 		// boundaries are special cases (x=0 and x=xn)
 		#pragma omp for
 		for (int j = 0; j < ny; j++) {
-			gradx[0 * nx * ny + j] = (eta[tid0 * nx * ny + ny + j] - eta[tid0 * nx * ny +j]) / dx;
-			gradx[0 * nx * ny + (nx-1) * ny + j] = (eta[tid0 * nx * ny +(nx-1) * ny + j] -
-													eta[tid0 * nx * ny +(nx-2) * ny + j]) / dx;
-			gradx[1 * nx * ny + j] = (eta[tid1 * nx * ny + ny + j] - eta[tid1 * nx * ny + j]) / dx;
-			gradx[1 * nx * ny + (nx - 1) * ny + j] = (eta[tid1 * nx * ny + (nx - 1) * ny + j] -
-													eta[tid1 * nx * ny + (nx - 2) * ny + j]) / dx;
+			gradx[0 * nnodes + nid(0, j)] = (eta[tid0 * nnodes + nid(1, j)] - eta[tid0 * nnodes + nid(0, j)]) / dx;
+			gradx[0 * nnodes + nid(nx-1, j)] = (eta[tid0 * nnodes + nid(nx-1, j)] -
+													eta[tid0 * nnodes + nid(nx-2, j)]) / dx;
+			gradx[1 * nnodes + nid(0, j)] = (eta[tid1 * nnodes + nid(1, j)] - eta[tid1 * nnodes + nid(0, j)]) / dx;
+			gradx[1 * nnodes + nid(nx - 1, j)] = (eta[tid1 * nnodes + nid(nx - 1, j)] -
+													eta[tid1 * nnodes + nid(nx - 2, j)]) / dx;
 		}
 	}
 
 	if (ny == 1){
 		#pragma omp for
 		for (int i = 0; i < nx; i++) {
-            grady[0 * nx + i] = 0.;
-            grady[1 * nx + i] = 0.;
+            grady[0 * nnodes + nid(i, 0)] = 0.;
+            grady[1 * nnodes + nid(i, 0)] = 0.;
 		}
 	}
 	else{
@@ -211,21 +507,21 @@ void lsGridSpline::update_gradient_eta_dxdy(double* eta, double* gradx,double* g
 		#pragma omp for
 		for (int i = 0; i < nx; i++) {
 			for (int j = 1; j < (ny-1); j++) {
-				grady[0 * nx * ny +i * ny + j] = (eta[tid0 * nx * ny + i * ny + (j + 1)] -
-													eta[tid0 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
-				grady[1 * nx * ny + i * ny + j] = (eta[tid1 * nx * ny + i * ny + (j + 1)] -
-													eta[tid1 * nx * ny + i * ny + (j - 1)]) / (2 * dy);
+				grady[0 * nnodes + nid(i, j)] = (eta[tid0 * nnodes + nid(i, j + 1)] -
+													eta[tid0 * nnodes + nid(i, j - 1)]) / (2 * dy);
+				grady[1 * nnodes + nid(i, j)] = (eta[tid1 * nnodes + nid(i, j + 1)] -
+													eta[tid1 * nnodes + nid(i, j - 1)]) / (2 * dy);
 			}
 		}
 		#pragma omp for
 		// y=0 and y=yn
 		for (int i = 0; i < nx; i++) {
-			grady[0 * nx * ny + i * ny] = (eta[tid0 * nx * ny + i * ny + 1] - eta[tid0 * nx * ny + i * ny]) / dy;
-			grady[0 * nx * ny + i * ny + (ny - 1)] = (eta[tid0 * nx * ny + i * ny + (ny - 1)] -
-														eta[tid0 * nx * ny +i * ny + (ny - 2)]) / dy;
-			grady[1 * nx * ny + i * ny] = (eta[tid1 * nx * ny + i * ny + 1] - eta[tid1 * nx * ny + i * ny]) / dy;
-			grady[1 * nx * ny + i * ny + (ny - 1)] = (eta[tid1 * nx * ny + i * ny + (ny - 1)] -
-													eta[tid1 * nx * ny + i * ny + (ny - 2)]) / dy;
+			grady[0 * nnodes + nid(i, 0)] = (eta[tid0 * nnodes + nid(i, 1)] - eta[tid0 * nnodes + nid(i, 0)]) / dy;
+			grady[0 * nnodes + nid(i, ny - 1)] = (eta[tid0 * nnodes + nid(i, ny - 1)] -
+														eta[tid0 * nnodes + nid(i, ny - 2)]) / dy;
+			grady[1 * nnodes + nid(i, 0)] = (eta[tid1 * nnodes + nid(i, 1)] - eta[tid1 * nnodes + nid(i, 0)]) / dy;
+			grady[1 * nnodes + nid(i, ny - 1)] = (eta[tid1 * nnodes + nid(i, ny - 1)] -
+													eta[tid1 * nnodes + nid(i, ny - 2)]) / dy;
 
 		}
 	}
@@ -240,8 +536,8 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for
 		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
-				gradx[0 * ny * nl + j * nl + m] = 0.;
-				gradx[1 * ny * nl + j * nl + m] = 0.;
+				gradx[(0 * nnodes + nid(0, j)) * nl + m] = 0.;
+				gradx[(1 * nnodes + nid(0, j)) * nl + m] = 0.;
 			}
 		}
 	}
@@ -250,10 +546,10 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		for (int i = 1; i < (nx-1); i++) {
 			for (int j = 0; j < ny; j++) {
 				for (int m = 0; m < nl; m++) {
-					gradx[0 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid0 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
-						data[tid0 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
-					gradx[1 * nx * ny * nl + i * ny * nl + j * nl + m] = ((data[tid1 * nx * ny * nl + (i + 1) * ny * nl + j * nl + m] -
-						data[tid1 * nx * ny * nl + (i - 1) * ny * nl + j * nl + m]) / (2 * dx));
+					gradx[(0 * nnodes + nid(i, j)) * nl + m] = ((data[(tid0 * nnodes + nid(i + 1, j)) * nl + m] -
+						data[(tid0 * nnodes + nid(i - 1, j)) * nl + m]) / (2 * dx));
+					gradx[(1 * nnodes + nid(i, j)) * nl + m] = ((data[(tid1 * nnodes + nid(i + 1, j)) * nl + m] -
+						data[(tid1 * nnodes + nid(i - 1, j)) * nl + m]) / (2 * dx));
 				}
 			}
 		}
@@ -261,18 +557,22 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for collapse(2)
 		for (int j = 0; j < ny; j++) {
 			for (int m = 0; m < nl; m++) {
-				gradx[0 * nx * ny * nl + j * nl + m] = (
-					data[tid0 * nx * ny * nl + ny * nl + j * nl + m] -
-					data[tid0 * nx * ny * nl + j * nl + m]) / dx;
-				gradx[0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] = (
-					data[tid0 * nx * ny * nl + (nx-1) * ny * nl + j * nl + m] -
-					data[tid0 * nx * ny * nl + (nx-2) * ny * nl + j * nl + m]) / dx;
-				gradx[1 * nx * ny * nl + j * nl + m] = (
-					data[tid1 * nx * ny * nl + ny * nl + j * nl + m] -
-					data[tid1 * nx * ny * nl + j * nl + m]) / dx;
-				gradx[1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] = (
-					data[tid1 * nx * ny * nl + (nx - 1) * ny * nl + j * nl + m] -
-					data[tid1 * nx * ny * nl + (nx - 2) * ny * nl + j * nl + m]) / dx;
+				// nid(0, j), NOT the dense j*nl: after compaction the
+				// storage index of column 0 is no longer the grid index,
+				// and the dense form writes out of (or across) the
+				// compacted arrays
+				gradx[(0 * nnodes + nid(0, j)) * nl + m] = (
+					data[(tid0 * nnodes + nid(1, j)) * nl + m] -
+					data[(tid0 * nnodes + nid(0, j)) * nl + m]) / dx;
+				gradx[(0 * nnodes + nid(nx-1, j)) * nl + m] = (
+					data[(tid0 * nnodes + nid(nx-1, j)) * nl + m] -
+					data[(tid0 * nnodes + nid(nx-2, j)) * nl + m]) / dx;
+				gradx[(1 * nnodes + nid(0, j)) * nl + m] = (
+					data[(tid1 * nnodes + nid(1, j)) * nl + m] -
+					data[(tid1 * nnodes + nid(0, j)) * nl + m]) / dx;
+				gradx[(1 * nnodes + nid(nx - 1, j)) * nl + m] = (
+					data[(tid1 * nnodes + nid(nx - 1, j)) * nl + m] -
+					data[(tid1 * nnodes + nid(nx - 2, j)) * nl + m]) / dx;
 			}
 		}
 	}
@@ -280,8 +580,11 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for
 		for (int i = 0; i < nx; i++) {
 			for (int m = 0; m < nl; m++) {
-				grady[0 * nx * nl + i * nl + m] = 0.;
-				grady[1 * nx * nl + i * nl + m] = 0.;
+				// nid(i, 0), NOT the dense i*nl: the dense form runs off
+				// the end of the compacted arrays (heap corruption on any
+				// 1D border-mode grid)
+				grady[(0 * nnodes + nid(i, 0)) * nl + m] = 0.;
+				grady[(1 * nnodes + nid(i, 0)) * nl + m] = 0.;
 			}
 		}
 	}
@@ -291,12 +594,12 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		for (int i = 0; i < nx; i++) {
 			for (int j = 1; j < (ny-1); j++) {
 				for (int m = 0; m < nl; m++) {
-					grady[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-							(data[tid0 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
-							data[tid0 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
-					grady[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-							(data[tid1 * nx * ny * nl + i * ny * nl + (j + 1) * nl + m] -
-							data[tid1 * nx * ny * nl + i * ny * nl + (j - 1) * nl + m]) / (2 * dy));
+					grady[(0 * nnodes + nid(i, j)) * nl + m] = (
+							(data[(tid0 * nnodes + nid(i, j + 1)) * nl + m] -
+							data[(tid0 * nnodes + nid(i, j - 1)) * nl + m]) / (2 * dy));
+					grady[(1 * nnodes + nid(i, j)) * nl + m] = (
+							(data[(tid1 * nnodes + nid(i, j + 1)) * nl + m] -
+							data[(tid1 * nnodes + nid(i, j - 1)) * nl + m]) / (2 * dy));
 				}
 			}
 		}
@@ -305,18 +608,18 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
 			for (int m = 0; m < nl; m++) {
-				grady[0 * nx * ny * nl + i * ny * nl + m] = (
-						(data[tid0 * nx * ny * nl + i * ny * nl + nl + m] -
-						data[tid0 * nx * ny * nl + i * ny * nl + m]) / dy);
-				grady[0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
-						(data[tid0 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
-						data[tid0 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
-				grady[1 * nx * ny * nl + i * ny * nl + m] = (
-						(data[tid1 * nx * ny * nl + i * ny * nl + nl + m] -
-						data[tid1 * nx * ny * nl + i * ny * nl + m]) / dy);
-				grady[1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] = (
-						(data[tid1 * nx * ny * nl + i * ny * nl + (ny - 1) * nl + m] -
-						data[tid1 * nx * ny * nl + i * ny * nl + (ny - 2) * nl + m]) / dy);
+				grady[(0 * nnodes + nid(i, 0)) * nl + m] = (
+						(data[(tid0 * nnodes + nid(i, 1)) * nl + m] -
+						data[(tid0 * nnodes + nid(i, 0)) * nl + m]) / dy);
+				grady[(0 * nnodes + nid(i, ny - 1)) * nl + m] = (
+						(data[(tid0 * nnodes + nid(i, ny - 1)) * nl + m] -
+						data[(tid0 * nnodes + nid(i, ny - 2)) * nl + m]) / dy);
+				grady[(1 * nnodes + nid(i, 0)) * nl + m] = (
+						(data[(tid1 * nnodes + nid(i, 1)) * nl + m] -
+						data[(tid1 * nnodes + nid(i, 0)) * nl + m]) / dy);
+				grady[(1 * nnodes + nid(i, ny - 1)) * nl + m] = (
+						(data[(tid1 * nnodes + nid(i, ny - 1)) * nl + m] -
+						data[(tid1 * nnodes + nid(i, ny - 2)) * nl + m]) / dy);
 			}
 		}
 	}
@@ -324,8 +627,8 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for
 		for (int i = 0; i < nx; i++) {
 			for (int j = 0; j < ny; j++) {
-				gradz[0 * nx * ny + i * ny + j] = 0.;
-				gradz[1 * nx * ny + i * ny + j] = 0.;
+				gradz[0 * nnodes + nid(i, j)] = 0.;
+				gradz[1 * nnodes + nid(i, j)] = 0.;
 			}
 		}
 	}
@@ -335,12 +638,12 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		for (int i = 0; i < nx; i++) {
 			for (int j = 0; j < ny; j++) {
 				for (int m = 1; m < (nl-1); m++) {
-					gradz[0 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-							(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
-							data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
-					gradz[1 * nx * ny * nl + i * ny * nl + j * nl + m] = (
-							(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m + 1)] -
-							data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (m - 1)]) / (2 * ds));
+					gradz[(0 * nnodes + nid(i, j)) * nl + m] = (
+							(data[(tid0 * nnodes + nid(i, j)) * nl + (m + 1)] -
+							data[(tid0 * nnodes + nid(i, j)) * nl + (m - 1)]) / (2 * ds));
+					gradz[(1 * nnodes + nid(i, j)) * nl + m] = (
+							(data[(tid1 * nnodes + nid(i, j)) * nl + (m + 1)] -
+							data[(tid1 * nnodes + nid(i, j)) * nl + (m - 1)]) / (2 * ds));
 				}
 			}
 		}
@@ -348,39 +651,46 @@ void lsGridSpline::update_gradient_dxdydz(double* data, double* gradx, double* g
 		#pragma omp for collapse(2)
 		for (int i = 0; i < nx; i++) {
 			for (int j = 0; j < ny; j++) {
-				gradz[0 * nx * ny * nl + i * ny * nl + j * nl] = (
-						(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + 1] -
-						data[tid0 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
-				gradz[0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
-						(data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
-						data[tid0 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
-				gradz[1 * nx * ny * nl + i * ny * nl + j * nl] = (
-						(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + 1] -
-						data[tid1 * nx * ny * nl + i * ny * nl + j * nl]) / ds);
-				gradz[1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] = (
-						(data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 1)] -
-						data[tid1 * nx * ny * nl + i * ny * nl + j * nl + (nl - 2)]) / ds);
+				gradz[(0 * nnodes + nid(i, j)) * nl] = (
+						(data[(tid0 * nnodes + nid(i, j)) * nl + 1] -
+						data[(tid0 * nnodes + nid(i, j)) * nl]) / ds);
+				gradz[(0 * nnodes + nid(i, j)) * nl + (nl - 1)] = (
+						(data[(tid0 * nnodes + nid(i, j)) * nl + (nl - 1)] -
+						data[(tid0 * nnodes + nid(i, j)) * nl + (nl - 2)]) / ds);
+				gradz[(1 * nnodes + nid(i, j)) * nl] = (
+						(data[(tid1 * nnodes + nid(i, j)) * nl + 1] -
+						data[(tid1 * nnodes + nid(i, j)) * nl]) / ds);
+				gradz[(1 * nnodes + nid(i, j)) * nl + (nl - 1)] = (
+						(data[(tid1 * nnodes + nid(i, j)) * nl + (nl - 1)] -
+						data[(tid1 * nnodes + nid(i, j)) * nl + (nl - 2)]) / ds);
 			}
 		}
 	}
 }
 
 void lsGridSpline::square_vals(double* C, double* data, int nxp, int nyp, int tid){
-    C[0] = data[tid * nx * ny + nxp * ny + nyp]; // C00
-    C[1] = data[tid * nx * ny + nxp * ny + clamp(nyp + 1, 0, ny - 1)]; // C01
-    C[2] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + nyp]; // C10
-    C[3] = data[tid * nx * ny + clamp(nxp + 1, 0, nx - 1) * ny + clamp(nyp + 1, 0, ny - 1)];//C11
+    const int ip = clamp(nxp + 1, 0, nx - 1), jp = clamp(nyp + 1, 0, ny - 1);
+    C[0] = data[tid * nnodes + nid(nxp, nyp)]; // C00
+    C[1] = data[tid * nnodes + nid(nxp, jp)];  // C01
+    C[2] = data[tid * nnodes + nid(ip,  nyp)]; // C10
+    C[3] = data[tid * nnodes + nid(ip,  jp)];  // C11
 }
 
 void lsGridSpline::cube_vals(double* C, double* data, int nxp, int nyp, int nlp, int tid){
-    C[0] = data[tid * nx * ny * nl + nxp * ny * nl + nyp * nl + nlp]; //C000
-    C[1] = data[tid * nx * ny * nl + nxp * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + nlp]; //C010
-    C[2] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + nlp]; //C100
-    C[3] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + nlp]; //C110
-    C[4] = data[tid * nx * ny * nl + nxp * ny * nl + nyp * nl + clamp(nlp + 1, 0, nl - 1)]; //C001
-    C[5] = data[tid * nx * ny * nl + nxp * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + clamp(nlp + 1, 0, nl - 1)]; //C011
-    C[6] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + nyp * nl + clamp(nlp + 1, 0, nl - 1)]; //C101
-    C[7] = data[tid * nx * ny * nl + clamp(nxp + 1, 0, nx - 1) * ny * nl + clamp(nyp + 1, 0, ny - 1) * nl + clamp(nlp + 1, 0, nl - 1)]; //C111
+    const int ip = clamp(nxp + 1, 0, nx - 1), jp = clamp(nyp + 1, 0, ny - 1);
+    const int mp = clamp(nlp + 1, 0, nl - 1);
+    const long a = (long)tid * nnodes + nid(nxp, nyp);
+    const long b = (long)tid * nnodes + nid(nxp, jp);
+    const long c = (long)tid * nnodes + nid(ip,  nyp);
+    const long d = (long)tid * nnodes + nid(ip,  jp);
+    C[0] = data[a * nl + nlp]; //C000
+    C[1] = data[b * nl + nlp]; //C010
+    C[2] = data[c * nl + nlp]; //C100
+    C[3] = data[d * nl + nlp]; //C110
+    C[4] = data[a * nl + mp];  //C001
+    C[5] = data[b * nl + mp];  //C011
+    C[6] = data[c * nl + mp];  //C101
+    C[7] = data[d * nl + mp];  //C111
 }
 
 double lsGridSpline::spline_interp_velo(double* U, double* Udt, double* Udx, double* Udy, double* Uds, int nxp, int nyp, int nsp0, int nsp1, double xd, double yd, double sd0, double sd1, double td, int tid1, int tid2){
@@ -502,8 +812,28 @@ double lsGridSpline::spline_interp_velo(double* U, double* Udt, double* Udx, dou
 }
 
 
-std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h){
+std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt, double ypt, double zpt, double h, bool with_pressure){
     // for t, for x, for y, for z stacking
+
+    // keep the caller's coordinates: the wrap below rewrites xpt/ypt, and an
+    // error reported at the wrapped position is misleading -- it is not where
+    // the caller asked
+    const double xq0 = xpt, yq0 = ypt;
+
+    // periodic wrap: the equal-dk field repeats with the domain lengths,
+    // so any point maps back into the domain
+    if (periodic_x) {
+        const double Lp = domain[1] - domain[0];
+        double xr = std::fmod(xpt - domain[0], Lp);
+        if (xr < 0.0) xr += Lp;
+        xpt = domain[0] + xr;
+    }
+    if (periodic_y) {
+        const double Lp = domain[3] - domain[2];
+        double yr = std::fmod(ypt - domain[2], Lp);
+        if (yr < 0.0) yr += Lp;
+        ypt = domain[2] + yr;
+    }
 
     // list of required data
     // eta0, eta1, eta1dt, eta2dt, eta1dx, eta2dx, eta1dy, eta2dy
@@ -522,6 +852,42 @@ std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt
 	
 	int nxp = int(nxp_temp);
 	int nyp = int(nyp_temp);
+
+	// After compaction the nodes under the ignore box hold no data at all.
+	// Reading them would silently return the scratch node, so refuse: a
+	// query here means the ignore box does not match what the solver asks
+	// for. (Before compaction every node is stored and this never trips.)
+	if (compacted) {
+		const int ip = clamp(nxp + 1, 0, nx - 1), jp = clamp(nyp + 1, 0, ny - 1);
+		// grad_ok, not merely stored: the Hermite blend reads the PRECOMPUTED
+		// gradients at each corner, and a corner on the outermost kept ring
+		// has neighbours that were dropped, so its gradient is meaningless.
+		// Checking storage alone would let a query two nodes inside the box
+		// through and quietly interpolate with a garbage slope.
+		if (!grad_ok(nxp, nyp) || !grad_ok(nxp, jp) ||
+		    !grad_ok(ip, nyp) || !grad_ok(ip, jp)) {
+			// name what IS stored, so the mismatch is actionable.
+			// NB rank-divergent failure: std::cerr directly (per the
+			// mpi_utils.h rule) -- cfdwm_mpi::err() is muted on
+			// non-root ranks and this fires on whichever rank owns
+			// the querying subdomain, silently killing the job.
+			std::cerr << "[rank " << cfdwm_mpi::rank()
+				<< "] lsgrid ERROR: kinematics requested at ("
+				<< xq0 << ", " << yq0 << ")"
+				<< ((xq0 != xpt || yq0 != ypt)
+				    ? std::string(", which the periodic tile wraps to (")
+				      + std::to_string(xpt) + ", " + std::to_string(ypt) + ")"
+				    : std::string())
+				<< ", which is not stored. Kinematics "
+				"are kept only along the selected borders ("
+				<< (border[0] ? "left " : "") << (border[1] ? "right " : "")
+				<< (border[2] ? "bottom " : "") << (border[3] ? "top " : "")
+				<< "), " << BORDER_NODES << " nodes deep plus the stencil "
+				"halo. Either enable the border this point belongs to, or "
+				"query only near the borders that are enabled." << std::endl;
+			cfdwm_mpi::abort(1);
+		}
+	}
 
 	double C[4], D[4], Ct[4], Dt[4], Cx[4], Dx[4], Cy[4], Dy[4], Cs[4], Ds[4];
     square_vals(C, ETA, nxp, nyp, tid1);
@@ -580,9 +946,9 @@ std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt
 
     // Step 2 - Now compute vertical sigma coords and find kinematics from SigmaStreched grid.
 
-    double spt0 = cart2sigmaS(zpt, wave_elev0, water_depth);
+    double spt0 = cart2sigmaS(zpt, wave_elev0, local_depth(xpt, ypt));
     double nsp0a = spt0 / ds;
-    double spt1 = cart2sigmaS(zpt, wave_elev1, water_depth);
+    double spt1 = cart2sigmaS(zpt, wave_elev1, local_depth(xpt, ypt));
     double nsp1a = spt1 / ds;
 
 	float sd0_temp, sd1_temp;
@@ -600,6 +966,10 @@ std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt
 	res.push_back(ux);
 	res.push_back(vy);
 	res.push_back(wz);
+	// only meaningful when the grid carries a pressure field; the caller
+	// (wave_nhPres / wave_DynPres) checks store_pressure before asking
+	if (with_pressure && store_pressure)
+		res.push_back(spline_interp_velo(P, Pdt, Pdx, Pdy, Pds, nxp, nyp, nsp0, nsp1, xd, yd, sd0, sd1, td, tid1, tid2));
 
 	return res;
 }
@@ -610,7 +980,8 @@ std::vector<double> lsGridSpline::get_kinematics_at_point(double tpt, double xpt
 bool lsGridSpline::CheckTime(double tpt) {
 	/* Checks to see if the time tpt is within the interval t0 to t1. If so, returns true*/
 	if (tpt > t0 + dt) {
-		std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "t0: " << t0 << ", t1: " << (t0 + dt) << ", tpt: " << tpt << std::endl;
 		return true;
 	}
 	return false;
@@ -620,11 +991,18 @@ bool lsGridSpline::CheckTime(double tpt) {
 // lies inside a given rectangle or not. 
 bool lsGridSpline::CheckBounds()
 {
+	if (periodic_x && periodic_y) return true;   // fully periodic
+	if (periodic_x) {   // x always in bounds by periodic wrap
+		if (bymin >= domain[2] && bymax <= domain[3]) return true;
+		std::cout << "Requested point outside specified grid domain (y). "
+			"adjust the bounds of the grid and try again." << std::endl;
+		cfdwm_mpi::abort(-1);
+	}
 	if (bxmin >= domain[0] && bxmax <= domain[1] && bymin >= domain[2] && bymax <= domain[3])
 		return true;
 	else {
 		std::cout << "Requested point outside specified grid domain. adjust the bounds of the grid and try again." << std::endl;
-		exit(-1);
+		cfdwm_mpi::abort(-1);
 		return false;
 	}
 }
@@ -664,6 +1042,7 @@ void lsGridSpline::compute_mpi_partition() {
 }
 
 void lsGridSpline::initialize_kinematics(Irregular& irregular) {
+	fill_all = true;
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -675,20 +1054,52 @@ void lsGridSpline::initialize_kinematics(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
+	// must precede anything that consumes the sigma mapping
+	resolve_auto_stretch(irregular);
+
 	double tt0[4] = {t0-dt, t0, t0+dt, t0+2*dt};
 
 	double dd = omp_get_wtime();
 
+	// sigma-FFT fast path (equal-dk + smit): whole time levels via FFT
+	if (try_sigma_fft_setup(irregular)) {
+		compute_mpi_partition();   // queried later; fill is rank-redundant
+		for (int tt = 0; tt < 4; tt++) {
+			sigma_fft_fill_level(irregular, tt0[tt], tt);
+		}
+		update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+		update_gradient_eta_dt(ETA, ETAdt);
+		update_gradient_dxdydz(UX, Udx, Udy, Uds);
+		update_gradient_dt(UX, Udt);
+		update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+		update_gradient_dt(UY, Vdt);
+		update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+		update_gradient_dt(UZ, Wdt);
+		if (store_pressure) {
+			update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+			update_gradient_dt(P, Pdt);
+		}
+		if (dump_vtk) write_vtk(false);
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "Generation of domain kinematics data using the "
+				"sigma-FFT layer fill completed. Initialization time: "
+				<< (omp_get_wtime() - dd) << " seconds." << std::endl;
+		return;
+	}
+
 	//omp_set_num_threads(1)
 	//omp_set_num_threads(omp_get_max_threads());
 
+	compute_mpi_partition();   // MPI: work-balanced column partition
+	                           // (before the parallel region: it resizes
+	                           // shared vectors and must run exactly once)
 #pragma omp parallel // start parallel initialization
 	{
 #pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		// Main grid
-		compute_mpi_partition();                     // MPI: work-balanced column partition
 		int i0 = mpi_i0, i1 = mpi_i1;
 #pragma omp for collapse(2)
 		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
@@ -696,28 +1107,54 @@ void lsGridSpline::initialize_kinematics(Irregular& irregular) {
 				for (int j = 0; j < ny; j++) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
-					
-					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
 
-					double eta_temp = ETA[tt*nx*ny + i * ny + j];
+					if (irregular.seabed.active()) {
+						// variable bathymetry: slope-corrected first order
+						// + depth-local S&D second order; layers follow
+						// the local depth
+						ETA[tt * nnodes + nid(i, j)] = irregular.eta1_slope(tt0[tt], xpt, ypt) + swl;
+						if (irregular.order >= 2)
+							ETA[tt * nnodes + nid(i, j)] += irregular.eta2_slope(tt0[tt], xpt, ypt);
+						double eta_temp = ETA[tt * nnodes + nid(i, j)];
+						for (int m = 0; m < nl; m++) {
+							double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
+							UVWP S = irregular.uvwp1_slope(tt0[tt], xpt, ypt, zpt0 - swl);
+							if (irregular.order >= 2) {
+								UVWP S2 = irregular.uvwp2_slope(tt0[tt], xpt, ypt, zpt0 - swl);
+								S.u += S2.u; S.v += S2.v; S.w += S2.w; S.p += S2.p;
+							}
+							UX[(tt * nnodes + nid(i, j)) * nl + m] = S.u;
+							UY[(tt * nnodes + nid(i, j)) * nl + m] = S.v;
+							UZ[(tt * nnodes + nid(i, j)) * nl + m] = S.w;
+							if (store_pressure)
+								P[(tt * nnodes + nid(i, j)) * nl + m] = S.p;
+						}
+						continue;
+					}
+
+					ETA[tt * nnodes + nid(i, j)] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
+
+					double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 					double PHI0_dxdz = irregular.phi1_dxdz(tt0[tt], xpt, ypt);
 					double PHI0_dydz = irregular.phi1_dydz(tt0[tt], xpt, ypt);
 					double PHI0_dzdz = irregular.phi1_dzdz(tt0[tt], xpt, ypt);
 
 					for (int m = 0; m < nl; m++) {
-						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+						double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
 						double zpt0max = std::max(0., zpt0 - swl);
 						double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
-						
+
 						//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
 						//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
 						//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
 
 						UVWP U2 = irregular.uvw2(tt0[tt], xpt, ypt, zpt0min);
-						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2.u + PHI0_dxdz * zpt0max;
-						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2.v + PHI0_dydz * zpt0max;
-						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2.w + PHI0_dzdz * zpt0max;
+						UX[(tt * nnodes + nid(i, j)) * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2.u + PHI0_dxdz * zpt0max;
+						UY[(tt * nnodes + nid(i, j)) * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2.v + PHI0_dydz * zpt0max;
+						UZ[(tt * nnodes + nid(i, j)) * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2.w + PHI0_dzdz * zpt0max;
+						if (store_pressure)
+							P[(tt * nnodes + nid(i, j)) * nl + m] = irregular.dp(tt0[tt], xpt, ypt, zpt0);
 					}
 				}
 			}
@@ -727,10 +1164,12 @@ void lsGridSpline::initialize_kinematics(Irregular& irregular) {
 	// MPI: assemble the full grid from each rank's column block, then compute
 	// gradients (redundant on every rank; cheap finite differences).
 	for (int tt = 0; tt < 4; tt++) {
-		cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-		cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+		cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+		cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		if (store_pressure)
+			cfdwm_mpi::allgather_columns_var(P + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 	}
 	// Update derivatives
 	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
@@ -741,18 +1180,25 @@ void lsGridSpline::initialize_kinematics(Irregular& irregular) {
 	update_gradient_dt(UY, Vdt);
 	update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
 	update_gradient_dt(UZ, Wdt);
-		
+	if (store_pressure) {
+		update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+		update_gradient_dt(P, Pdt);
+	}
+
 	// End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
 	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
 	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
+		std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 void lsGridSpline::initialize_kinematics_with_ignore(Irregular& irregular) {
+	fill_all = false;
 
 	bxmin = domain[0];
 	bxmax = domain[1];
@@ -764,50 +1210,127 @@ void lsGridSpline::initialize_kinematics_with_ignore(Irregular& irregular) {
 	//dz = (domain_end[2] - domain_start[2]) / double(NZ - 1);
 	ds = 1. / std::max(1., double(nl - 1));
 
+	// must precede anything that consumes the sigma mapping
+	resolve_auto_stretch(irregular);
+
 	double tt0[4] = {t0, t0, t0+dt, t0+2*dt};
 
 	double dd = omp_get_wtime();
 
+	// sigma-FFT fast path: filling everything is cheaper than skipping
+	if (try_sigma_fft_setup(irregular)) {
+		// Say so explicitly. An FFT produces the whole lattice in one
+		// transform, so restricting storage to the borders cannot skip any
+		// of that work -- it only saves memory here (it saves work on the
+		// direct-summation path). Reading the log without this, the border
+		// selection looks silently disregarded.
+		long nign = 0;
+		for (int i = 0; i < nx; i++)
+			for (int j = 0; j < ny; j++)
+				if (IGNORE[i * ny + j]) nign++;
+		const long ntot = (long)nx * ny;   // grid nodes, not storage slots
+		if (nign)
+			cfdwm_mpi::out()
+			    << "sigma-fft: " << (ntot - nign) << " of " << ntot
+			    << " lsgrid nodes are inside the selected borders. NOTE: the "
+			       "sigma-FFT computes the whole lattice in a single "
+			       "transform, so all " << ntot << " nodes are evaluated "
+			       "regardless -- restricting storage to the borders saves "
+			       "memory, not FFT work (it saves work on the "
+			       "direct-summation path)." << std::endl;
+		compute_mpi_partition();
+		for (int tt = 0; tt < 4; tt++) {
+			sigma_fft_fill_level(irregular, tt0[tt], tt);
+		}
+		update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+		update_gradient_eta_dt(ETA, ETAdt);
+		update_gradient_dxdydz(UX, Udx, Udy, Uds);
+		update_gradient_dt(UX, Udt);
+		update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+		update_gradient_dt(UY, Vdt);
+		update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+		update_gradient_dt(UZ, Wdt);
+		if (store_pressure) {
+			update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+			update_gradient_dt(P, Pdt);
+		}
+		if (dump_vtk) write_vtk(false);
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "Generation of domain kinematics data using the "
+				"sigma-FFT layer fill completed. Initialization time: "
+				<< (omp_get_wtime() - dd) << " seconds." << std::endl;
+		return;
+	}
+
 	//omp_set_num_threads(1)
 	//omp_set_num_threads(omp_get_max_threads());
 
+	compute_mpi_partition();   // MPI: work-balanced column partition
+	                           // (before the parallel region: it resizes
+	                           // shared vectors and must run exactly once)
 #pragma omp parallel // start parallel initialization
 	{
 #pragma omp master
-		std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
+		if (cfdwm_mpi::rank() == 0)
+			std::cout << "Number of available threads: " << omp_get_num_threads() << std::endl;
 
 		// Main grid
-		compute_mpi_partition();                     // MPI: work-balanced column partition
 		int i0 = mpi_i0, i1 = mpi_i1;
 #pragma omp for collapse(2)
 		for (int tt = 0; tt < 4; tt++){ // We initialize 4 steps in time
 			for (int i = i0; i < i1; i++) {
 				for (int j = 0; j < ny; j++) {
-					if (!IGNORE[i * ny + j]) {
+					if (fill_node(i, j)) {
 						double xpt = domain[0] + dx * i;
 						double ypt = domain[2] + dy * j;
-						
-						ETA[tt*nx*ny + i * ny + j] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
 
-						double eta_temp = ETA[tt*nx*ny + i * ny + j];
+						if (irregular.seabed.active()) {
+							// variable bathymetry: slope-corrected first order
+							// + depth-local S&D second order; layers
+							// follow the local depth
+							ETA[tt * nnodes + nid(i, j)] = irregular.eta1_slope(tt0[tt], xpt, ypt) + swl;
+							if (irregular.order >= 2)
+								ETA[tt * nnodes + nid(i, j)] += irregular.eta2_slope(tt0[tt], xpt, ypt);
+							double eta_temp = ETA[tt * nnodes + nid(i, j)];
+							for (int m = 0; m < nl; m++) {
+								double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
+								UVWP S = irregular.uvwp1_slope(tt0[tt], xpt, ypt, zpt0 - swl);
+								if (irregular.order >= 2) {
+									UVWP S2 = irregular.uvwp2_slope(tt0[tt], xpt, ypt, zpt0 - swl);
+									S.u += S2.u; S.v += S2.v; S.w += S2.w; S.p += S2.p;
+								}
+								UX[(tt * nnodes + nid(i, j)) * nl + m] = S.u;
+								UY[(tt * nnodes + nid(i, j)) * nl + m] = S.v;
+								UZ[(tt * nnodes + nid(i, j)) * nl + m] = S.w;
+								if (store_pressure)
+									P[(tt * nnodes + nid(i, j)) * nl + m] = S.p;
+							}
+							continue;
+						}
+
+						ETA[tt * nnodes + nid(i, j)] = irregular.eta1(tt0[tt], xpt, ypt) + irregular.eta2(tt0[tt], xpt, ypt) + swl;
+
+						double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 						double PHI0_dxdz = irregular.phi1_dxdz(tt0[tt], xpt, ypt);
 						double PHI0_dydz = irregular.phi1_dydz(tt0[tt], xpt, ypt);
 						double PHI0_dzdz = irregular.phi1_dzdz(tt0[tt], xpt, ypt);
 
 						for (int m = 0; m < nl; m++) {
-							double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+							double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
 							double zpt0max = std::max(0., zpt0 - swl);
 							double zpt0min = std::min(0., zpt0); // swl already included in irregular class functions
-							
+
 							//UX0[i * ny * nl + j * nl + m] = irregular.u1(t0, xpt, ypt, zpt0min) + irregular.u2(t0, xpt, ypt, zpt0min) + PHI0_dxdz * zpt0max;
 							//UY0[i * ny * nl + j * nl + m] = irregular.v1(t0, xpt, ypt, zpt0min) + irregular.v2(t0, xpt, ypt, zpt0min) + PHI0_dydz * zpt0max;
 							//UZ0[i * ny * nl + j * nl + m] = irregular.w1(t0, xpt, ypt, zpt0min) + irregular.w2(t0, xpt, ypt, zpt0min) + PHI0_dzdz * zpt0max;
 
 							UVWP U2 = irregular.uvw2(tt0[tt], xpt, ypt, zpt0min);
-							UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2.u + PHI0_dxdz * zpt0max;
-							UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2.v + PHI0_dydz * zpt0max;
-							UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2.w + PHI0_dzdz * zpt0max;
+							UX[(tt * nnodes + nid(i, j)) * nl + m] = irregular.u1(tt0[tt], xpt, ypt, zpt0min) + U2.u + PHI0_dxdz * zpt0max;
+							UY[(tt * nnodes + nid(i, j)) * nl + m] = irregular.v1(tt0[tt], xpt, ypt, zpt0min) + U2.v + PHI0_dydz * zpt0max;
+							UZ[(tt * nnodes + nid(i, j)) * nl + m] = irregular.w1(tt0[tt], xpt, ypt, zpt0min) + U2.w + PHI0_dzdz * zpt0max;
+							if (store_pressure)
+								P[(tt * nnodes + nid(i, j)) * nl + m] = irregular.dp(tt0[tt], xpt, ypt, zpt0);
 						}
 					}
 				}
@@ -818,10 +1341,12 @@ void lsGridSpline::initialize_kinematics_with_ignore(Irregular& irregular) {
 	// MPI: assemble the full grid from each rank's column block, then compute
 	// gradients (redundant on every rank; cheap finite differences).
 	for (int tt = 0; tt < 4; tt++) {
-		cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-		cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+		cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+		cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		if (store_pressure)
+			cfdwm_mpi::allgather_columns_var(P + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 	}
 	// Update derivatives
 	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
@@ -832,20 +1357,33 @@ void lsGridSpline::initialize_kinematics_with_ignore(Irregular& irregular) {
 	update_gradient_dt(UY, Vdt);
 	update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
 	update_gradient_dt(UZ, Wdt);
-		
+	if (store_pressure) {
+		update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+		update_gradient_dt(P, Pdt);
+	}
+
 	// End parallel initialization
 	if (dump_vtk) {
 		write_vtk(false);
 	}
-	std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
 	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "Generation of domain kinematics data using irregular second order wave theory completed. ";
+		std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 // When called, updates the arrays storing surface elevation and kinematics data for timestep t0 = t1, t1 = t1+dt
 void lsGridSpline::update(Irregular& irregular, double t_target)
 {
+	fill_all = false;
+	// ignore_at_init == false: the whole grid was filled at t = 0 for the
+	// benefit of a solver initialising its full domain. That has now served
+	// its purpose -- from here on only the region outside the ignore box is
+	// updated, so the rest of the storage can go back.
+	if (!compacted) compact();
+
 	double dd, t1, t2;
 	int tt;
 
@@ -855,7 +1393,8 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 		CheckBounds();
 	}*/
 	
-	std::cout << "t_target: " << t_target << "sec" << std::endl;
+	if (cfdwm_mpi::rank() == 0)
+		std::cout << "t_target: " << t_target << "sec" << std::endl;
 	tstep++;
 	// new time ste
 	t0 += dt; // base step
@@ -865,6 +1404,35 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 	t2 = t0 + 2*dt;
 	tt = (tstep + 3) % 4; // index to write new time step (two steps ahead of basestep)
 	dd = omp_get_wtime();
+
+	// sigma-FFT fast path: fill the new time slice with FFTs
+	if (sfft.enabled) {
+		sigma_fft_fill_level(irregular, t2, tt);
+#pragma omp parallel
+		{
+			update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
+			update_gradient_eta_dt(ETA, ETAdt);
+			update_gradient_dxdydz(UX, Udx, Udy, Uds);
+			update_gradient_dt(UX, Udt);
+			update_gradient_dxdydz(UY, Vdx, Vdy, Vds);
+			update_gradient_dt(UY, Vdt);
+			update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
+			update_gradient_dt(UZ, Wdt);
+			if (store_pressure) {
+				update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+				update_gradient_dt(P, Pdt);
+			}
+		}
+		if (dump_vtk) write_vtk(false);
+		dd = omp_get_wtime() - dd;
+		if (cfdwm_mpi::rank() == 0) {
+			std::cout << "update time: " << dd << " sec" << std::endl;
+			std::cout << "lsGridSpline matrices updated. t = " << t0 << " to "
+				<< (t0 + dt) << std::endl;
+		}
+		return;
+	}
+
 	//omp_set_num_threads(1);
 	//omp_set_num_threads(omp_get_max_threads());
 	int i0 = mpi_i0, i1 = mpi_i1;               // MPI: reuse the partition from init
@@ -878,23 +1446,49 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 				double xpt = domain[0] + dx * i;
 				//std::cout << "processornum: " << omp_get_thread_num() << std::endl;
 				double ypt = domain[2] + dy * j;
-				if (!IGNORE[i * ny + j]) {
-					ETA[tt*nx*ny + i * ny + j] = irregular.eta1(t2, xpt, ypt) + irregular.eta2(t2, xpt, ypt) + swl;
-					double eta_temp = ETA[tt*nx*ny + i * ny + j];
+				if (fill_node(i, j)) {
+					if (irregular.seabed.active()) {
+						// variable bathymetry: slope-corrected first order
+						// + depth-local S&D second order; layers
+						// follow the local depth
+						ETA[tt * nnodes + nid(i, j)] = irregular.eta1_slope(t2, xpt, ypt) + swl;
+						if (irregular.order >= 2)
+							ETA[tt * nnodes + nid(i, j)] += irregular.eta2_slope(t2, xpt, ypt);
+						double eta_temp = ETA[tt * nnodes + nid(i, j)];
+						for (int m = 0; m < nl; m++) {
+							double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
+							UVWP S = irregular.uvwp1_slope(t2, xpt, ypt, zpt0 - swl);
+							if (irregular.order >= 2) {
+								UVWP S2 = irregular.uvwp2_slope(t2, xpt, ypt, zpt0 - swl);
+								S.u += S2.u; S.v += S2.v; S.w += S2.w; S.p += S2.p;
+							}
+							UX[(tt * nnodes + nid(i, j)) * nl + m] = S.u;
+							UY[(tt * nnodes + nid(i, j)) * nl + m] = S.v;
+							UZ[(tt * nnodes + nid(i, j)) * nl + m] = S.w;
+							if (store_pressure)
+								P[(tt * nnodes + nid(i, j)) * nl + m] = S.p;
+						}
+						continue;
+					}
+
+					ETA[tt * nnodes + nid(i, j)] = irregular.eta1(t2, xpt, ypt) + irregular.eta2(t2, xpt, ypt) + swl;
+					double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 					double PHI1_dxdz = irregular.phi1_dxdz(t2, xpt, ypt);
 					double PHI1_dydz = irregular.phi1_dydz(t2, xpt, ypt);
 					double PHI1_dzdz = irregular.phi1_dzdz(t2, xpt, ypt);
 
 					for (int m = 0; m < nl; m++) {
-						double zpt0 = sigmaS2cart(ds*m, eta_temp, water_depth);
+						double zpt0 = sigmaS2cart(ds*m, eta_temp, local_depth(xpt, ypt));
 						double zpt1max = std::max(0., zpt0 - swl);
 						double zpt1min = std::min(0., zpt0); // swl already included in irregular class functions
 
 						UVWP U2 = irregular.uvw2(t2, xpt, ypt, zpt1min);
-						UX[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.u1(t2, xpt, ypt, zpt1min) + U2.u + PHI1_dxdz * zpt1max;
-						UY[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.v1(t2, xpt, ypt, zpt1min) + U2.v + PHI1_dydz * zpt1max;
-						UZ[tt*nx*ny*nl + i * ny * nl + j * nl + m] = irregular.w1(t2, xpt, ypt, zpt1min) + U2.w + PHI1_dzdz * zpt1max;
+						UX[(tt * nnodes + nid(i, j)) * nl + m] = irregular.u1(t2, xpt, ypt, zpt1min) + U2.u + PHI1_dxdz * zpt1max;
+						UY[(tt * nnodes + nid(i, j)) * nl + m] = irregular.v1(t2, xpt, ypt, zpt1min) + U2.v + PHI1_dydz * zpt1max;
+						UZ[(tt * nnodes + nid(i, j)) * nl + m] = irregular.w1(t2, xpt, ypt, zpt1min) + U2.w + PHI1_dzdz * zpt1max;
+						if (store_pressure)
+							P[(tt * nnodes + nid(i, j)) * nl + m] = irregular.dp(t2, xpt, ypt, zpt0);
 					}
 				}
 			}
@@ -904,10 +1498,12 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 
 	// MPI: assemble the new time slice from each rank's column block, then
 	// recompute gradients (redundant on every rank; cheap finite differences).
-	cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-	cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-	cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-	cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+	cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+	cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+	cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+	cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+	if (store_pressure)
+		cfdwm_mpi::allgather_columns_var(P + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 
 	#pragma omp parallel
 	{
@@ -919,14 +1515,20 @@ void lsGridSpline::update(Irregular& irregular, double t_target)
 		update_gradient_dt(UY, Vdt);
 		update_gradient_dxdydz(UZ, Wdx, Wdy, Wds);
 		update_gradient_dt(UZ, Wdt);   // was missing: Wdt went stale after updates
+		if (store_pressure) {
+			update_gradient_dxdydz(P, Pdx, Pdy, Pds);
+			update_gradient_dt(P, Pdt);
+		}
 	}
 
 	if (dump_vtk) {
 		write_vtk(false);
 	}
 	dd = omp_get_wtime() - dd;
-	std::cout << "update time: " << dd << " sec" << std::endl;
-	std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "update time: " << dd << " sec" << std::endl;
+		std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	}
 
 }
 
@@ -984,7 +1586,7 @@ void lsGridSpline::initialize_kinematics(SpectralWaveData* swd) {
 		}
 		catch (SwdException& e) {  // Could be t > tmax from file.
 			std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
-			exit(EXIT_FAILURE);
+			cfdwm_mpi::abort(EXIT_FAILURE);
 		}
 		for (int i = i0; i < i1; i++) {
 			for (int j = 0; j < ny; j++) {
@@ -992,17 +1594,17 @@ void lsGridSpline::initialize_kinematics(SpectralWaveData* swd) {
 				double ypt = domain[2] + dy * j;
 
 				double eta_swd = swd->Elev(xpt, ypt);   // SWD frame (z=0 at calm surface)
-				ETA[tt * nx * ny + i * ny + j] = eta_swd + swl;
+				ETA[tt * nnodes + nid(i, j)] = eta_swd + swl;
 
-				double eta_temp = ETA[tt * nx * ny + i * ny + j];
+				double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 				for (int m = 0; m < nl; m++) {
-					double zpt0 = sigmaS2cart(ds * m, eta_temp, water_depth); // CFD frame
+					double zpt0 = sigmaS2cart(ds * m, eta_temp, local_depth(xpt, ypt)); // CFD frame
 					double zpt_swd = std::min(zpt0 - swl, eta_swd);           // SWD frame, clamped at surface
 					vector_swd U = swd->GradPhi(xpt, ypt, zpt_swd);
-					UX[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.x;
-					UY[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.y;
-					UZ[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.z;
+					UX[(tt * nnodes + nid(i, j)) * nl + m] = U.x;
+					UY[(tt * nnodes + nid(i, j)) * nl + m] = U.y;
+					UZ[(tt * nnodes + nid(i, j)) * nl + m] = U.z;
 				}
 			}
 		}
@@ -1011,10 +1613,10 @@ void lsGridSpline::initialize_kinematics(SpectralWaveData* swd) {
 	// MPI: assemble the full grid from each rank's column block, then compute
 	// gradients (redundant on every rank; cheap finite differences).
 	for (int tt = 0; tt < 4; tt++) {
-		cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-		cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+		cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+		cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 	}
 	// Update derivatives (no swd access in here)
 	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
@@ -1029,10 +1631,12 @@ void lsGridSpline::initialize_kinematics(SpectralWaveData* swd) {
 	if (dump_vtk) {
 		write_vtk(false);
 	}
-	std::cout << "Generation of domain kinematics data using SWD completed. ";
 	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "Generation of domain kinematics data using SWD completed. ";
+		std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 void lsGridSpline::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
@@ -1059,26 +1663,26 @@ void lsGridSpline::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 		}
 		catch (SwdException& e) {  // Could be t > tmax from file.
 			std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
-			exit(EXIT_FAILURE);
+			cfdwm_mpi::abort(EXIT_FAILURE);
 		}
 		for (int i = i0; i < i1; i++) {
 			for (int j = 0; j < ny; j++) {
-				if (!IGNORE[i * ny + j]) {
+				if (fill_node(i, j)) {
 					double xpt = domain[0] + dx * i;
 					double ypt = domain[2] + dy * j;
 
 					double eta_swd = swd->Elev(xpt, ypt);   // SWD frame (z=0 at calm surface)
-					ETA[tt * nx * ny + i * ny + j] = eta_swd + swl;
+					ETA[tt * nnodes + nid(i, j)] = eta_swd + swl;
 
-					double eta_temp = ETA[tt * nx * ny + i * ny + j];
+					double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 					for (int m = 0; m < nl; m++) {
-						double zpt0 = sigmaS2cart(ds * m, eta_temp, water_depth); // CFD frame
+						double zpt0 = sigmaS2cart(ds * m, eta_temp, local_depth(xpt, ypt)); // CFD frame
 						double zpt_swd = std::min(zpt0 - swl, eta_swd);           // SWD frame, clamped at surface
 						vector_swd U = swd->GradPhi(xpt, ypt, zpt_swd);
-						UX[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.x;
-						UY[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.y;
-						UZ[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.z;
+						UX[(tt * nnodes + nid(i, j)) * nl + m] = U.x;
+						UY[(tt * nnodes + nid(i, j)) * nl + m] = U.y;
+						UZ[(tt * nnodes + nid(i, j)) * nl + m] = U.z;
 					}
 				}
 			}
@@ -1088,10 +1692,10 @@ void lsGridSpline::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	// MPI: assemble the full grid from each rank's column block, then compute
 	// gradients (redundant on every rank; cheap finite differences).
 	for (int tt = 0; tt < 4; tt++) {
-		cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-		cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-		cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+		cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+		cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+		cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 	}
 	// Update derivatives (no swd access in here)
 	update_gradient_eta_dxdy(ETA, ETAdx, ETAdy);
@@ -1106,10 +1710,12 @@ void lsGridSpline::initialize_kinematics_with_ignore(SpectralWaveData* swd) {
 	if (dump_vtk) {
 		write_vtk(false);
 	}
-	std::cout << "Generation of domain kinematics data using SWD completed. ";
 	dd = omp_get_wtime() - dd;
-	std::cout << "Initialization time: " << dd << " seconds." << std::endl;
-	std::cout << "Interpolation can commence..." << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "Generation of domain kinematics data using SWD completed. ";
+		std::cout << "Initialization time: " << dd << " seconds." << std::endl;
+		std::cout << "Interpolation can commence..." << std::endl;
+	}
 }
 
 // When called, updates the arrays storing surface elevation and kinematics
@@ -1119,7 +1725,8 @@ void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 	double dd, t2;
 	int tt;
 
-	std::cout << "t_target: " << t_target << "sec" << std::endl;
+	if (cfdwm_mpi::rank() == 0)
+		std::cout << "t_target: " << t_target << "sec" << std::endl;
 	tstep++;
 	// new time step
 	t0 += dt; // base step
@@ -1133,26 +1740,26 @@ void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 	}
 	catch (SwdException& e) {  // Could be t > tmax from file.
 		std::cerr << typeid(e).name() << std::endl << e.what() << std::endl;
-		exit(EXIT_FAILURE);
+		cfdwm_mpi::abort(EXIT_FAILURE);
 	}
 	for (int i = i0; i < i1; i++) {
 		for (int j = 0; j < ny; j++) {
-			if (!IGNORE[i * ny + j]) {
+			if (fill_node(i, j)) {
 				double xpt = domain[0] + dx * i;
 				double ypt = domain[2] + dy * j;
 
 				double eta_swd = swd->Elev(xpt, ypt);   // SWD frame (z=0 at calm surface)
-				ETA[tt * nx * ny + i * ny + j] = eta_swd + swl;
+				ETA[tt * nnodes + nid(i, j)] = eta_swd + swl;
 
-				double eta_temp = ETA[tt * nx * ny + i * ny + j];
+				double eta_temp = ETA[tt * nnodes + nid(i, j)];
 
 				for (int m = 0; m < nl; m++) {
-					double zpt0 = sigmaS2cart(ds * m, eta_temp, water_depth); // CFD frame
+					double zpt0 = sigmaS2cart(ds * m, eta_temp, local_depth(xpt, ypt)); // CFD frame
 					double zpt_swd = std::min(zpt0 - swl, eta_swd);           // SWD frame, clamped at surface
 					vector_swd U = swd->GradPhi(xpt, ypt, zpt_swd);
-					UX[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.x;
-					UY[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.y;
-					UZ[tt * nx * ny * nl + i * ny * nl + j * nl + m] = U.z;
+					UX[(tt * nnodes + nid(i, j)) * nl + m] = U.x;
+					UY[(tt * nnodes + nid(i, j)) * nl + m] = U.y;
+					UZ[(tt * nnodes + nid(i, j)) * nl + m] = U.z;
 				}
 			}
 		}
@@ -1160,10 +1767,10 @@ void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 
 	// MPI: assemble the new time slice from each rank's column block, then
 	// recompute gradients (redundant on every rank; cheap finite differences).
-	cfdwm_mpi::allgather_columns(ETA + (long)tt * nx * ny,      mpi_bounds, (long)ny);
-	cfdwm_mpi::allgather_columns(UX  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-	cfdwm_mpi::allgather_columns(UY  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
-	cfdwm_mpi::allgather_columns(UZ  + (long)tt * nx * ny * nl, mpi_bounds, (long)ny * nl);
+	cfdwm_mpi::allgather_columns_var(ETA + (long)tt * nnodes, mpi_bounds, col_off, (long)1);
+	cfdwm_mpi::allgather_columns_var(UX  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+	cfdwm_mpi::allgather_columns_var(UY  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
+	cfdwm_mpi::allgather_columns_var(UZ  + (long)tt * nnodes * nl, mpi_bounds, col_off, (long)nl);
 
 	#pragma omp parallel
 	{
@@ -1181,8 +1788,10 @@ void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 		write_vtk(false);
 	}
 	dd = omp_get_wtime() - dd;
-	std::cout << "update time: " << dd << " sec" << std::endl;
-	std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	if (cfdwm_mpi::rank() == 0) {
+		std::cout << "update time: " << dd << " sec" << std::endl;
+		std::cout << "lsGridSpline matrices updated. t = " << t0 << " to " << (t0 + dt) << std::endl;
+	}
 }
 
 #endif // SWD_enable
@@ -1198,6 +1807,9 @@ void lsGridSpline::update(SpectralWaveData* swd, double t_target)
 
 // when called, writes stored kinematics to file
 void lsGridSpline::write_vtk(bool endtime) {
+	// MPI: every rank holds the full assembled grid; one writer suffices
+	// (all ranks writing the same file concurrently would corrupt it)
+	if (cfdwm_mpi::rank() != 0) return;
 	char buffer[256]; sprintf(buffer, "%05d", tstep);
 
 	if (dirExists(vtk_directory_path.c_str()) == 0) {
@@ -1207,197 +1819,86 @@ void lsGridSpline::write_vtk(bool endtime) {
 
 
 	std::string str(buffer);
-	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vtu");
+	std::string fpath = (vtk_directory_path + vtk_prefix + buffer + ".vts");
 	std::cout << fpath << std::endl;
 	FILE* fp = fopen(fpath.c_str(), "w");
 	if (endtime)
-		export_vtu(fp, true);
+		export_vts(fp, true);
 	else
-		export_vtu(fp, false);
+		export_vts(fp, false);
 	fclose(fp);
 
 	std::cout << "wrote kinematics to: " << fpath << std::endl;
 }
 
-/* exports sGrid at t= t0 to .vtu file for visualization in vtk/paraview */
-void lsGridSpline::export_vtu(FILE* fp, bool last)
+/* exports sGrid at t = t0 (or t0 + dt) to a .vts structured-grid file for
+   visualization in vtk/paraview. The lsgrid is logically structured
+   (nx x ny x nl, sigma-stretched z), so a StructuredGrid carries the
+   geometry without connectivity tables. VTK point ordering: x varies
+   fastest, then y, then the layer index (z). */
+void lsGridSpline::export_vts(FILE* fp, bool last)
 {
+	int tt = (tstep + 1) % 4; // index for base step
+	double tval = t0;
+	if (last) {
+		tt = (tstep + 2) % 4; // index for basestep + 1
+		tval = t0 + dt;
+	}
+
 	// write header
 	fputs("<?xml version=\"1.0\"?>\n"
-		"<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n", fp);
-	fputs("\t <UnstructuredGrid>\n", fp);
+		"<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n", fp);
+	fprintf(fp, "\t <StructuredGrid WholeExtent=\"0 %d 0 %d 0 %d\">\n", nx - 1, ny - 1, nl - 1);
 	fprintf(fp, "\t\t <FieldData> \n");
-	if (last) {
-		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"%s\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", vtk_timelabel.c_str() , t0 + dt, t0 + dt);
-		fprintf(fp, "\t\t\t %.3f \n", t0+dt);
-	}
-	else {
-		fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"%s\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", vtk_timelabel.c_str() , t0, t0);
-		fprintf(fp, "\t\t\t %.3f \n", t0);
-	}
+	fprintf(fp, "\t\t\t <DataArray type = \"Float64\" Name = \"%s\" NumberOfTuples = \"1\" format = \"ascii\" RangeMin = \"%.3f\" RangeMax = \"%.3f\"> \n", vtk_timelabel.c_str(), tval, tval);
+	fprintf(fp, "\t\t\t %.3f \n", tval);
 	fprintf(fp, "\t\t\t </DataArray > \n");
 	fprintf(fp, "\t\t </FieldData> \n");
 
-	fprintf(fp, "\t\t <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", nx*ny*nl, std::max((nx-1),1)* std::max((ny-1),1)* std::max((nl-1),1));
-	
-	// Loop over velocity data and store kinematics in cell vector stucture
-	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
+	fprintf(fp, "\t\t <Piece Extent=\"0 %d 0 %d 0 %d\">\n", nx - 1, ny - 1, nl - 1);
 
+	fputs("\t\t\t <PointData Scalars=\"scalars\">\n", fp);
 	fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" Name=\"Velocity\" format=\"ascii\">\n");
-	int tt = (tstep + 1) % 4; // index for base step
-	if (last) {
-		tt = (tstep + 2) % 4; // index for basestep + 1
-	}
-	
-	for (int i = 0; i < nx; i++) {
+	for (int m = 0; m < nl; m++) {
 		for (int j = 0; j < ny; j++) {
-			for (int m = 0; m < nl; m++) {
-				fprintf(fp, "%g %g %g\n", UX[tt*nx*ny*nl + i * ny * nl + j * nl + m], UY[tt*nx*ny*nl +i * ny * nl + j * nl + m], UZ[tt*nx*ny*nl +i * ny * nl + j * nl + m]);
+			for (int i = 0; i < nx; i++) {
+				fprintf(fp, "%g %g %g\n", UX[(tt * nnodes + nid(i, j)) * nl + m], UY[(tt * nnodes + nid(i, j)) * nl + m], UZ[(tt * nnodes + nid(i, j)) * nl + m]);
 			}
 		}
 	}
-
-
 	fputs("\t\t\t\t </DataArray>\n", fp);
-
+	if (store_pressure) {
+		fprintf(fp, "\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"1\" Name=\"PressureDyn\" format=\"ascii\">\n");
+		for (int m = 0; m < nl; m++) {
+			for (int j = 0; j < ny; j++) {
+				for (int i = 0; i < nx; i++) {
+					fprintf(fp, "%g\n", P[(tt * nnodes + nid(i, j)) * nl + m]);
+				}
+			}
+		}
+		fputs("\t\t\t\t </DataArray>\n", fp);
+	}
 	fputs("\t\t\t </PointData>\n", fp);
 
 	fputs("\t\t\t <Points>\n", fp);
 	fputs("\t\t\t\t <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n", fp);
-	
-	for (int i = 0; i < nx; i++) {
-		double xpt = domain[0] + dx * i;
+	for (int m = 0; m < nl; m++) {
+		double upt = ds * m;
 		for (int j = 0; j < ny; j++) {
 			double ypt = domain[2] + dy * j;
-			double eta1_temp = ETA[tt*nx*ny + i * ny + j];
-			for (int m = 0; m < nl; m++) {
-				double spt = s2tan(-1. + ds * m);
-				double zpt1 = s2z(spt, eta1_temp, water_depth);
-				fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt1);
+			for (int i = 0; i < nx; i++) {
+				double xpt = domain[0] + dx * i;
+				double eta_temp = ETA[tt * nnodes + nid(i, j)];
+				double zpt = s2z(u2sigma(upt), eta_temp, local_depth(xpt, ypt));
+				fprintf(fp, "%12.4f %12.4f %12.4f\n", xpt, ypt, zpt);
 			}
 		}
 	}
-	
-	
 	fputs("\t\t\t\t </DataArray>\n", fp);
 	fputs("\t\t\t </Points>\n", fp);
 
-	fputs("\t\t\t <Cells>\n", fp);
-	fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">\n", fp);
-
-	if (nx > 1 && ny > 1 && nl > 1) {
-		for (int i = 0; i < (nx - 1); i++) {
-			for (int j = 0; j < (ny - 1); j++) {
-				for (int m = 0; m < (nl - 1); m++) {
-					int ape1 = nl * ny * i + nl * j + m;
-					int ape2 = nl * ny * (i + 1) + nl * j + m;
-					int ape3 = nl * ny * (i + 1) + nl * (j + 1) + m;
-					int ape4 = nl * ny * i + nl * (j + 1) + m;
-					int ape5 = nl * ny * i + nl * j + (m + 1);
-					int ape6 = nl * ny * (i + 1) + nl * j + (m + 1);
-					int ape7 = nl * ny * (i + 1) + nl * (j + 1) + (m + 1);
-					int ape8 = nl * ny * i + nl * (j + 1) + (m + 1);
-					fprintf(fp, "%u %u %u %u %u %u %u %u\n", ape1, ape2, ape3, ape4, ape5, ape6, ape7, ape8);
-				}
-			}
-		}
-
-
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
-
-		for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
-			fprintf(fp, "%d \n", i * 8);
-		}
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
-		for (int i = 1; i < ((nx - 1) * (ny - 1) * (nl - 1) + 1); i++) {
-			fputs("12 \n", fp);
-		}
-	}
-	// only single dimension i y direction.
-	else if (nx > 1 && ny == 1 && nl > 1) {
-		for (int i = 0; i < (nx - 1); i++) {		
-			for (int m = 0; m < (nl - 1); m++) {
-				int ape1 = nl * i + m;
-				int ape2 = nl * (i + 1) + m;
-				int ape3 = nl * (i + 1) + (m + 1);
-				int ape4 = nl * i + (m + 1);
-				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
-			}
-
-		}
-
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
-
-		for (int i = 1; i < ((nx - 1) * (nl - 1) + 1); i++) {
-			fprintf(fp, "%d \n", i * 4);
-		}
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
-		for (int i = 1; i < ((nx - 1) * (nl - 1) + 1); i++) {
-			fputs("9 \n", fp);
-		}
-
-	}
-	// only single dimension i x direction.
-	else if (nx == 1 && ny > 1 && nl > 1) {
-		for (int j = 0; j < (ny - 1); j++) {
-			for (int m = 0; m < (nl - 1); m++) {
-				int ape1 = nl * j + m;
-				int ape2 = nl * (j + 1) + m;
-				int ape3 = nl * (j + 1) + (m + 1);
-				int ape4 = nl * j + (m + 1);
-				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
-			}
-
-		}
-
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
-
-		for (int j = 1; j < ((ny - 1) * (nl - 1) + 1); j++) {
-			fprintf(fp, "%d \n", j * 4);
-		}
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
-		for (int j = 1; j < ((ny - 1) * (nl - 1) + 1); j++) {
-			fputs("9 \n", fp);
-		}
-	}
-
-	// only single dimension i z direction (lagrangian).
-	else if (nx > 1 && ny > 1 && nl == 1) {
-		for (int i = 0; i < (nx - 1); i++) {
-			for (int j = 0; j < (ny - 1); j++) {
-				int ape1 = ny * i + j;
-				int ape2 = ny * (i + 1) + j;
-				int ape3 = ny * (i + 1) + (j + 1);
-				int ape4 = ny * i + (j + 1);
-				fprintf(fp, "%u %u %u %u\n", ape1, ape2, ape3, ape4);
-			}
-
-		}
-
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n", fp);
-
-		for (int i = 1; i < ((nx - 1) * (ny - 1) + 1); i++) {
-			fprintf(fp, "%d \n", i * 4);
-		}
-		fputs("\t\t\t\t </DataArray>\n", fp);
-		fputs("\t\t\t\t <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n", fp);
-		for (int i = 1; i < ((nx - 1) * (ny - 1) + 1); i++) {
-			fputs("9 \n", fp);
-		}
-
-	}
-
-	fputs("\t\t\t\t </DataArray>\n", fp);
-	fputs("\t\t\t </Cells>\n", fp);
 	fputs("\t\t </Piece>\n", fp);
-	fputs("\t </UnstructuredGrid>\n", fp);
+	fputs("\t </StructuredGrid>\n", fp);
 	fputs("</VTKFile>\n", fp);
 	fflush(fp);
 }
@@ -1408,18 +1909,54 @@ void lsGridSpline::set_ignore()
 	dx = (domain[1] - domain[0]) / std::max(1.,double(nx - 1));
 	dy = (domain[3] - domain[2]) / std::max(1., double(ny - 1));
 
-	for (int i = 0; i < nx; i++) {
-		double xpt = domain[0] + dx * i;
+	// QA: the numbers the grid actually ended up with, whether they came
+	// from the input file or were derived. dx/dy/dt are what matter for
+	// resolution and are not otherwise visible -- only nx/ny/dt are stated.
+	cfdwm_mpi::out() << "lsgrid: " << nx << " x " << ny << " x " << nl
+		<< " nodes over [" << domain[0] << ", " << domain[1] << "] x ["
+		<< domain[2] << ", " << domain[3] << "] -- dx=" << dx << " m, dy="
+		<< dy << " m, dt=" << dt << " s." << std::endl;
+
+	// Keep a strip along each selected border, drop everything else.
+	// Everything downstream -- compact(), fill_node(), the query guard --
+	// consumes this mask, so borders are expressed here and nowhere else.
+	// With no border selected nothing is dropped and the grid stays dense,
+	// which is what a client initialising its whole domain wants.
+	// No border selected (border mode off, or on with all four zero) means
+	// store the whole grid -- what a client initialising its full domain
+	// wants. Dropping everything instead leaves an empty grid.
+	if (!border_mode || !(border[0] || border[1] || border[2] || border[3])) {
+		for (long k = 0; k < (long)nx * ny; k++) IGNORE[k] = 0;
+		return;
+	}
+	// Size the strip in METRES when the client has declared how far inward
+	// it queries: sizing in nodes alone silently stops being enough once the
+	// client's cells are coarse relative to dx.
+	int nb = BORDER_NODES;
+	if (border_margin > 0.) {
+		const double dmin = std::min(dx > 0. ? dx : 1e30, dy > 0. ? dy : 1e30);
+		if (dmin > 0. && dmin < 1e29)
+			nb = std::max(nb, (int)std::ceil(border_margin / dmin) + 1);
+	}
+	long nkeepc = 0;
+	for (int i = 0; i < nx; i++)
 		for (int j = 0; j < ny; j++) {
-			double ypt = domain[2] + dy * j;
-			//std::cout << xpt << " " << ypt << std::endl;
-			//std::cout << domain_ignore[0] << " " << domain_ignore[1] << " " << domain_ignore[2] << " " << domain_ignore[3] << std::endl;
-			if (xpt >= domain_ignore[0] && xpt <= domain_ignore[1] && ypt >= domain_ignore[2] && ypt <= domain_ignore[3]) {
-				IGNORE[i * ny + j] = 1;
-			}
-			else {
-				IGNORE[i * ny + j] = 0;
-			}
+			const bool on_border =
+				(border[0] && i <= nb - 1) ||            // left   (x-)
+				(border[1] && i >= nx - nb) ||           // right  (x+)
+				(border[2] && j <= nb - 1) ||            // bottom (y-)
+				(border[3] && j >= ny - nb);             // top    (y+)
+			IGNORE[i * ny + j] = on_border ? 0 : 1;
+			if (on_border) nkeepc++;
 		}
-	}				
+	// Depth of the stored strip in METRES is what a linked solver has to
+	// compare against its own stencil reach; nodes alone do not say it.
+	cfdwm_mpi::out() << "lsgrid: storing borders"
+		<< (border[0] ? " left" : "") << (border[1] ? " right" : "")
+		<< (border[2] ? " bottom" : "") << (border[3] ? " top" : "")
+		<< " -- " << nb << " nodes + halo (margin "
+		<< (border_margin > 0. ? border_margin : 0.) << " m), reaching "
+		<< (nb - 1 + 2) * dx << " m into the domain in x and "
+		<< (nb - 1 + 2) * dy << " m in y; " << nkeepc << " of "
+		<< (long)nx * ny << " nodes before the stencil halo." << std::endl;
 }

@@ -12,6 +12,10 @@
 // because sgrids.update() is only driven by the collective wave_force_update()).
 
 #include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <ostream>
+#include <streambuf>
 #include <vector>
 
 #if defined(MPI_enable)
@@ -27,6 +31,15 @@ namespace cfdwm_mpi {
 	inline bool active() { int f = 0; MPI_Initialized(&f); return f != 0; }
 	inline int rank() { if (!active()) return 0; int r; MPI_Comm_rank(comm(), &r); return r; }
 	inline int size() { if (!active()) return 1; int s; MPI_Comm_size(comm(), &s); return s; }
+
+	// Fatal-error exit that takes the whole job down. A plain exit() on
+	// one rank leaves the others deadlocked in the next collective
+	// (MPI_Allgatherv), so rank-divergent error paths (bad query point,
+	// I/O failure on one node) must abort the communicator instead.
+	inline void abort(int code) {
+		if (active()) MPI_Abort(comm(), code);
+		exit(code);
+	}
 
 	// Even 1-D block decomposition of n items across the ranks: sets [i0,i1) for a
 	// given rank r (larger remainder chunks go to the lowest ranks).
@@ -78,7 +91,26 @@ namespace cfdwm_mpi {
 		               base, counts.data(), displs.data(), MPI_DOUBLE, comm());
 	}
 
+	// As above, but for a COMPACTED grid where columns hold different node
+	// counts: col_off[i] is the first storage node of column i, so rank r
+	// owns storage nodes [col_off[bounds[r]], col_off[bounds[r+1]]). The
+	// i-major slot assignment in lsGridSpline::compact() is what makes each
+	// rank's range contiguous, which is the whole reason for this variant.
+	inline void allgather_columns_var(double* base, const std::vector<int>& bounds,
+	                                  const std::vector<long>& col_off, long per_node) {
+		int s = size();
+		if (s <= 1 || !active()) return;
+		std::vector<int> counts(s), displs(s);
+		for (int r = 0; r < s; r++) {
+			displs[r] = (int)(col_off[bounds[r]] * per_node);
+			counts[r] = (int)((col_off[bounds[r + 1]] - col_off[bounds[r]]) * per_node);
+		}
+		MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
+		               base, counts.data(), displs.data(), MPI_DOUBLE, comm());
+	}
+
 } // namespace cfdwm_mpi
+
 
 #else // ---- serial fallback (no MPI) ----------------------------------------
 
@@ -86,13 +118,57 @@ namespace cfdwm_mpi {
 	inline int  rank() { return 0; }
 	inline int  size() { return 1; }
 	inline bool active() { return false; }
+	inline void abort(int code) { exit(code); }
 	inline void range(int n, int& i0, int& i1) { i0 = 0; i1 = n; }
 	inline void partition_weighted(const std::vector<long>&, int n, std::vector<int>& bounds) {
 		bounds.assign(2, 0); bounds[1] = n;
 	}
 	inline void allgather_columns(double*, const std::vector<int>&, long) {}
+	inline void allgather_columns_var(double*, const std::vector<int>&,
+	                                 const std::vector<long>&, long) {}
 }
 
 #endif
+
+// ---- master-only logging ----------------------------------------------------
+//
+// Every rank reads waveinput.dat and echoes it back, which multiplies the
+// (long) input summary by the number of ranks and blows up the SLURM job log.
+// cfdwm_mpi::out()/err() return the real std::cout/std::cerr on rank 0 and a
+// stream that discards everything on the other ranks, so the printing code can
+// stay written as a straight sequence of `<<` without rank guards.
+//
+// Rank-divergent messages (a failure only one rank can see) must NOT use these
+// -- print those to std::cerr directly, prefixed with the rank, so they are not
+// silently swallowed. fatal()-style paths in the library do exactly that.
+
+namespace cfdwm_mpi {
+
+	namespace detail {
+		// a streambuf that swallows everything written to it
+		class NullBuf : public std::streambuf {
+		protected:
+			int overflow(int c) override { return c; }
+			std::streamsize xsputn(const char*, std::streamsize n) override { return n; }
+		};
+		inline std::ostream& null_stream() {
+			static NullBuf buf;
+			static std::ostream os(&buf);
+			return os;
+		}
+	}
+
+	// true on the rank that is allowed to write the human-readable log
+	inline bool is_master() { return rank() == 0; }
+
+	// stdout/stderr on the master rank, a null sink everywhere else
+	inline std::ostream& out() {
+		return is_master() ? std::cout : detail::null_stream();
+	}
+	inline std::ostream& err() {
+		return is_master() ? std::cerr : detail::null_stream();
+	}
+
+} // namespace cfdwm_mpi
 
 #endif // CFDWM_MPI_UTILS_H
