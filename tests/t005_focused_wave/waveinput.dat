@@ -77,14 +77,14 @@ time_rampup 0 1.
 x_rampdown 12. 13.
 
 #[lsgrid]
-scheme spline
+#scheme spline
 #         XMIN   XMAX   YMIN   YMAX
-bounds -0.1 25. -5. 5.
-nx  251
-ny  1
-nl  7
-t0  0.0
-dt  0.5
-stretch_params 0.7   1.5
+#bounds -0.1 25. -5. 5.
+#nx  251
+#ny  1
+#nl  7
+#t0  0.0
+#dt  0.5
+#stretch_params 0.7   1.5
 #         XMIN   XMAX   YMIN   YMAX
-ignore_subdomain 0.15 25. -5. 5.
+#ignore_subdomain 0.15 25. -5. 5.

@@ -140,8 +140,10 @@ y = 0.
 
 tic()
 # Step 1 - Lest compute the exact second order solution
-#shutil.copyfile("waveinput_stokes.dat", 'waveinput.dat')
-mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")  
+# (direct evaluation, no lsgrid: this script samples the interior, so it
+# must not inherit a border-only grid input left behind by case5.py)
+shutil.copyfile("waveinput_exact.dat", 'waveinput.dat')
+mydll1 = dlopen("../../builds/linux64/libCFDwavemaker_openmp.so")
 init_dll(mydll1)
 
 wave_elev1 = []
