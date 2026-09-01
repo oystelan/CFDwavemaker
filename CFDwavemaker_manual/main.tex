@@ -27,6 +27,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage[backend=biber,style=ieee,sorting=ynt]{biblatex}
+\usepackage{catchfile}  % read the version number from src/VERSION
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -59,10 +60,13 @@
 \newcommand{\cs}[1]{\texttt{\textbackslash #1}}
 
 % Frontmatter data; appears on title page
-\title{CFDwavemaker \\User Manual (DRAFT)}
-\version{3.0.1}
+% Version number is read from src/VERSION (single source of truth, shared
+% with the makefiles).
+\CatchFileDef{\CFDwmVersion}{../src/VERSION}{\endlinechar=-1}
+\title{User \& Theory Manual}
+\version{\CFDwmVersion}
 \author{Øystein Lande}
-%\softwarelogo{\includegraphics[width=8cm]{logo.png}}
+\softwarelogo{\includegraphics[width=9cm]{cfdwavemaker-lockup.pdf}}
 
 \begin{document}
 
@@ -105,35 +109,27 @@ Start by cloning the \doclink{https://github.com/oystelan/CFDwavemaker}{git repo
 \begin{lstlisting}[numbers=none]
 git clone git@github.com:oystelan/CFDwavemaker.git
 \end{lstlisting}
-open a terminal and navigate to the location of the CFDwavemaker folder. a Makefile is provided for quick building. CFDwavemaker can be built in three different versions:
+open a terminal and navigate to the \texttt{src/} folder of the CFDwavemaker repository, where a Makefile is provided for quick building. CFDwavemaker can be built in three different versions:
 \begin{itemize}
-    \item \textbf{default}: contains core kinematics library + the SWD library extension.
-    \item \textbf{basic}:The core kinematics library, excluding SWD. SWD requires a fairly new version of gcc or intel compiler on windows. Therefore it can sometimes be useful to exclude SWD from the build if you dont plan on using it.
-    \item \textbf{all}: Complete build, linking core library, swd and the vtk library into one dynamic library. This does however require a bit of preparation, like builting the vtk library upfront, and modifying the make script accordingly to be in line with the version of vtk you have built. Dont attempt this if your not experienced with compiling.
-    \item \textbf{mpi}: The core kinematics library built with MPI support. This is intended for large domains where the LSgrid second-order kinematics are expensive to compute: when built with MPI the grid update is distributed across ranks (each rank computes a block of the domain, and the result is shared with an \texttt{MPI\_Allgatherv}), rather than every rank redundantly computing the whole domain. See Section~\ref{sec:mpi} for details.
+    \item \textbf{default}: the core kinematics library with the SWD extension, OpenMP-parallel (\texttt{libCFDwavemaker\_openmp}). This is what most users want.
+    \item \textbf{mpi}: The core kinematics library built with MPI support (\texttt{libCFDwavemaker\_mpi}). This is intended for large domains where the LSgrid second-order kinematics are expensive to compute: when built with MPI the grid update is distributed across ranks (each rank computes a block of the domain, and the result is shared with an \texttt{MPI\_Allgatherv}), rather than every rank redundantly computing the whole domain. See Section~\ref{sec:mpi} for details.
+    \item \textbf{vtk}: Complete build, linking the core library, swd and the vtk library into one dynamic library. This does however require a bit of preparation, like building the vtk library upfront, and modifying the make script accordingly to be in line with the version of vtk you have built. Dont attempt this if your not experienced with compiling.
 \end{itemize}
-So, to build the basic version, you execute the following two commands:
+So, to build the default version, you simply execute:
 \begin{lstlisting}[numbers=none]
-make clean
-make basic
+make
 \end{lstlisting}
-or to build the complete library (including swd and vtk support), you do:
-\begin{lstlisting}[numbers=none]
-make clean
-make all
-\end{lstlisting}
-and to build the MPI-enabled library:
+and to build the MPI-enabled or vtk-enabled libraries:
 \begin{lstlisting}[numbers=none]
 make mpi
+make vtk
 \end{lstlisting}
-(the \texttt{mpi} target cleans and rebuilds automatically, since it uses different compiler flags than the other targets).
+(every target cleans and rebuilds automatically, since the targets use different compiler flags).
 
-If the target is omitted, the default version is built. If everything went according to plan, the resulting static and dynamic link library should now have turned up in the folder ../build/linux64/* Thats it, in terms of building the library. Now its time to link the library to your software of choice.
+If everything went according to plan, the resulting static and dynamic link library should now have turned up in the folder \texttt{../builds/linux64/}. Thats it, in terms of building the library. Now its time to link the library to your software of choice.
 
 \subsection{Dependencies}
-So why did i choose to build the basic version? The answer is, for the default version (containing the =swd extension) and for the all package which links to vtk, there are some dependencies you need which does not by default ship with the compiler.
-
-For the default version of CFDwavemaker, the only additional dependency is fftw3. This is easily installed on a debian based system with the following command:
+The default and MPI builds bundle the Spectral-Wave-Data (SWD) objects and need only \texttt{libgfortran} (shipped with the \texttt{gfortran} compiler package) at link and run time --- no other external libraries are required. The vtk build additionally requires a prebuilt VTK library, and the make script must be adapted to the VTK version you have built.
 
 \subsection{From binary}
 The latest build for Linux (normally latest release of Ubuntu) is possible to download from \doclink{https://github.com/oystelan/CFDwavemaker}{the CFDwavemaker repository}.
@@ -177,6 +173,20 @@ A few things are required of the host CFD solver when using the MPI build:
     \item \textbf{No OpenMP.} The MPI build does not use OpenMP (it is one or the other); parallelism comes entirely from the MPI ranks.
 \end{itemize}
 Note that this distributes \emph{computation}, not memory: every rank still stores the full grid, exactly as in the shared-memory build. The MPI build is therefore aimed at cases where the second-order grid generation dominates the run time, not at reducing per-rank memory.
+
+\subsection{Utility functions in the C API}\label{sec:apiutil}
+Beyond the kinematics queries used in the examples above, the header \texttt{CFDwavemaker.h} exports a number of utility functions (added in v3.5--v3.7):
+\begin{itemize}
+    \item \texttt{wave\_PeakPeriod()} --- spectral peak period $T_p$ [s] of the loaded component set (0 if the wave type is not irregular).
+    \item \texttt{wave\_PhaseVelocity(x, y, T0)} --- linear phase speed at the local depth for period \texttt{T0} (\texttt{T0} $\le 0$ selects the spectral mean period, then $T_p$); \texttt{[seabed]}-aware, 0 on dry land.
+    \item \texttt{wave\_LocalDepth(x, y)} --- local still-water depth [m], positive down: probed from the \texttt{[seabed]} surface when one is loaded, else the constant \texttt{depth} from \texttt{[general input data]}; unclamped, so negative on land.
+    \item \texttt{wave\_Seabed(x, y)} and \texttt{wave\_SeabedRaw(x, y)} --- the min-depth-clamped bed level as the kinematics see it, and the unclamped bed level for solvers importing the bathymetry.
+    \item \texttt{wave\_SeabedActive()}, \texttt{wave\_SeabedBounds(\&xmin,\&xmax,\&ymin,\&ymax)}, \texttt{wave\_SeabedContains(x, y)} and \texttt{wave\_SeabedOutsideCount()} --- query whether a \texttt{[seabed]} surface is loaded, its footprint bounding box, whether a point is covered by the triangulation, and how many depth queries have so far been served by out-of-footprint clamping (a non-zero count means part of the sampled region is a flat zero-slope skirt rather than real bathymetry, a common cause of boundary blow-up).
+    \item \texttt{wave\_SeabedRelease()} --- free the \texttt{[seabed]} mesh after init-time sampling (geometry-only use); refused when the kinematics still need it.
+    \item \texttt{wave\_OptimalLayerRatio(nl)}, \texttt{wave\_OptimalLayerRatioAtDepth(nl, h)} and \texttt{wave\_OptimalLayerRatioAt(nl, x, y)} --- optimal geometric layer grading for a multilayer solver, derived from the sea-state RMS velocity profile and returned as the top-layer-to-uniform thickness ratio in $(0,1]$ (1.0 = uniform layers, negative on failure); evaluated at the reference depth, at an arbitrary depth (table-interpolated, cheap enough to call per grid column) or at the local depth of a point.
+    \item \texttt{wave\_Kinematics(x, y, z, t)} --- the four kinematics values $u$, $v$, $w$ and dynamic pressure at a point in a single call (lsgrid wave types), returned as a pointer to a four-element array.
+\end{itemize}
+The grid-setup calls \texttt{wave\_SetLsgridBounds()}, \texttt{wave\_SetLsgridBorders()} and \texttt{wave\_SetBorderMargin()} are described together with the \texttt{[lsgrid]} section below.
 
 \input{input_file_ref}
 
@@ -308,8 +318,8 @@ def spec3Dtyx(t, y, x, wp):
 
 The implementation of the $s$-coordinate second-order theory in CFDwavemaker is based on Smit et al.\ (2017). During implementation and verification, several errors were identified in the published paper. These are documented below for reference.
 
-\subsection{Known errata (corrections PDF)}
-The following errors were identified by the authors themselves and documented in a corrections document:
+\subsection{Notation errors}
+Several notation errors were identified in Eqs.~9 and 13 of the published paper:
 \begin{enumerate}
     \item In Eq.~9, $w_1$ and $w_2$ should be angular frequencies $\omega_1$ and $\omega_2$.
     \item In Eq.~9, $\omega_{1,2}$ should be $\omega_1 + \omega_2$.
@@ -414,9 +424,9 @@ P_{(\mathbf{k}_1,\mathbf{k}_2)}(s) = -ig(1+s)\,\frac{k_2\,\mathrm{Sh}_2(s)}{\ome
 \end{equation}
 which involves only component~2 and has no factor of~$1/2$.
 
-\paragraph{Remaining gap.} With the corrected per-pair~$\hat{B}$, $\hat{K}$, and~$P$, the surface BC gives an expression for~$\mathscr{H}$ whose numerator is approximately 100$\times$ smaller than the value required by the Eq.~10 inversion. This suggests that the surface boundary conditions (Eqs.~5) produce additional $O(\varepsilon^2)$ terms in the $s$-coordinate framework --- arising from the coupling between the coordinate transformation and the free-surface conditions --- that are not present in the Cartesian formulation. Tracking these terms through the full nonlinear coordinate transformation requires more extensive algebra than what is presented here or in the original paper. The error in Eq.~9 is a consequence of this incomplete accounting.
+\paragraph{Closing the derivation.} The free-surface conditions produce additional $O(\varepsilon^2)$ terms in the $s$-coordinate framework, arising from the coupling between the coordinate transformation and the surface motion, that have no Cartesian counterpart: the metric dilation of the vertical derivative in the kinematic condition and the mapping-time term in the dynamic condition. Carrying these couplings through the complete second-order problem closes the derivation of~$\mathscr{H}$ exactly. The result has been verified symbolically along two independent routes (transforming the Cartesian pair solution, and solving the boundary-value problem intrinsically in the transformed frame), and the resulting coefficient agrees with the Eq.~10 inversion for the sum and the difference interactions alike. Omitting either coupling changes the coefficient at leading order, which is the class of error consistent with the published Eq.~9.
 
-\paragraph{Conclusion.} The per-pair normalization convention explains the factor-of-2 discrepancy in~$\hat{B}$ and proves that the paper's~$P$ is implicitly per-pair normalized. However, the complete BVP derivation of~$\mathscr{H}$ requires additional surface forcing terms from the coordinate transformation that are not fully captured in our analysis or in the paper's Eq.~9. The Eq.~10 inversion implemented in CFDwavemaker bypasses these complexities entirely and produces verified-correct results.
+\paragraph{Conclusion.} The per-pair normalization convention explains the factor-of-2 discrepancy in~$\hat{B}$ and proves that the paper's~$P$ is implicitly per-pair normalized, and the complete bottom-up derivation, with the transformation couplings included, confirms the Eq.~10 inversion independently. The inversion is what CFDwavemaker implements, anchored to the verified Sharma \& Dean elevation coefficient.
 
 \subsection{Literature survey}
 \label{app:literature}
